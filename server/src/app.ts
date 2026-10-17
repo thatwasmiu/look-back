@@ -6,14 +6,15 @@ import { registerAuth } from './auth.js';
 import type { Config } from './config.js';
 import { registerMedia } from './media.js';
 import { registerPages } from './pages.js';
+import { registerUploads } from './uploads.js';
 
-// boss is consumed by routes added in later tasks.
-export async function buildApp(config: Config, pool: pg.Pool, _boss: PgBoss | null): Promise<FastifyInstance> {
+export async function buildApp(config: Config, pool: pg.Pool, boss: PgBoss): Promise<FastifyInstance> {
   const app = Fastify({ trustProxy: config.trustProxy });
   registerAuth(app, config);
   app.get('/api/health', async () => ({ ok: true }));
   registerAlbums(app, pool, config);
   registerPages(app, pool);
   registerMedia(app, pool, config);
+  registerUploads(app, config, pool, boss);
   return app;
 }
