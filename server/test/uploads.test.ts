@@ -94,8 +94,8 @@ describe('tus uploads', () => {
     expect(last.headers.get('upload-offset')).toBe(String(2 * MiB3));
   });
 
-  it('PATCH without a session returns 401', async () => {
-    const r = await fetch(`${base}/api/uploads/${crypto.randomUUID()}`, {
+  it.each(['/api/uploads', '/%61pi/uploads'])('PATCH %s/<id> without a session returns 401', async (prefix) => {
+    const r = await fetch(`${base}${prefix}/${crypto.randomUUID()}`, {
       method: 'PATCH',
       headers: { ...tusHeaders(), 'upload-offset': '0', 'content-type': 'application/offset+octet-stream' },
       body: new Uint8Array(10),

@@ -36,8 +36,12 @@ export function registerAuth(app: FastifyInstance, config: Config): void {
   // Not encapsulated, so the guard covers all routes, and runs after secure-session's hook.
   const plugin = async (a: FastifyInstance) => {
     a.addHook('onRequest', async (req, reply) => {
-      const path = req.url.split('?')[0];
-      if (!path.startsWith('/api/') || path === '/api/auth/login' || path === '/api/health') return;
+      // Decide on the matched route pattern, never the raw URL (it may be percent-encoded).
+      // Unmatched requests have no route and fall through to the bare 404 handler.
+      const route = req.routeOptions.url;
+      if (route === undefined || !route.startsWith('/api/')) return;
+      const key = `${req.method} ${route}`;
+      if (key === 'POST /api/auth/login' || key === 'GET /api/health') return;
       if (!req.session.get('owner')) return reply.code(401).send({ error: 'unauthorized' });
     });
 

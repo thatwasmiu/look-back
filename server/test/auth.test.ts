@@ -33,6 +33,26 @@ describe('auth', () => {
     expect((await t.app.inject({ url: '/api/albums' })).statusCode).toBe(401);
   });
 
+  it.each([
+    ['GET', '/%61pi/albums'],
+    ['GET', '/api/%61lbums'],
+    ['GET', '/API/albums'],
+    ['GET', '/api/auth/login'],
+    ['POST', '/api/health'],
+  ])('%s %s without cookie → 401 or bare 404', async (method, url) => {
+    const res = await t.app.inject({ method: method as 'GET', url });
+    expect([401, 404]).toContain(res.statusCode);
+    if (res.statusCode === 404) expect(res.json()).not.toHaveProperty('albums');
+    expect(res.body).not.toMatch(/\[\{|"id"/);
+  });
+
+  it('encoded-path DELETE of a real album without cookie → 401, album kept', async () => {
+    const id = (await t.pool.query(`insert into albums (title) values ('keep') returning id`)).rows[0].id;
+    const res = await t.app.inject({ method: 'DELETE', url: `/%61pi/albums/${id}` });
+    expect(res.statusCode).toBe(401);
+    expect((await t.pool.query('select 1 from albums where id=$1', [id])).rowCount).toBe(1);
+  });
+
   it('health stays public', async () => {
     expect((await t.app.inject({ url: '/api/health' })).statusCode).toBe(200);
   });
