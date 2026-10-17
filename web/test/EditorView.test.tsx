@@ -50,6 +50,16 @@ test('arrow-key nudges of one element coalesce into a single undo step', async (
   expect(el().style.left).toBe(x0);
 });
 
+test.each(['{Delete}', '{Backspace}'])('%s removes the selected element even while a toolbar button keeps focus', async (key) => {
+  const user = userEvent.setup();
+  const { container } = setup(okApi());
+  await user.click(screen.getByRole('button', { name: 'Text' })); // adds + selects the text
+  await user.click(screen.getByRole('button', { name: 'Bring forward' })); // focus stays on this button
+  expect(document.activeElement?.tagName).toBe('BUTTON');
+  await user.keyboard(key);
+  expect(container.querySelector('.edit-page .el-text')).toBeNull();
+});
+
 test('deleting media from the tray empties its frames locally, so the next save carries no stale mediaId', async () => {
   const m = { id: 'm1', albumId: 'a1', kind: 'image' as const, status: 'ready' as const, width: 4, height: 3, durationSec: null, blurDataUrl: null, variants: { original: 'm1/o.jpg' }, error: null };
   const withFrame: AlbumBundle = { ...bundle, media: [m], pages: [{ ...bundle.pages[0], layout: { background: 'paper-cream', elements: [

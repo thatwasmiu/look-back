@@ -257,7 +257,8 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
       if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); setHist(redo); return; }
       if (!selectedId) return;
       // commit(fn) derives from h.present, not this render's layout: key repeats can arrive before a re-render.
-      if ((e.key === 'Delete' || e.key === 'Backspace') && t.tagName !== 'BUTTON') {
+      // Focus often stays on the last-clicked toolbar button; buttons have no use for these keys.
+      if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         commit((l) => removeElement(l, selectedId), null);
         return;
