@@ -31,8 +31,11 @@ export async function runProcessMedia(job: ProcessMediaJob, pool: pg.Pool, confi
       if (u.rowCount === 0) await rm(mediaPath, { recursive: true, force: true }); // deleted while processing
     } catch (e) {
       const msg = (e instanceof Error ? e.message : String(e)).slice(0, 500) || 'processing failed';
-      await rm(mediaPath, { recursive: true, force: true });
-      await pool.query(`update media set status='failed', error=$2 where id=$1 and status='processing'`, [mediaId, msg]);
+      const f = await pool.query(`update media set status='failed', error=$2 where id=$1 and status='processing'`, [mediaId, msg]);
+      // rm only if we still own the row, or it was deleted meanwhile (never when another attempt finished it)
+      if (f.rowCount || !(await pool.query('select 1 from media where id=$1', [mediaId])).rowCount) {
+        await rm(mediaPath, { recursive: true, force: true });
+      }
     }
   } finally {
     await rm(uploadPath, { force: true });
