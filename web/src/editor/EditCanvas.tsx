@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { flushSync } from 'react-dom';
 import Moveable from 'react-moveable';
 import type { FrameEl, MediaDTO, PageElement, PageLayout, TextEl } from '@scrapbook/shared';
@@ -12,6 +12,7 @@ type Props = {
   onCommit(l: PageLayout): void; // one history entry
   onFrameAddMedia?(frameId: string): void; // empty frame tapped: media tray/upload hooks in here
   cropId?: string | null; onCrop?(frameId: string | null): void; // frame in crop mode (pan/zoom the photo inside it)
+  zoom?: number; // 1 = page fits the stage
 };
 type Crop = FrameEl['crop'];
 
@@ -19,7 +20,7 @@ const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)
 
 // Selected element gets react-moveable handles. During a gesture only a transient layout changes (live preview);
 // the gesture end commits it once. Moveable reports CSS px relative to the page box; page units = px / box size.
-export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFrameAddMedia, cropId = null, onCrop }: Props) {
+export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFrameAddMedia, cropId = null, onCrop, zoom = 1 }: Props) {
   const pageRef = useRef<HTMLDivElement>(null);
   const moveableRef = useRef<Moveable>(null);
   const [live, setLive] = useState<PageLayout | null>(null);
@@ -105,6 +106,7 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
 
   return (
     <div className={`edit-page${editingId ? ' editing' : ''}`} ref={pageRef} onPointerDown={onPointerDown}
+      style={{ '--zoom': String(zoom) } as CSSProperties}
       onDoubleClick={(e) => startEditing((e.target as Element).closest('[data-el]')?.getAttribute('data-el') ?? null)}>
       <PageRenderer layout={shown} media={media} mode="edit" renderOverlay={renderOverlay} />
       <Moveable ref={moveableRef} target={target} className="editor-moveable" zoom={coarse ? 1.7 : 1}
@@ -131,7 +133,13 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
         onClick={(e) => {
           if (!selected) return;
           if (e.isDouble) startEditing(selected.id);
-          else if (selected.type === 'frame' && !selected.mediaId) onFrameAddMedia?.(selected.id);
+          else if (selected.type === 'frame' && !selected.mediaId && onFrameAddMedia) {
+            // The native file dialog swallows mouse events: opened mid-gesture it left a half-finished drag that
+            // grabbed the frame afterwards. Deselect first (nothing to drag) and open it once this click is done.
+            const id = selected.id;
+            onSelect(null);
+            setTimeout(() => onFrameAddMedia(id), 0);
+          }
         }}
       />
     </div>

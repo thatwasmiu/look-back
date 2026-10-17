@@ -11,17 +11,22 @@ type Props = {
   undo(): void; redo(): void; canUndo: boolean; canRedo: boolean;
   status: SaveStatus; save(): void;
   crop?(): void; // selected filled frame → crop mode (double-tap alone is unreliable on phones)
+  zoom: number; setZoom(z: number): void;
 };
 
 const backgrounds: PageLayout['background'][] = ['paper-cream', 'paper-kraft', 'paper-grid', 'paper-dots'];
 const inks = ['#4a3b2c', '#3b2a1a', '#7a4a2e', '#a33a2a', '#2f5d7c', '#3f6b3a'];
 // Swatch preview: an empty frame (paper inside), drawn by the real renderer so the list matches the page.
 const SAMPLE: FrameEl = { type: 'frame', id: 'sample', x: 0, y: 0, w: 1, h: 1, rotation: 0, z: 0, frameStyle: 'polaroid', mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } };
+// Zoom steps relative to "page fits the stage" (1).
+export const ZOOMS = [1, 1.25, 1.5, 2, 2.5, 3];
+export const stepZoom = (z: number, dir: 1 | -1) =>
+  dir > 0 ? ZOOMS.find((s) => s > z + 1e-9) ?? z : [...ZOOMS].reverse().find((s) => s < z - 1e-9) ?? z;
 const statusLabel: Record<SaveStatus, string> = { saved: 'Saved', saving: 'Saving…', unsaved: 'Unsaved', error: 'Save failed' };
 
 // Laptop: a bar above the page. Phone (coarse pointer or < 700px, see CSS): a sheet pinned to the bottom,
 // pickers open above it.
-export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo, status, save, crop }: Props) {
+export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo, status, save, crop, zoom, setZoom }: Props) {
   const [picker, setPicker] = useState<'frame' | 'frameStyle' | 'sticker' | 'tape' | 'bg' | null>(null);
   const toggle = (p: typeof picker) => setPicker((cur) => (cur === p ? null : p));
   const ref = useRef<HTMLDivElement>(null);
@@ -81,6 +86,12 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
         <button type="button" disabled={!canUndo} aria-label="Undo" title="Undo (Ctrl+Z)" onClick={undo}>↶</button>
         <button type="button" disabled={!canRedo} aria-label="Redo" title="Redo (Ctrl+Shift+Z)" onClick={redo}>↷</button>
         <button type="button" onClick={save}>Save</button>
+        <span className="sep" />
+        <span className="zoom">
+          <button type="button" aria-label="Zoom out" title="Zoom out" disabled={zoom <= ZOOMS[0]} onClick={() => setZoom(stepZoom(zoom, -1))}>−</button>
+          <button type="button" aria-label={`Fit page (zoom ${Math.round(zoom * 100)}%)`} title="Fit page" onClick={() => setZoom(1)}>{Math.round(zoom * 100)}%</button>
+          <button type="button" aria-label="Zoom in" title="Zoom in (Ctrl + wheel)" disabled={zoom >= ZOOMS[ZOOMS.length - 1]} onClick={() => setZoom(stepZoom(zoom, 1))}>+</button>
+        </span>
         <span className={`status status-${status}`} role="status">{statusLabel[status]}</span>
       </div>
       {text && (

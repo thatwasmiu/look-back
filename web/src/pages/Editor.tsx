@@ -4,7 +4,7 @@ import { pageLayoutSchema, templates, type AlbumBundle, type MediaDTO, type Page
 import { api as realApi, ApiError } from '../api';
 import { PageRenderer } from '../render/PageRenderer';
 import { EditCanvas } from '../editor/EditCanvas';
-import { Toolbar } from '../editor/Toolbar';
+import { Toolbar, stepZoom } from '../editor/Toolbar';
 import { initHistory, push, redo, undo } from '../editor/history';
 import { assignMedia, clearMedia, removeElement, updateElement } from '../editor/layoutOps';
 import { useAutosave } from '../editor/useAutosave';
@@ -71,7 +71,21 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
     return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', esc); };
   }, [picking]);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [panelsHidden, setPanelsHidden] = useState(false); // phone: tuck photos/pages/tools away for a bigger page
+  const [panelsHidden, setPanelsHidden] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const stageRef = useRef<HTMLDivElement>(null);
+  // Ctrl + wheel (and trackpad pinch, which arrives as ctrl+wheel) zooms the page, not the browser.
+  useEffect(() => {
+    const n = stageRef.current;
+    if (!n) return;
+    const wheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      setZoom((z) => stepZoom(z, e.deltaY < 0 ? 1 : -1));
+    };
+    n.addEventListener('wheel', wheel, { passive: false });
+    return () => n.removeEventListener('wheel', wheel);
+  }, []); // phone: tuck photos/pages/tools away for a bigger page
   const [opError, setOpError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false); // page op in progress: editing frozen so nothing lands mid-switch/delete
   const navigate = useNavigate();
@@ -304,12 +318,12 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
         <Toolbar layout={layout} selected={selected} commit={commit}
           undo={() => setHist(undo)} redo={() => setHist(redo)} canUndo={hist.past.length > 0} canRedo={hist.future.length > 0}
           status={status} save={() => void flush().then((ok) => ok && setOpError(null))}
-          crop={() => setCropId(selectedId)} />
+          crop={() => setCropId(selectedId)} zoom={zoom} setZoom={setZoom} />
       )}
       <div className="edit-main">
-        <div className="edit-stage">
+        <div className="edit-stage" ref={stageRef}>
           {page ? <EditCanvas layout={layout} media={media} selectedId={selectedId} onSelect={setSelectedId} onCommit={commit}
-            onFrameAddMedia={addToFrame} cropId={cropId} onCrop={setCropId} />
+            onFrameAddMedia={addToFrame} cropId={cropId} onCrop={setCropId} zoom={zoom} />
             : <p className="empty">No pages yet — add one below.</p>}
         </div>
         <MediaTray media={trayMedia} items={upload.items} coverMediaId={coverId}

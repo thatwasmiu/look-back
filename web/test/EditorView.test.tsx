@@ -177,3 +177,19 @@ test('the add-page template list has Cancel and also closes on an outside click 
   await user.keyboard('{Escape}');
   expect(list()).toBeNull();
 });
+
+test('zoom: + / − step the page size, the percentage button fits it back; Ctrl+wheel zooms too', async () => {
+  const user = userEvent.setup();
+  const { container } = setup(okApi());
+  const zoom = () => (container.querySelector<HTMLElement>('.edit-page')!).style.getPropertyValue('--zoom');
+  expect(zoom()).toBe('1');
+  await user.click(screen.getByRole('button', { name: 'Zoom in' }));
+  await user.click(screen.getByRole('button', { name: 'Zoom in' }));
+  expect(zoom()).toBe('1.5');
+  await user.click(screen.getByRole('button', { name: 'Zoom out' }));
+  expect(zoom()).toBe('1.25');
+  await user.click(screen.getByRole('button', { name: /Fit page/ }));
+  expect(zoom()).toBe('1');
+  act(() => { container.querySelector('.edit-stage')!.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, ctrlKey: true, bubbles: true, cancelable: true })); });
+  expect(zoom()).toBe('1.25');
+});
