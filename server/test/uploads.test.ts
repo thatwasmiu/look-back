@@ -26,7 +26,7 @@ const patch = (url: string, offset: number, body: Buffer, cookie: string) =>
   fetch(url, {
     method: 'PATCH',
     headers: { ...tusHeaders(cookie), 'upload-offset': String(offset), 'content-type': 'application/offset+octet-stream' },
-    body,
+    body: new Uint8Array(body),
   });
 const mkAlbum = async () =>
   (await t.pool.query(`insert into albums (title) values ('u') returning id`)).rows[0].id as string;
