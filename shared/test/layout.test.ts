@@ -8,7 +8,7 @@ const sample = () => ({
     { ...base, id: 'e1', type: 'frame', frameStyle: 'polaroid', mediaId: 'm_123', crop: { x: 0.5, y: 0.5, scale: 1 } },
     { ...base, id: 'e2', type: 'tape', w: 0.15, h: 0.05, tapeStyle: 'yellow' },
     { ...base, id: 'e3', type: 'sticker', stickerId: 'flower-1' },
-    { ...base, id: 'e4', type: 'text', text: 'Đà Lạt', font: 'caveat', color: '#6b4f2e', size: 0.05 },
+    { ...base, id: 'e4', type: 'text', text: 'Đà Lạt', font: 'dancing-script', color: '#6b4f2e', size: 0.05 },
   ],
 })
 const ok = (l: unknown) => pageLayoutSchema.safeParse(l).success

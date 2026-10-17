@@ -12,19 +12,19 @@
 .bg-paper-cream {
   background:
     radial-gradient(ellipse 85% 75% at 50% 45%, transparent 55%, rgba(130, 95, 45, .2)),
-    url(../assets/paper-grain.svg), url(../assets/paper-mottle.svg),
+    url(../assets/paper-grain.webp), url(../assets/paper-mottle.webp) 0 0 / 600px 600px,
     #f5ecd8;
 }
 .bg-paper-kraft {
   background:
     radial-gradient(ellipse 85% 75% at 50% 45%, transparent 50%, rgba(70, 45, 15, .28)),
-    url(../assets/paper-fibers.svg), url(../assets/paper-grain.svg), url(../assets/paper-mottle.svg),
+    url(../assets/paper-fibers.webp), url(../assets/paper-grain.webp), url(../assets/paper-mottle.webp) 0 0 / 600px 600px,
     #c79f6e;
 }
 .bg-paper-grid {
   background:
     radial-gradient(ellipse 85% 75% at 50% 45%, transparent 60%, rgba(120, 100, 60, .14)),
-    url(../assets/paper-grain.svg),
+    url(../assets/paper-grain.webp),
     linear-gradient(rgba(84, 132, 178, .2) 1px, transparent 1px) 0 0 / 5cqw 5cqw,
     linear-gradient(90deg, rgba(84, 132, 178, .2) 1px, transparent 1px) 0 0 / 5cqw 5cqw,
     #fbf8ef;
@@ -32,27 +32,28 @@
 .bg-paper-dots {
   background:
     radial-gradient(ellipse 85% 75% at 50% 45%, transparent 60%, rgba(120, 95, 50, .16)),
-    url(../assets/paper-grain.svg),
+    url(../assets/paper-grain.webp),
     radial-gradient(circle, rgba(110, 88, 60, .32) .32cqw, transparent .42cqw) 2.5cqw 2.5cqw / 5cqw 5cqw,
     #f4ecdb;
 }
 
 /* ---- Frames ---- */
-.el-frame { filter: drop-shadow(0 .25cqh .25cqh rgba(40, 28, 10, .22)) drop-shadow(0 1.2cqh 1.4cqh rgba(40, 28, 10, .16)); }
+.el-frame:has(> .frame-torn) { filter: drop-shadow(0 .6cqh .8cqh rgba(40, 28, 10, .25)); }
 .frame { width: 100%; height: 100%; display: flex; }
+.frame-polaroid, .frame-plain { box-shadow: 0 .25cqh .4cqh rgba(40, 28, 10, .2), 0 1.2cqh 1.8cqh -.4cqh rgba(40, 28, 10, .2); }
 .frame-window {
   position: relative; flex: 1; overflow: hidden; background: #e8dfcc;
   box-shadow: inset 0 0 0 1px rgba(60, 40, 20, .08), inset 0 0 .6cqh rgba(60, 40, 20, .12);
 }
 .frame-polaroid { padding: 4% 4% 14%; background: linear-gradient(165deg, #fffefa, #f5f1e7); }
 .frame-plain { padding: 2.5%; background: #fffdf8; }
-.frame-torn { padding: 6%; background: url(../assets/paper-grain.svg), #fbf6ea; }
+.frame-torn { padding: 6%; background: url(../assets/paper-grain.webp), #fbf6ea; }
 
-.slot-paper { position: absolute; inset: 0; background: url(../assets/paper-grain.svg), #ede4d1; }
+.slot-paper { position: absolute; inset: 0; background: url(../assets/paper-grain.webp), #ede4d1; }
 .slot-empty {
   position: absolute; inset: 5%; display: grid; place-items: center;
   border: .35cqh dashed rgba(74, 59, 44, .45); border-radius: .6cqh;
-  font-family: 'Caveat', 'Patrick Hand', cursive; font-size: 4cqh; color: rgba(74, 59, 44, .7);
+  font-family: 'Patrick Hand', cursive; font-size: 3.6cqh; color: rgba(74, 59, 44, .7);
 }
 .chip {
   position: absolute; left: 6%; bottom: 6%; padding: .3cqh 1.2cqh; border-radius: 1cqh;
@@ -69,6 +70,8 @@
 .blur-image picture, .blur-image .sharp { position: absolute; inset: 0; width: 100%; height: 100%; }
 .blur-image .sharp { display: block; object-fit: cover; opacity: 0; transition: opacity 300ms ease-out; }
 .blur-image .sharp.loaded { opacity: 1; }
+/* Once the sharp image has faded in, stop painting the blur under it. */
+.blur-image:has(.sharp.loaded) .blur-layer { visibility: hidden; transition: visibility 0s 300ms; }
 
 /* ---- Video ---- */
 .video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
@@ -80,10 +83,9 @@
   font-size: 3cqh; padding-left: .4cqh; pointer-events: none;
 }
 
-/* ---- Washi tape: torn zig-zag ends, translucent so the photo shows through ---- */
-.el-tape { filter: drop-shadow(0 .15cqh .2cqh rgba(40, 28, 10, .2)); }
+/* ---- Washi tape: torn zig-zag ends, translucent so the photo shows through (no filters/blend: paint cost) ---- */
 .tape {
-  position: relative; width: 100%; height: 100%; mix-blend-mode: multiply;
+  position: relative; width: 100%; height: 100%;
   clip-path: polygon(3% 0, 97% 0, 100% 10%, 96% 20%, 100% 30%, 97% 40%, 100% 50%, 96% 60%, 100% 70%, 97% 80%, 100% 90%, 97% 100%,
                      3% 100%, 0 90%, 4% 80%, 0 70%, 3% 60%, 0 50%, 4% 40%, 0 30%, 3% 20%, 0 10%);
 }
@@ -99,14 +101,13 @@
     linear-gradient(90deg, rgba(255, 255, 255, .25) 50%, transparent 50%) 0 0 / 1.6cqh 100%,
     rgba(140, 207, 182, .72);
 }
-.tape-kraft { background: url(../assets/paper-fibers.svg), url(../assets/paper-grain.svg), rgba(190, 150, 100, .88); }
+.tape-kraft { background: url(../assets/paper-fibers.webp), url(../assets/paper-grain.webp), rgba(190, 150, 100, .88); }
 
 /* ---- Stickers: die-cut white edge + lift ---- */
-.el-sticker svg {
-  display: block; width: 100%; height: 100%; overflow: visible;
-  filter: drop-shadow(.35cqw 0 0 #fff) drop-shadow(-.35cqw 0 0 #fff) drop-shadow(0 .35cqw 0 #fff) drop-shadow(0 -.35cqw 0 #fff)
-          drop-shadow(0 .3cqh .4cqh rgba(40, 28, 10, .3));
-}
+.el-sticker svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.el-sticker .cut * { fill: #fff; stroke: #fff; stroke-width: 10px; stroke-dasharray: none; }
+.el-sticker .cut-shadow { opacity: .2; }
+.el-sticker .cut-shadow * { fill: #281c0a; stroke: #281c0a; stroke-width: 10px; stroke-dasharray: none; }
 
 /* ---- Handwritten text ---- */
 .el-text .text {

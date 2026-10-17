@@ -3,7 +3,8 @@
   --paper-dark: #e2d6bd;
   --ink: #3b3226;
   --accent: #b5543a;
-  --hand: 'Caveat', 'Patrick Hand', cursive;
+  --hand: 'Dancing Script', cursive;
+  --hand-plain: 'Patrick Hand', cursive; /* small sizes: script gets hard to read */
 }
 * { box-sizing: border-box; }
 body {
@@ -11,7 +12,8 @@ body {
   background: var(--paper) radial-gradient(circle at 20% 10%, #f6efe0, var(--paper) 60%);
   font-family: system-ui, sans-serif;
 }
-h1, strong { font-family: var(--hand); }
+h1 { font-family: var(--hand); }
+strong { font-family: var(--hand-plain); }
 button {
   font: inherit; padding: .5rem 1rem; border: 0; border-radius: 4px; cursor: pointer;
   background: var(--accent); color: #fff;
@@ -31,7 +33,7 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .albums header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; }
 .albums h1 { font-size: 2.4rem; margin: .25rem 0; }
 .new-album { display: flex; flex-wrap: wrap; gap: .5rem; }
-.empty { text-align: center; font-family: var(--hand); font-size: 1.5rem; }
+.empty { text-align: center; font-family: var(--hand-plain); font-size: 1.5rem; }
 .grid {
   list-style: none; margin: 1.5rem 0; padding: 0;
   display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 1.5rem;

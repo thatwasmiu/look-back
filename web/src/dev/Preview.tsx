@@ -28,12 +28,12 @@ const frame = (geo: ReturnType<typeof g>, frameStyle: FrameEl['frameStyle'], med
   ({ type: 'frame', ...geo, frameStyle, mediaId, crop: { x: cx, y: cy, scale } });
 const tape = (geo: ReturnType<typeof g>, tapeStyle: 'yellow' | 'pink' | 'mint' | 'kraft'): PageElement => ({ type: 'tape', ...geo, tapeStyle });
 const sticker = (geo: ReturnType<typeof g>, stickerId: string): PageElement => ({ type: 'sticker', ...geo, stickerId });
-const text = (geo: ReturnType<typeof g>, t: string, font: 'caveat' | 'patrick-hand', size: number, color = '#4a3b2c'): PageElement =>
+const text = (geo: ReturnType<typeof g>, t: string, font: 'dancing-script' | 'patrick-hand', size: number, color = '#4a3b2c'): PageElement =>
   ({ type: 'text', ...geo, text: t, font, size, color });
 
 const pages: { label: string; mode: 'view' | 'edit'; layout: PageLayout }[] = [
   { label: 'paper-cream · polaroid · yellow/pink tape', mode: 'view', layout: { background: 'paper-cream', elements: [
-    text(g(0.08, 0.035, 0.84, 0.1, -2, 5), 'Đà Lạt mùa hè ✿', 'caveat', 0.075, '#7a4a2e'),
+    text(g(0.08, 0.035, 0.84, 0.1, -2, 5), 'Đà Lạt mùa hè ✿', 'dancing-script', 0.075, '#7a4a2e'),
     frame(g(0.07, 0.15, 0.62, 0.4, -4, 1), 'polaroid', 'sunset'),
     tape(g(0.28, 0.13, 0.22, 0.045, -6, 3), 'yellow'),
     frame(g(0.42, 0.5, 0.52, 0.34, 5, 2), 'polaroid', 'lake', 0.5, 0.6, 1.2),
@@ -50,7 +50,7 @@ const pages: { label: string; mode: 'view' | 'edit'; layout: PageLayout }[] = [
     tape(g(0.64, 0.085, 0.18, 0.04, 4, 3), 'mint'),
     frame(g(0.3, 0.5, 0.56, 0.36, -3, 2), 'polaroid', 'video'),
     tape(g(0.45, 0.485, 0.24, 0.045, 2, 3), 'kraft'),
-    text(g(0.36, 0.875, 0.5, 0.06, -3, 5), 'thác Datanla', 'caveat', 0.045, '#fdf6e6'),
+    text(g(0.36, 0.875, 0.5, 0.06, -3, 5), 'thác Datanla', 'dancing-script', 0.045, '#fdf6e6'),
     sticker(g(0.06, 0.58, 0.2, 0.15, -12, 6), 'camera'),
     sticker(g(0.04, 0.78, 0.28, 0.17, 8, 6), 'ticket'),
     sticker(g(0.8, 0.42, 0.16, 0.12, 10, 6), 'coffee'),
@@ -77,7 +77,7 @@ const pages: { label: string; mode: 'view' | 'edit'; layout: PageLayout }[] = [
     sticker(g(0.7, 0.06, 0.2, 0.15, 14, 6), 'leaf'),
     sticker(g(0.62, 0.62, 0.22, 0.15, -6, 6), 'arrow'),
     sticker(g(0.72, 0.7, 0.2, 0.15, 10, 6), 'butterfly'),
-    text(g(0.56, 0.9, 0.4, 0.06, -4, 5), 'ghi chú ở đây…', 'caveat', 0.04),
+    text(g(0.56, 0.9, 0.4, 0.06, -4, 5), 'ghi chú ở đây…', 'dancing-script', 0.04),
   ] } },
 ];
 

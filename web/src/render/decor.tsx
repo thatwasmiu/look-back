@@ -2,8 +2,7 @@ import type { ComponentType, ReactNode } from 'react';
 import type { TapeEl, TextEl } from '@scrapbook/shared';
 
 export const fontFamily: Record<TextEl['font'], string> = {
-  // Caveat has no Vietnamese tone-mark glyphs (U+1EA0–1EF9); Patrick Hand fills them in.
-  caveat: "'Caveat', 'Patrick Hand', cursive",
+  'dancing-script': "'Dancing Script', cursive",
   'patrick-hand': "'Patrick Hand', cursive",
 };
 
@@ -12,11 +11,14 @@ export const tapeStyles: TapeEl['tapeStyle'][] = ['yellow', 'pink', 'mint', 'kra
 export const Tape = ({ tapeStyle }: { tapeStyle: TapeEl['tapeStyle'] }) => <div className={`tape tape-${tapeStyle}`} />;
 
 // Hand-drawn sticker set: same ink outline, flat pastel fills, a white highlight.
-// The die-cut white border and shadow come from CSS (.el-sticker svg).
+// Die-cut white border + offset shadow are the same shapes drawn fat underneath (CSS .cut / .cut-shadow),
+// not CSS filters: drop-shadow stacks were too slow to paint while scrolling.
 const INK = '#4a3b2c';
 const svg = (children: ReactNode): ComponentType => {
   const Svg = () => (
     <svg viewBox="0 0 100 100" fill="none" stroke={INK} strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round">
+      <g className="cut-shadow" transform="translate(0 2.5)">{children}</g>
+      <g className="cut">{children}</g>
       {children}
     </svg>
   );

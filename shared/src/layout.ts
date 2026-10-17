@@ -35,7 +35,7 @@ const textSchema = z.object({
   ...baseShape,
   type: z.literal('text'),
   text: z.string().max(500),
-  font: z.enum(['caveat', 'patrick-hand']),
+  font: z.enum(['dancing-script', 'patrick-hand']),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   size: z.number().gt(0), // fraction of page height
 })
