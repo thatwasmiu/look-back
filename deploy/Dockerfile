@@ -10,7 +10,7 @@ COPY tsconfig.base.json ./
 COPY shared shared
 COPY server server
 COPY web web
-ARG VITE_MEDIA_BASE_URL
+ARG VITE_MEDIA_BASE_URL=/media
 ENV VITE_MEDIA_BASE_URL=${VITE_MEDIA_BASE_URL}
 RUN npm run build -w server && npm run build -w web
 
