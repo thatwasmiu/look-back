@@ -3,13 +3,14 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes, useParams } from 'react
 import { api } from './api';
 import Login from './pages/Login';
 import AlbumList from './pages/AlbumList';
+import Viewer from './pages/Viewer';
 
-// Placeholders until the viewer/editor tasks.
-const Viewer = () => <p>Viewer {useParams().id}</p>;
+// Placeholder until the editor task.
 const Editor = () => <p>Editor {useParams().id}</p>;
 
-// Dev-only renderer showcase; import.meta.env.DEV is false in builds, so it's tree-shaken out.
+// Dev-only renderer/viewer showcases; import.meta.env.DEV is false in builds, so they're tree-shaken out.
 const Preview = import.meta.env.DEV ? lazy(() => import('./dev/Preview')) : null;
+const ViewerPreview = import.meta.env.DEV ? lazy(() => import('./dev/ViewerPreview')) : null;
 
 // Layout route: check() runs once on load for all protected routes.
 function Gate() {
@@ -28,6 +29,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         {Preview && <Route path="/dev/preview" element={<Suspense><Preview /></Suspense>} />}
+        {ViewerPreview && <Route path="/dev/viewer" element={<Suspense><ViewerPreview /></Suspense>} />}
         <Route element={<Gate />}>
           <Route path="/" element={<AlbumList />} />
           <Route path="/albums/:id" element={<Viewer />} />

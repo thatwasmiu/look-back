@@ -11,7 +11,7 @@ const img = (id: string, name: keyof typeof blur, over: Partial<MediaDTO> = {}):
   variants: { display: `dev-samples/${name}.webp`, displayAvif: `dev-samples/${name}.avif`, original: `dev-samples/${name}.webp` },
   ...over,
 });
-const media = new Map<string, MediaDTO>(([
+export const media = new Map<string, MediaDTO>(([
   img('sunset', 'sunset-hills'), img('lake', 'lake-mountains'), img('pine', 'pine-forest'), img('beach', 'beach'),
   img('processing', 'beach', { status: 'processing', variants: null }),
   img('failed', 'beach', { status: 'failed', blurDataUrl: null, variants: null, error: 'ffmpeg exited 1' }),
@@ -31,7 +31,7 @@ const sticker = (geo: ReturnType<typeof g>, stickerId: string): PageElement => (
 const text = (geo: ReturnType<typeof g>, t: string, font: 'dancing-script' | 'patrick-hand', size: number, color = '#4a3b2c'): PageElement =>
   ({ type: 'text', ...geo, text: t, font, size, color });
 
-const pages: { label: string; mode: 'view' | 'edit'; layout: PageLayout }[] = [
+export const pages: { label: string; mode: 'view' | 'edit'; layout: PageLayout }[] = [
   { label: 'paper-cream · polaroid · yellow/pink tape', mode: 'view', layout: { background: 'paper-cream', elements: [
     text(g(0.08, 0.035, 0.84, 0.1, -2, 5), 'Đà Lạt mùa hè ✿', 'dancing-script', 0.075, '#7a4a2e'),
     frame(g(0.07, 0.15, 0.62, 0.4, -4, 1), 'polaroid', 'sunset'),

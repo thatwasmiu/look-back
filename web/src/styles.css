@@ -48,3 +48,53 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .polaroid strong { display: block; margin-top: .5rem; font-size: 1.5rem; text-align: center; }
 .polaroid small { display: block; text-align: center; opacity: .7; }
 .polaroid small a { display: inline; text-decoration: underline; }
+
+/* ---- Viewer: the book on a desk ---- */
+.viewer {
+  height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
+  background: radial-gradient(ellipse 90% 80% at 50% 45%, #8a6a4c, #5b412e);
+  color: #f6efe0;
+}
+.viewer .empty { color: inherit; }
+.viewer-bar { display: flex; align-items: center; gap: .75rem; padding: .5rem 1rem; }
+.viewer-bar a { color: inherit; text-decoration: none; }
+.viewer-bar h1 { flex: 1; min-width: 0; margin: 0; font-size: 1.6rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.viewer-bar .counter { font-family: var(--hand-plain); font-size: 1.1rem; opacity: .85; white-space: nowrap; }
+.viewer-bar .btn { background: var(--accent); color: #fff; padding: .35rem .9rem; border-radius: 4px; }
+.stage { flex: 1; min-height: 0; container-type: size; display: grid; place-items: center; }
+/* Largest 3:4 page (or 3:2 spread) that fits the stage with a gutter: never scroll to see a page. */
+.book {
+  position: relative; aspect-ratio: 3 / 4; width: min(calc(100cqw - 32px), calc((100cqh - 32px) * .75));
+  perspective: 2400px; touch-action: pan-y pinch-zoom;
+}
+.book.spread { aspect-ratio: 3 / 2; width: min(calc(100cqw - 64px), calc((100cqh - 48px) * 1.5)); }
+.leaf { position: absolute; top: 0; left: 0; width: 100%; z-index: 1; }
+.spread .leaf { width: 50%; }
+.spread .leaf.right { left: 50%; }
+.leaf.hidden { visibility: hidden; z-index: 0; }
+.leaf.fade, .leaf.sweep { z-index: 2; pointer-events: none; }
+.leaf.sweep { z-index: 3; }
+/* Turn: outgoing leading page slides over the spine with a slight curl; the page under it crossfades. */
+.fwd .leaf.sweep { transform-origin: left center; animation: sweep-fwd 350ms ease-in-out forwards; }
+.back .leaf.sweep { transform-origin: right center; animation: sweep-back 350ms ease-in-out forwards; }
+.leaf.fade { animation: fade-out 350ms ease-in forwards; }
+.leaf.fade-in { animation: fade-in 350ms ease-out; }
+@keyframes sweep-fwd { 55% { transform: translateX(-55%) rotateY(-18deg); opacity: 1; } to { transform: translateX(-100%); opacity: 0; } }
+@keyframes sweep-back { 55% { transform: translateX(55%) rotateY(18deg); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+@keyframes fade-out { to { opacity: 0; } }
+@keyframes fade-in { from { opacity: 0; } }
+/* Spine: soft shadow where the two pages meet. */
+.book.spread.has-left::after {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 46%; width: 8%; z-index: 4; pointer-events: none;
+  background: linear-gradient(90deg, transparent, #0000001f 42%, #00000038 50%, #0000001f 58%, transparent);
+}
+/* Tap/click zones on the outer page edges only, clear of a frame's play button. */
+.edge { position: absolute; top: 0; bottom: 0; width: 18%; z-index: 5; padding: 0; border-radius: 0; background: transparent; }
+.spread .edge { width: 9%; }
+.edge-prev { left: 0; }
+.edge-next { right: 0; }
+.edge:disabled { cursor: default; }
+.edge:not(:disabled):hover { background: linear-gradient(var(--to), #ffffff1a, transparent); }
+.edge-prev { --to: 90deg; }
+.edge-next { --to: 270deg; }
+.edge:focus-visible { outline: 2px solid #f6efe0; outline-offset: -2px; }
