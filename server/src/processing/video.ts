@@ -54,7 +54,7 @@ export function hlsArgs(input: string, outDir: string, info: ProbeInfo, renditio
   const filter = `[0:v]split=${n}${rs.map((_, i) => `[s${i}]`).join('')};`
     + rs.map((r, i) => `[s${i}]scale=${portrait ? `${r}:-2` : `-2:${r}`}[v${i}]`).join(';');
 
-  const args = ['-y', '-i', input, '-filter_complex', filter];
+  const args = ['-hide_banner', '-nostats', '-v', 'error', '-y', '-i', input, '-filter_complex', filter];
   rs.forEach((r, i) => {
     args.push('-map', `[v${i}]`);
     if (info.hasAudio) args.push('-map', '0:a:0');
@@ -62,7 +62,7 @@ export function hlsArgs(input: string, outDir: string, info: ProbeInfo, renditio
     args.push(`-maxrate:v:${i}`, `${cap}k`, `-bufsize:v:${i}`, `${cap * 2}k`);
   });
   args.push('-c:v', 'libx264', '-preset', preset, '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-crf', '23',
-    '-g', '96', '-keyint_min', '96', '-sc_threshold', '0');
+    '-force_key_frames', 'expr:gte(t,n_forced*4)', '-sc_threshold', '0');
   if (info.hasAudio) args.push('-c:a', 'aac', '-b:a', '128k');
   args.push('-f', 'hls', '-hls_time', '4', '-hls_playlist_type', 'vod',
     '-hls_segment_filename', join(outDir, '%v_%04d.ts'),
@@ -82,7 +82,8 @@ export async function processVideo(
   await run('nice', ['-n', '10', 'ffmpeg', ...hlsArgs(srcPath, hlsDir, info, renditions, preset)]);
 
   const t = Math.min(1, info.durationSec / 2);
-  const frame = await run('nice', ['-n', '10', 'ffmpeg', '-v', 'error', '-ss', String(t), '-i', srcPath,
+  const frame = await run('nice', ['-n', '10', 'ffmpeg', '-hide_banner', '-nostats', '-v', 'error', '-ss', String(t), '-i', srcPath,
+    '-vf', "scale='if(gt(iw,ih),min(2048,iw),-2)':'if(gt(iw,ih),-2,min(2048,ih))'",
     '-frames:v', '1', '-f', 'image2pipe', '-c:v', 'png', 'pipe:1']);
   await writeWebp(frame, absPath(mediaDir, keyFor(mediaId, 'poster.webp')), 2048, 80);
   await copyFile(srcPath, absPath(mediaDir, keyFor(mediaId, `original.${ext}`)));

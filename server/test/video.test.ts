@@ -77,6 +77,16 @@ describe('processVideo', () => {
     expect(out).toBe('yuv420p');
   });
 
+  it('segments are ~4 s regardless of fps', async () => {
+    const src = join(dir, 'long.mp4');
+    ff('-f', 'lavfi', '-i', 'testsrc2=s=320x180:d=9:r=30', '-c:v', 'libx264', src);
+    await processVideo(src, 'v7', dir, 'mp4', [720], 'ultrafast');
+    const pl = await readFile(absPath(dir, 'v7/hls/180p.m3u8'), 'utf8');
+    const durs = [...pl.matchAll(/#EXTINF:([\d.]+)/g)].map((m) => Number(m[1]));
+    expect(durs.length).toBeGreaterThanOrEqual(3);
+    for (const d of durs.slice(0, -1)) expect(Math.abs(d - 4)).toBeLessThanOrEqual(0.25);
+  });
+
   it('video without audio succeeds', async () => {
     const src = join(dir, 'na.mp4');
     ff(...lavfi('320x180', false), '-c:v', 'libx264', src);
