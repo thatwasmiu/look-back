@@ -1,0 +1,5 @@
+{
+  "name": "scrapbook-album",
+  "private": true,
+  "workspaces": ["shared", "server", "web"]
+}
