@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { FileStore } from '@tus/file-store';
 import { Server } from '@tus/server';
@@ -12,11 +13,26 @@ const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/qu
 const HEIC = "HEIC not supported — choose 'Most Compatible' or let the browser convert to JPEG";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const bad = (body: string) => ({ status_code: 400, body });
+// An unfinished upload older than this is refused by tus (410) and cleaned up by the worker.
+export const UPLOAD_EXPIRY_MS = 24 * 3600 * 1000;
+
+// Marks abandoned uploads failed and deletes their partial files. Runs in the worker, hourly.
+export async function cleanupAbandonedUploads(pool: pg.Pool, uploadDir: string, maxAgeMs = UPLOAD_EXPIRY_MS): Promise<void> {
+  const { rows } = await pool.query(
+    `update media set status='failed', error='upload abandoned'
+      where status='uploading' and created_at < now() - $1 * interval '1 millisecond' returning id`,
+    [maxAgeMs],
+  );
+  for (const { id } of rows) {
+    await rm(join(uploadDir, id), { force: true });
+    await rm(join(uploadDir, `${id}.json`), { force: true });
+  }
+}
 
 export function registerUploads(app: FastifyInstance, config: Config, pool: pg.Pool, boss: PgBoss): void {
   const tus = new Server({
     path: '/api/uploads',
-    datastore: new FileStore({ directory: config.uploadDir }),
+    datastore: new FileStore({ directory: config.uploadDir, expirationPeriodInMilliseconds: UPLOAD_EXPIRY_MS }),
     maxSize: config.maxUploadBytes,
     relativeLocation: true,
     namingFunction: () => randomUUID(), // also the media row id

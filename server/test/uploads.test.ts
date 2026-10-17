@@ -1,6 +1,9 @@
 import { randomBytes } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { JOB_PROCESS_MEDIA } from '../src/queue.js';
+import { cleanupAbandonedUploads } from '../src/uploads.js';
 import { testApp } from './helpers.js';
 
 const t = await testApp({ maxUploadBytes: 8 * 1024 * 1024 });
@@ -101,5 +104,31 @@ describe('tus uploads', () => {
       body: new Uint8Array(10),
     });
     expect(r.status).toBe(401);
+  });
+
+  it('abandoned partial uploads expire: cleanup marks the row failed and removes its files', async () => {
+    const cookie = await t.login();
+    const albumId = await mkAlbum();
+    const start = async () => {
+      const c = await create({ albumId, filename: 'p.mp4', filetype: 'video/mp4' }, 1000, cookie);
+      expect(c.status).toBe(201);
+      expect(c.headers.get('upload-expires')).toBeTruthy(); // tus expiration is on
+      const url = new URL(c.headers.get('location')!, base).href;
+      expect((await patch(url, 0, randomBytes(100), cookie)).status).toBe(204);
+      return url.split('/').pop()!;
+    };
+    const old = await start();
+    const fresh = await start();
+    await t.pool.query(`update media set created_at = now() - interval '25 hours' where id = $1`, [old]);
+    expect(existsSync(join(t.config.uploadDir, old))).toBe(true);
+
+    await cleanupAbandonedUploads(t.pool, t.config.uploadDir);
+
+    const status = async (id: string) => (await t.pool.query('select status, error from media where id=$1', [id])).rows[0];
+    expect(await status(old)).toEqual({ status: 'failed', error: 'upload abandoned' });
+    expect(existsSync(join(t.config.uploadDir, old))).toBe(false);
+    expect(existsSync(join(t.config.uploadDir, `${old}.json`))).toBe(false);
+    expect(await status(fresh)).toEqual({ status: 'uploading', error: null });
+    expect(existsSync(join(t.config.uploadDir, fresh))).toBe(true);
   });
 });
