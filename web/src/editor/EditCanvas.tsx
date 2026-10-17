@@ -1,7 +1,7 @@
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { flushSync } from 'react-dom';
 import Moveable from 'react-moveable';
-import type { MediaDTO, PageElement, PageLayout, TextEl } from '@scrapbook/shared';
+import type { FrameEl, MediaDTO, PageElement, PageLayout, TextEl } from '@scrapbook/shared';
 import { PageRenderer } from '../render/PageRenderer';
 import { fontFamily } from '../render/decor';
 import { updateElement } from './layoutOps';
@@ -11,22 +11,38 @@ type Props = {
   selectedId: string | null; onSelect(id: string | null): void;
   onCommit(l: PageLayout): void; // one history entry
   onFrameAddMedia?(frameId: string): void; // empty frame tapped: media tray/upload hooks in here
+  cropId?: string | null; onCrop?(frameId: string | null): void; // frame in crop mode (pan/zoom the photo inside it)
 };
+type Crop = FrameEl['crop'];
 
 const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
 
 // Selected element gets react-moveable handles. During a gesture only a transient layout changes (live preview);
 // the gesture end commits it once. Moveable reports CSS px relative to the page box; page units = px / box size.
-export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFrameAddMedia }: Props) {
+export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFrameAddMedia, cropId = null, onCrop }: Props) {
   const pageRef = useRef<HTMLDivElement>(null);
   const moveableRef = useRef<Moveable>(null);
   const [live, setLive] = useState<PageLayout | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const start = useRef<PageElement | null>(null);
   const liveRef = useRef<PageLayout | null>(null); // gesture-end handler must not read a stale closure
-  const shown = live ?? layout;
+  // Crop gesture preview; committed once on Done (or a tap outside the frame).
+  const [cropLive, setCropLive] = useState<Crop | null>(null);
+  useEffect(() => setCropLive(null), [cropId]);
+  // The page box resizes with the stage (window, phone tray opening): keep the handles on the element.
+  useEffect(() => {
+    if (typeof ResizeObserver === 'undefined') return; // jsdom
+    const ro = new ResizeObserver(() => moveableRef.current?.updateRect());
+    ro.observe(pageRef.current!);
+    return () => ro.disconnect();
+  }, []);
+  const shown = cropId && cropLive ? updateElement(live ?? layout, cropId, { crop: cropLive }) : live ?? layout;
   const selected = layout.elements.find((e) => e.id === selectedId) ?? null;
-  const target = selected && editingId !== selected.id
+  const finishCrop = () => {
+    if (cropId && cropLive) onCommit(updateElement(layout, cropId, { crop: cropLive }));
+    onCrop?.(null);
+  };
+  const target = selected && editingId !== selected.id && cropId !== selected.id
     ? [...pageRef.current?.querySelectorAll<HTMLElement>('[data-el]') ?? []].find((n) => n.dataset.el === selected.id) ?? null : null;
 
   const size = () => {
@@ -50,7 +66,8 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
   };
 
   const onPointerDown = (e: ReactPointerEvent) => {
-    if ((e.target as Element).closest('.moveable-control-box, [contenteditable]')) return;
+    if ((e.target as Element).closest('.moveable-control-box, [contenteditable], .crop-overlay')) return;
+    if (cropId) finishCrop();
     const id = (e.target as Element).closest('[data-el]')?.getAttribute('data-el') ?? null;
     if (id !== editingId) setEditingId(null);
     if (id === selectedId) return;
@@ -62,9 +79,12 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
   const startEditing = (id: string | null) => {
     const el = layout.elements.find((x) => x.id === id);
     if (el?.type === 'text') { onSelect(el.id); setEditingId(el.id); }
+    if (el?.type === 'frame' && el.mediaId) { onSelect(el.id); onCrop?.(el.id); }
   };
 
-  const renderOverlay = (el: PageElement) => el.id === editingId && el.type === 'text'
+  const renderOverlay = (el: PageElement) => el.id === cropId && el.type === 'frame'
+    ? <CropOverlay el={el} media={el.mediaId ? media.get(el.mediaId) : undefined} onChange={setCropLive} onDone={finishCrop} />
+    : el.id === editingId && el.type === 'text'
     ? <TextEditor el={el} onDone={(text) => {
       setEditingId(null);
       if (text !== el.text) onCommit(updateElement(layout, el.id, { text: text.slice(0, 500) }));
@@ -115,6 +135,73 @@ function TextEditor({ el, onDone }: { el: TextEl; onDone(text: string): void }) 
       onBlur={(e) => onDone(e.currentTarget.innerText.replace(/\n$/, ''))}
       onKeyDown={(e) => { if (e.key === 'Escape') e.currentTarget.blur(); }}>
       {el.text}
+    </div>
+  );
+}
+
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+// Crop mode: drag pans (the photo follows the finger), wheel / pinch zooms. Pointer deltas are rotated into the
+// frame's own axes. With cover-fit and scale about the crop point (BlurImage), the image's left edge sits at
+// -crop.x * (renderedWidth - windowWidth), so a pan of dx px is Δcrop.x = -dx / (renderedWidth - windowWidth).
+function CropOverlay({ el, media, onChange, onDone }: { el: FrameEl; media: MediaDTO | undefined; onChange(c: Crop): void; onDone(): void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const cur = useRef(el.crop); // latest crop, ahead of re-renders
+  const pts = useRef(new Map<number, { x: number; y: number }>());
+  const base = useRef<{ crop: Crop; cx: number; cy: number; d: number } | null>(null);
+  const set = (c: Crop) => { cur.current = c; onChange(c); };
+
+  const pan = (c: Crop, sx: number, sy: number): Crop => {
+    const win = ref.current?.parentElement?.querySelector<HTMLElement>('.frame-window');
+    if (!win) return c;
+    const a = (-el.rotation * Math.PI) / 180;
+    const dx = sx * Math.cos(a) - sy * Math.sin(a);
+    const dy = sx * Math.sin(a) + sy * Math.cos(a);
+    const w = win.offsetWidth, h = win.offsetHeight;
+    const iw = media?.width || w, ih = media?.height || h;
+    const k = Math.max(w / iw, h / ih) * c.scale;
+    const rx = iw * k - w, ry = ih * k - h;
+    return { ...c, x: rx > 0.5 ? clamp(c.x - dx / rx, 0, 1) : c.x, y: ry > 0.5 ? clamp(c.y - dy / ry, 0, 1) : c.y };
+  };
+  // Gesture baseline restarts whenever a finger is added or lifted.
+  const rebase = () => {
+    const p = [...pts.current.values()];
+    if (!p.length) { base.current = null; return; }
+    const cx = p.reduce((s, q) => s + q.x, 0) / p.length, cy = p.reduce((s, q) => s + q.y, 0) / p.length;
+    base.current = { crop: cur.current, cx, cy, d: p.length > 1 ? Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) : 0 };
+  };
+  const onMove = (e: ReactPointerEvent) => {
+    if (!pts.current.has(e.pointerId) || !base.current) return;
+    pts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const p = [...pts.current.values()];
+    const b = base.current;
+    const cx = p.reduce((s, q) => s + q.x, 0) / p.length, cy = p.reduce((s, q) => s + q.y, 0) / p.length;
+    const scale = b.d && p.length > 1 ? clamp(b.crop.scale * Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) / b.d, 1, 5) : b.crop.scale;
+    set(pan({ ...b.crop, scale }, cx - b.cx, cy - b.cy));
+  };
+  const lift = (e: ReactPointerEvent) => { pts.current.delete(e.pointerId); rebase(); };
+
+  useEffect(() => {
+    const n = ref.current!;
+    // Non-passive so a trackpad pinch (ctrl+wheel) zooms the photo instead of the browser page.
+    const wheel = (e: WheelEvent) => {
+      e.preventDefault();
+      set({ ...cur.current, scale: clamp(cur.current.scale * Math.exp(-e.deltaY * 0.0015), 1, 5) });
+    };
+    n.addEventListener('wheel', wheel, { passive: false });
+    return () => n.removeEventListener('wheel', wheel);
+  });
+
+  return (
+    <div className="crop-overlay" ref={ref}
+      onPointerDown={(e) => {
+        if ((e.target as Element).closest('button')) return;
+        e.currentTarget.setPointerCapture(e.pointerId);
+        pts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        rebase();
+      }}
+      onPointerMove={onMove} onPointerUp={lift} onPointerCancel={lift}>
+      <button type="button" className="crop-done" onClick={onDone}>Done</button>
     </div>
   );
 }

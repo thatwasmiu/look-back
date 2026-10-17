@@ -9,6 +9,7 @@ type Props = {
   commit(next: PageLayout | ((l: PageLayout) => PageLayout), select?: string | null, coalesce?: string): void;
   undo(): void; redo(): void; canUndo: boolean; canRedo: boolean;
   status: SaveStatus; save(): void;
+  crop?(): void; // selected filled frame → crop mode (double-tap alone is unreliable on phones)
 };
 
 const backgrounds: PageLayout['background'][] = ['paper-cream', 'paper-kraft', 'paper-grid', 'paper-dots'];
@@ -17,7 +18,7 @@ const statusLabel: Record<SaveStatus, string> = { saved: 'Saved', saving: 'Savin
 
 // Laptop: a bar above the page. Phone (coarse pointer or < 700px, see CSS): a sheet pinned to the bottom,
 // pickers open above it.
-export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo, status, save }: Props) {
+export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo, status, save, crop }: Props) {
   const [picker, setPicker] = useState<'sticker' | 'tape' | 'bg' | null>(null);
   const toggle = (p: typeof picker) => setPicker((cur) => (cur === p ? null : p));
   const add = (el: PageElement) => { commit(addElement(layout, el), el.id); setPicker(null); };
@@ -47,6 +48,7 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
         <button type="button" aria-expanded={picker === 'tape'} onClick={() => toggle('tape')}>Tape</button>
         <button type="button" onClick={() => add(newText())}>Text</button>
         <button type="button" aria-expanded={picker === 'bg'} onClick={() => toggle('bg')}>Paper</button>
+        {crop && selected?.type === 'frame' && selected.mediaId && <button type="button" onClick={crop}>Crop</button>}
         <span className="sep" />
         <button type="button" disabled={!sel} aria-label="Bring forward" title="Bring forward" onClick={() => sel && commit(bringForward(layout, sel))}>↑</button>
         <button type="button" disabled={!sel} aria-label="Send backward" title="Send backward" onClick={() => sel && commit(sendBackward(layout, sel))}>↓</button>

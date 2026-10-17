@@ -22,7 +22,7 @@ type Props = { el: FrameEl; media: MediaDTO | undefined; mode: 'view' | 'edit'; 
 
 export function FrameView({ el, media, mode, active }: Props) {
   return (
-    <div className={`frame frame-${el.frameStyle}`} style={el.frameStyle === 'torn' ? { clipPath: TORN_CLIP } : undefined}>
+    <div className={`frame frame-${el.frameStyle}`} data-frame-id={el.id} style={el.frameStyle === 'torn' ? { clipPath: TORN_CLIP } : undefined}>
       <div className="frame-window">{content(el, media, mode, active)}</div>
     </div>
   );

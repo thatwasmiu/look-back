@@ -8,7 +8,7 @@ import blur from './samples/blur.json';
 const img = (id: string, name: keyof typeof blur, over: Partial<MediaDTO> = {}): MediaDTO => ({
   id, albumId: 'dev', kind: 'image', status: 'ready', width: 1200, height: 900, durationSec: null, error: null,
   blurDataUrl: blur[name],
-  variants: { display: `dev-samples/${name}.webp`, displayAvif: `dev-samples/${name}.avif`, original: `dev-samples/${name}.webp` },
+  variants: { thumb: `dev-samples/${name}.webp`, display: `dev-samples/${name}.webp`, displayAvif: `dev-samples/${name}.avif`, original: `dev-samples/${name}.webp` },
   ...over,
 });
 export const media = new Map<string, MediaDTO>(([

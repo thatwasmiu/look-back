@@ -42,6 +42,12 @@ export function assignMedia(l: PageLayout, frameId: string, mediaId: string | nu
   return { ...l, elements: l.elements.map((e) => (e.id === frameId && e.type === 'frame' ? { ...e, mediaId, crop: { x: 0.5, y: 0.5, scale: 1 } } : e)) };
 }
 
+// Media deleted from the album: empty every frame that showed it (same layout back if none did).
+export function clearMedia(l: PageLayout, mediaId: string): PageLayout {
+  if (!l.elements.some((e) => e.type === 'frame' && e.mediaId === mediaId)) return l;
+  return { ...l, elements: l.elements.map((e) => (e.type === 'frame' && e.mediaId === mediaId ? { ...e, mediaId: null } : e)) };
+}
+
 // randomUUID needs a secure context; the app may be opened over plain http on the LAN.
 const newId = () => `e${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 const tilt = () => Math.round((Math.random() * 8 - 4) * 10) / 10;

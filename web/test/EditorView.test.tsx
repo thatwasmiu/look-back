@@ -9,7 +9,8 @@ afterEach(cleanup);
 const setup = (api: EditorApi) => render(
   <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={bundle} api={api} /></MemoryRouter>,
 );
-const okApi = (): EditorApi => ({ savePage: vi.fn().mockResolvedValue({}), addPage: vi.fn(), deletePage: vi.fn(), reorderPages: vi.fn() });
+const mediaApi = { getMedia: vi.fn(), deleteMedia: vi.fn(), updateAlbum: vi.fn() };
+const okApi = (): EditorApi => ({ savePage: vi.fn().mockResolvedValue({}), addPage: vi.fn(), deletePage: vi.fn(), reorderPages: vi.fn(), ...mediaApi });
 
 const bundle: AlbumBundle = {
   album: { id: 'a1', title: 'Trip', coverMediaId: null },
@@ -20,7 +21,7 @@ const bundle: AlbumBundle = {
 test('a failed save blocks switching page; Save retries, then the switch goes through', async () => {
   const api: EditorApi = {
     savePage: vi.fn().mockRejectedValueOnce(new Error('500')).mockResolvedValue({}),
-    addPage: vi.fn(), deletePage: vi.fn(), reorderPages: vi.fn(),
+    addPage: vi.fn(), deletePage: vi.fn(), reorderPages: vi.fn(), ...mediaApi,
   };
   const user = userEvent.setup();
   setup(api);
@@ -47,4 +48,20 @@ test('arrow-key nudges of one element coalesce into a single undo step', async (
   expect(el().style.left).not.toBe(x0);
   await user.click(screen.getByRole('button', { name: 'Undo' }));
   expect(el().style.left).toBe(x0);
+});
+
+test('deleting media from the tray empties its frames locally, so the next save carries no stale mediaId', async () => {
+  const m = { id: 'm1', albumId: 'a1', kind: 'image' as const, status: 'ready' as const, width: 4, height: 3, durationSec: null, blurDataUrl: null, variants: { original: 'm1/o.jpg' }, error: null };
+  const withFrame: AlbumBundle = { ...bundle, media: [m], pages: [{ ...bundle.pages[0], layout: { background: 'paper-cream', elements: [
+    { type: 'frame', id: 'f1', x: 0.1, y: 0.1, w: 0.5, h: 0.4, rotation: 0, z: 1, frameStyle: 'polaroid', mediaId: 'm1', crop: { x: 0.3, y: 0.5, scale: 2 } },
+  ] } }] };
+  const api = { ...okApi(), deleteMedia: vi.fn().mockResolvedValue(undefined) };
+  vi.spyOn(window, 'confirm').mockReturnValue(true);
+  const user = userEvent.setup();
+  render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={withFrame} api={api} /></MemoryRouter>);
+  await user.click(screen.getByRole('button', { name: 'Delete from album' }));
+  await waitFor(() => expect(api.deleteMedia).toHaveBeenCalledWith('m1'));
+  await waitFor(() => expect(api.savePage).toHaveBeenCalledWith('p0', expect.objectContaining({
+    elements: [expect.objectContaining({ id: 'f1', mediaId: null })] }), undefined), { timeout: 3000 });
+  expect(screen.queryByRole('button', { name: 'Delete from album' })).toBeNull();
 });
