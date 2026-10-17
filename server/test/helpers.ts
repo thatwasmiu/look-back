@@ -2,15 +2,18 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildApp } from '../src/app.js';
+import { hashPassword } from '../src/auth.js';
 import type { Config } from '../src/config.js';
 import { createPool } from '../src/db.js';
 import { migrate } from '../src/migrate.js';
+
+const TEST_PASSWORD = 'test-password';
 
 export async function testApp() {
   const config: Config = {
     port: 0,
     databaseUrl: process.env.DATABASE_URL!,
-    ownerPasswordHash: 'scrypt$00$00',
+    ownerPasswordHash: await hashPassword(TEST_PASSWORD),
     sessionSecret: 'test-secret',
     mediaDir: mkdtempSync(join(tmpdir(), 'media-')),
     uploadDir: mkdtempSync(join(tmpdir(), 'upload-')),
@@ -28,8 +31,10 @@ export async function testApp() {
     app,
     pool,
     config,
+    password: TEST_PASSWORD,
     async login(): Promise<string> {
-      throw new Error('login not implemented until auth task');
+      const res = await app.inject({ method: 'POST', url: '/api/auth/login', payload: { password: TEST_PASSWORD } });
+      return String(res.headers['set-cookie']).split(';')[0];
     },
   };
 }

@@ -6,9 +6,12 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "hash-password": "tsx src/hash-password.ts"
   },
   "dependencies": {
+    "@fastify/rate-limit": "^11.2.1",
+    "@fastify/secure-session": "^8.4.1",
     "@scrapbook/shared": "*",
     "fastify": "^5.0.0",
     "pg": "^8.12.0",
