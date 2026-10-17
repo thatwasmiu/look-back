@@ -76,4 +76,15 @@ describe('albums', () => {
     expect(existsSync(dir)).toBe(false);
     expect((await t.pool.query('select 1 from media where id=$1', [mid])).rowCount).toBe(0);
   });
+
+  it('a video cover shows its poster in the list', async () => {
+    const album = (await call('POST', '/api/albums', { title: 'Vid' })).json();
+    const { rows } = await t.pool.query(
+      `insert into media (album_id, kind, status, variants) values ($1,'video','ready',$2) returning id`,
+      [album.id, JSON.stringify({ original: 'o', poster: 'v/poster.webp', hls: 'v/hls/master.m3u8' })],
+    );
+    await call('PATCH', `/api/albums/${album.id}`, { coverMediaId: rows[0].id });
+    const sum = (await call('GET', '/api/albums')).json().find((x: { id: string }) => x.id === album.id);
+    expect(sum.coverThumb).toBe('v/poster.webp');
+  });
 });

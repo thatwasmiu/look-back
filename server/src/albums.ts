@@ -16,7 +16,7 @@ const title = { type: 'string', minLength: 1, maxLength: 200 } as const;
 export function registerAlbums(app: FastifyInstance, pool: pg.Pool, config: Config): void {
   app.get('/api/albums', async (): Promise<AlbumSummary[]> => {
     const { rows } = await pool.query(
-      `select a.*, m.variants->>'thumb' as cover_thumb,
+      `select a.*, coalesce(m.variants->>'thumb', m.variants->>'poster') as cover_thumb,
               (select count(*)::int from pages p where p.album_id = a.id) as page_count
          from albums a left join media m on m.id = a.cover_media_id
         order by a.created_at desc, a.id`,
