@@ -7,6 +7,6 @@ export async function createQueue(databaseUrl: string): Promise<PgBoss> {
   const boss = new PgBoss(databaseUrl);
   boss.on('error', (e) => console.error('pg-boss', e));
   await boss.start();
-  await boss.createQueue(JOB_PROCESS_MEDIA);
+  await boss.createQueue(JOB_PROCESS_MEDIA, { name: JOB_PROCESS_MEDIA, retryLimit: 1 });
   return boss;
 }
