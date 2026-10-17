@@ -3,7 +3,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { JOB_PROCESS_MEDIA } from '../src/queue.js';
 import { testApp } from './helpers.js';
 
-const t = await testApp({ maxUploadBytes: 1024 });
+const t = await testApp({ maxUploadBytes: 8 * 1024 * 1024 });
 // Real HTTP: light-my-request's inject stalls on hijacked raw-stream bodies.
 const base = await t.app.listen({ port: 0, host: '127.0.0.1' });
 afterAll(async () => {
@@ -53,7 +53,7 @@ describe('tus uploads', () => {
   });
 
   it('rejects uploads over the size limit with 413', async () => {
-    const r = await create({ albumId: await mkAlbum(), filename: 'a.jpg', filetype: 'image/jpeg' }, 2048, await t.login());
+    const r = await create({ albumId: await mkAlbum(), filename: 'a.jpg', filetype: 'image/jpeg' }, 9 * 1024 * 1024, await t.login());
     expect(r.status).toBe(413);
   });
 
@@ -79,5 +79,27 @@ describe('tus uploads', () => {
     expect(jobs).toHaveLength(1);
     expect(jobs[0].data.mediaId).toBe(mediaId);
     expect(jobs[0].data.uploadPath).toContain(mediaId);
+  });
+
+  it('accepts PATCH chunks larger than Fastify bodyLimit (3 MiB x 2)', async () => {
+    const cookie = await t.login();
+    const MiB3 = 3 * 1024 * 1024;
+    const c = await create({ albumId: await mkAlbum(), filename: 'big.mp4', filetype: 'video/mp4' }, 2 * MiB3, cookie);
+    expect(c.status).toBe(201);
+    const url = new URL(c.headers.get('location')!, base).href;
+    const chunk = randomBytes(MiB3);
+    expect((await patch(url, 0, chunk, cookie)).status).toBe(204);
+    const last = await patch(url, MiB3, chunk, cookie);
+    expect(last.status).toBe(204);
+    expect(last.headers.get('upload-offset')).toBe(String(2 * MiB3));
+  });
+
+  it('PATCH without a session returns 401', async () => {
+    const r = await fetch(`${base}/api/uploads/${crypto.randomUUID()}`, {
+      method: 'PATCH',
+      headers: { ...tusHeaders(), 'upload-offset': '0', 'content-type': 'application/offset+octet-stream' },
+      body: new Uint8Array(10),
+    });
+    expect(r.status).toBe(401);
   });
 });
