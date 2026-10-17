@@ -26,19 +26,27 @@ export async function processImage(srcPath: string, mediaId: string, mediaDir: s
   await mkdir(dir, { recursive: true });
   const out = (name: string) => absPath(mediaDir, keyFor(mediaId, name));
 
-  // Throws on undecodable input (the upload filetype is client-supplied).
-  const { info } = await sharp(srcPath).rotate().toBuffer({ resolveWithObject: true });
+  // Header-only probe; throws on undecodable input (upload filetype is client-supplied).
+  const meta = await sharp(srcPath).metadata();
+  const swap = (meta.orientation ?? 1) >= 5;
+  const width = (swap ? meta.height : meta.width)!;
+  const height = (swap ? meta.width : meta.height)!;
+
+  // Decode the (possibly 48MP) source once; every derivative comes from this upright buffer.
+  const big = await sharp(srcPath).rotate()
+    .resize({ width: 2048, height: 2048, fit: 'inside', withoutEnlargement: true })
+    .png({ compressionLevel: 1 }).toBuffer();
 
   await copyFile(srcPath, out(`original.${ext}`));
-  await writeWebp(srcPath, out('thumb.webp'), 400, 75);
-  await writeWebp(srcPath, out('display.webp'), 2048, 82);
-  await sharp(srcPath).rotate()
-    .resize({ width: 2048, height: 2048, fit: 'inside', withoutEnlargement: true })
-    .avif({ quality: 55, effort: 4 }).toFile(out('display.avif'));
+  await Promise.all([
+    writeWebp(big, out('thumb.webp'), 400, 75),
+    writeWebp(big, out('display.webp'), 2048, 82),
+    sharp(big).avif({ quality: 55, effort: 4 }).toFile(out('display.avif')),
+  ]);
 
   return {
-    width: info.width, height: info.height, durationSec: null,
-    blurDataUrl: await makeBlur(srcPath),
+    width, height, durationSec: null,
+    blurDataUrl: await makeBlur(big),
     variants: {
       original: keyFor(mediaId, `original.${ext}`),
       thumb: keyFor(mediaId, 'thumb.webp'),
