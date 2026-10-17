@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { AlbumBundle } from '@scrapbook/shared';
 import { api, ApiError } from '../api';
+import { BackgroundEffectView } from '../render/effects';
 import { PageRenderer } from '../render/PageRenderer';
 import { planPreload, runPreload } from '../viewer/preload';
 import { nextIndex, prevIndex, visiblePages } from '../viewer/spread';
@@ -55,6 +56,7 @@ export function Book({ bundle }: { bundle: AlbumBundle }) {
 
   return (
     <main className="viewer">
+      <BackgroundEffectView kind={album.backgroundEffect} />
       <header className="viewer-bar">
         <Link to="/">← Albums</Link>
         <h1>{album.title}</h1>

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { MediaDTO, PageElement, PageLayout } from '@scrapbook/shared';
 import { FrameView } from './FrameView';
 import { Tape, fontFamily, stickers } from './decor';
+import { EffectView } from './effects';
 import './render.css';
 
 type RenderProps = {
@@ -38,5 +39,6 @@ function element(el: PageElement, media: Map<string, MediaDTO>, mode: 'view' | '
     }
     case 'text':
       return <div className="text" style={{ fontFamily: fontFamily[el.font], color: el.color, fontSize: `${el.size * 100}cqh` }}>{el.text}</div>;
+    case 'effect': return <EffectView effect={el.effect} />;
   }
 }

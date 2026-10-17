@@ -18,7 +18,7 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 const bundle: AlbumBundle = {
-  album: { id: 'a1', title: 'Trip', coverMediaId: null },
+  album: { id: 'a1', title: 'Trip', coverMediaId: null, backgroundEffect: 'none' },
   pages: Array.from({ length: 5 }, (_, i) => ({ id: `p${i}`, albumId: 'a1', position: i, layout: { background: 'paper-cream', elements: [] } })),
   media: [],
 };
@@ -71,4 +71,11 @@ test('swipe left flips forward; short or vertical drags do not', async () => {
   expect(screen.getByText('1 / 5')).toBeTruthy();
   drag(-60, 5);
   expect(screen.getByText('2 / 5')).toBeTruthy();
+});
+
+test("the album's background effect plays behind the book", async () => {
+  const withFx = { ...bundle, album: { ...bundle.album, backgroundEffect: 'stars' as const } };
+  const { container } = setup(vi.fn().mockResolvedValue(json(200, withFx)));
+  await screen.findByText('1 / 5');
+  expect(container.querySelector('main.viewer > .bgfx-stars')).not.toBeNull();
 });

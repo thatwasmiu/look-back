@@ -14,7 +14,7 @@ const fill = (id: string, layout: PageLayout): PageLayout => {
 };
 
 const bundle: AlbumBundle = {
-  album: { id: 'dev', title: 'Templates (dev sample)', coverMediaId: null },
+  album: { id: 'dev', title: 'Templates (dev sample)', coverMediaId: null, backgroundEffect: 'none' },
   pages: templates.filter((t) => t.id !== 'blank').map((t, i) => ({ id: `page${i}`, albumId: 'dev', position: i, layout: fill(t.id, t.layout) })),
   media: [...media.values()],
 };

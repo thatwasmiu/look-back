@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { pageLayoutSchema, templates, type AlbumBundle, type MediaDTO, type PageDTO, type PageLayout } from '@scrapbook/shared';
+import { pageLayoutSchema, templates, type AlbumBundle, type BackgroundEffect, type MediaDTO, type PageDTO, type PageLayout } from '@scrapbook/shared';
 import { api as realApi, ApiError } from '../api';
 import { PageRenderer } from '../render/PageRenderer';
 import { EditCanvas } from '../editor/EditCanvas';
 import { Toolbar, stepZoom } from '../editor/Toolbar';
+import { BackgroundEffectView } from '../render/effects';
 import { initHistory, push, redo, undo } from '../editor/history';
 import { assignMedia, clearMedia, removeElement, updateElement } from '../editor/layoutOps';
 import { useAutosave } from '../editor/useAutosave';
@@ -73,6 +74,13 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [panelsHidden, setPanelsHidden] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [bgEffect, setBgEffectState] = useState(bundle.album.backgroundEffect);
+  // Album-level setting: optimistic, rolled back if the save fails.
+  const setBgEffect = (e: BackgroundEffect) => {
+    const prev = bgEffect;
+    setBgEffectState(e);
+    api.updateAlbum(albumId, { backgroundEffect: e }).catch(() => { setBgEffectState(prev); setOpError("Couldn't save the album background."); });
+  };
   const stageRef = useRef<HTMLDivElement>(null);
   // Ctrl + wheel (and trackpad pinch, which arrives as ctrl+wheel) zooms the page, not the browser.
   useEffect(() => {
@@ -318,9 +326,10 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
         <Toolbar layout={layout} selected={selected} commit={commit}
           undo={() => setHist(undo)} redo={() => setHist(redo)} canUndo={hist.past.length > 0} canRedo={hist.future.length > 0}
           status={status} save={() => void flush().then((ok) => ok && setOpError(null))}
-          crop={() => setCropId(selectedId)} zoom={zoom} setZoom={setZoom} />
+          crop={() => setCropId(selectedId)} zoom={zoom} setZoom={setZoom} bgEffect={bgEffect} setBgEffect={setBgEffect} />
       )}
       <div className="edit-main">
+        <BackgroundEffectView kind={bgEffect} />
         <div className="edit-stage" ref={stageRef}>
           {page ? <EditCanvas layout={layout} media={media} selectedId={selectedId} onSelect={setSelectedId} onCommit={commit}
             onFrameAddMedia={addToFrame} cropId={cropId} onCrop={setCropId} zoom={zoom} />

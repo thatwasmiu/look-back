@@ -11,7 +11,7 @@ const label = (n: number): PageElement => ({
 });
 
 const bundle: AlbumBundle = {
-  album: { id: 'dev', title: 'Đà Lạt 2026 (dev sample)', coverMediaId: null },
+  album: { id: 'dev', title: 'Đà Lạt 2026 (dev sample)', coverMediaId: null, backgroundEffect: 'petals' },
   pages: Array.from({ length: 9 }, (_, i) => {
     const { layout } = pages[i % pages.length];
     return { id: `page${i}`, albumId: 'dev', position: i, layout: { ...layout, elements: [...layout.elements, label(i)] } };

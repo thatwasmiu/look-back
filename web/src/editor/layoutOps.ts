@@ -1,5 +1,5 @@
 // Pure edits on a PageLayout: every function returns a new layout (or the same one when nothing changes).
-import type { FrameEl, PageElement, PageLayout, StickerEl, TapeEl, TextEl } from '@scrapbook/shared';
+import type { EffectEl, FrameEl, PageElement, PageLayout, StickerEl, TapeEl, TextEl } from '@scrapbook/shared';
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 // Schema bounds: x,y ∈ [-0.5,1.5], w,h ∈ (0,1.5], rotation ∈ [-180,180].
@@ -56,6 +56,10 @@ const box = (w: number, h: number) => ({ id: newId(), x: 0.5 - w / 2, y: 0.5 - h
 
 export const newSticker = (stickerId: string): StickerEl => ({ type: 'sticker', ...box(0.18, 0.135), stickerId });
 export const newTape = (tapeStyle: TapeEl['tapeStyle']): TapeEl => ({ type: 'tape', ...box(0.22, 0.045), tapeStyle });
+// Particle effects start as a visually square box; a light leak covers the whole page, untilted.
+export const newEffect = (effect: EffectEl['effect']): EffectEl => effect === 'light-leak'
+  ? { type: 'effect', id: newId(), x: 0, y: 0, w: 1, h: 1, rotation: 0, z: 0, effect }
+  : { type: 'effect', ...box(0.6, 0.45), rotation: 0, effect };
 export const newText = (): TextEl =>
   ({ type: 'text', ...box(0.5, 0.08), text: 'ghi chú', font: 'patrick-hand', color: '#4a3b2c', size: 0.045 });
 // Round shapes (circle, heart) are kept visually square: h = 0.75w on the 3:4 page.

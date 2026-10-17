@@ -54,3 +54,15 @@ describe('frame styles', () => {
     expect(ok(l)).toBe(false)
   })
 })
+
+describe('effects', () => {
+  it('accepts every page effect and rejects unknown ones', async () => {
+    const { PAGE_EFFECTS } = await import('../src/index')
+    for (const effect of PAGE_EFFECTS) {
+      const l = sample(); l.elements.push({ ...base, id: 'fx', type: 'effect', effect } as never)
+      expect(ok(l)).toBe(true)
+    }
+    const l = sample(); l.elements.push({ ...base, id: 'fx', type: 'effect', effect: 'lasers' } as never)
+    expect(ok(l)).toBe(false)
+  })
+})

@@ -31,6 +31,12 @@ const frameSchema = z.object({
   mediaId: z.string().nullable(),
   crop: cropSchema,
 })
+// Page effects play inside their own box; album background effects play behind the whole book.
+export const PAGE_EFFECTS = ['sparkles', 'hearts', 'petals', 'confetti', 'bokeh', 'light-leak'] as const
+export const BACKGROUND_EFFECTS = ['none', 'snow', 'petals', 'fireflies', 'stars', 'rain'] as const
+export type BackgroundEffect = (typeof BACKGROUND_EFFECTS)[number]
+
+const effectSchema = z.object({ ...baseShape, type: z.literal('effect'), effect: z.enum(PAGE_EFFECTS) })
 const tapeSchema = z.object({
   ...baseShape,
   type: z.literal('tape'),
@@ -46,7 +52,7 @@ const textSchema = z.object({
   size: z.number().gt(0), // fraction of page height
 })
 
-export const pageElementSchema = z.discriminatedUnion('type', [frameSchema, tapeSchema, stickerSchema, textSchema])
+export const pageElementSchema = z.discriminatedUnion('type', [frameSchema, tapeSchema, stickerSchema, textSchema, effectSchema])
 
 export const pageLayoutSchema = z.object({
   background: z.enum(['paper-cream', 'paper-kraft', 'paper-grid', 'paper-dots']),
@@ -64,5 +70,6 @@ export type FrameEl = z.infer<typeof frameSchema>
 export type TapeEl = z.infer<typeof tapeSchema>
 export type StickerEl = z.infer<typeof stickerSchema>
 export type TextEl = z.infer<typeof textSchema>
+export type EffectEl = z.infer<typeof effectSchema>
 export type PageElement = z.infer<typeof pageElementSchema>
 export type PageLayout = z.infer<typeof pageLayoutSchema>

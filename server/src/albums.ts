@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import type pg from 'pg';
-import { instantiateTemplate, templates, type AlbumBundle, type AlbumDTO, type AlbumSummary } from '@scrapbook/shared';
+import { BACKGROUND_EFFECTS, instantiateTemplate, templates, type AlbumBundle, type AlbumDTO, type AlbumSummary, type BackgroundEffect } from '@scrapbook/shared';
 import type { Config } from './config.js';
 import { removeMediaDirs, toMediaDTO } from './media.js';
 import { toPageDTO } from './pages.js';
@@ -10,7 +10,7 @@ export const uuidParams = {
   params: { type: 'object', properties: { id: { type: 'string', format: 'uuid' } } },
 } as const;
 
-const toAlbumDTO = (r: any): AlbumDTO => ({ id: r.id, title: r.title, coverMediaId: r.cover_media_id });
+const toAlbumDTO = (r: any): AlbumDTO => ({ id: r.id, title: r.title, coverMediaId: r.cover_media_id, backgroundEffect: r.background_effect });
 const title = { type: 'string', minLength: 1, maxLength: 200 } as const;
 
 export function registerAlbums(app: FastifyInstance, pool: pg.Pool, config: Config): void {
@@ -45,16 +45,18 @@ export function registerAlbums(app: FastifyInstance, pool: pg.Pool, config: Conf
     },
   );
 
-  app.patch<{ Params: { id: string }; Body: { title?: string; coverMediaId?: string | null } }>(
+  app.patch<{ Params: { id: string }; Body: { title?: string; coverMediaId?: string | null; backgroundEffect?: BackgroundEffect } }>(
     '/api/albums/:id',
     {
       schema: {
         ...uuidParams,
-        body: { type: 'object', properties: { title, coverMediaId: { type: ['string', 'null'], format: 'uuid' } } },
+        body: { type: 'object', properties: {
+          title, coverMediaId: { type: ['string', 'null'], format: 'uuid' }, backgroundEffect: { type: 'string', enum: [...BACKGROUND_EFFECTS] },
+        } },
       },
     },
     async (req, reply) => {
-      const { title: t, coverMediaId } = req.body;
+      const { title: t, coverMediaId, backgroundEffect } = req.body;
       if (coverMediaId) {
         const m = await pool.query('select 1 from media where id = $1 and album_id = $2', [coverMediaId, req.params.id]);
         if (!m.rowCount) return reply.code(400).send({ error: 'cover media not in this album' });
@@ -62,9 +64,10 @@ export function registerAlbums(app: FastifyInstance, pool: pg.Pool, config: Conf
       const { rows } = await pool.query(
         `update albums set title = coalesce($2, title),
                 cover_media_id = case when $3::boolean then $4::uuid else cover_media_id end,
+                background_effect = coalesce($5, background_effect),
                 updated_at = now()
           where id = $1 returning *`,
-        [req.params.id, t ?? null, coverMediaId !== undefined, coverMediaId ?? null],
+        [req.params.id, t ?? null, coverMediaId !== undefined, coverMediaId ?? null, backgroundEffect ?? null],
       );
       return rows[0] ? toAlbumDTO(rows[0]) : reply.code(404).send({ error: 'not found' });
     },

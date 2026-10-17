@@ -87,4 +87,14 @@ describe('albums', () => {
     const sum = (await call('GET', '/api/albums')).json().find((x: { id: string }) => x.id === album.id);
     expect(sum.coverThumb).toBe('v/poster.webp');
   });
+
+  it('background effect: defaults to none, PATCH sets it, bundle returns it, unknown → 400', async () => {
+    const a = (await call('POST', '/api/albums', { title: 'Fx' })).json();
+    expect(a.backgroundEffect).toBe('none');
+    const p = await call('PATCH', `/api/albums/${a.id}`, { backgroundEffect: 'snow' });
+    expect(p.statusCode).toBe(200);
+    expect(p.json()).toMatchObject({ title: 'Fx', backgroundEffect: 'snow' });
+    expect((await call('GET', `/api/albums/${a.id}`)).json().album.backgroundEffect).toBe('snow');
+    expect((await call('PATCH', `/api/albums/${a.id}`, { backgroundEffect: 'lava' })).statusCode).toBe(400);
+  });
 });

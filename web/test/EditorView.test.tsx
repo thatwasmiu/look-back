@@ -13,7 +13,7 @@ const mediaApi = { getMedia: vi.fn(), deleteMedia: vi.fn(), updateAlbum: vi.fn()
 const okApi = (): EditorApi => ({ savePage: vi.fn().mockResolvedValue({}), addPage: vi.fn(), deletePage: vi.fn(), reorderPages: vi.fn(), ...mediaApi });
 
 const bundle: AlbumBundle = {
-  album: { id: 'a1', title: 'Trip', coverMediaId: null },
+  album: { id: 'a1', title: 'Trip', coverMediaId: null, backgroundEffect: 'none' },
   pages: [0, 1].map((i) => ({ id: `p${i}`, albumId: 'a1', position: i, layout: { background: 'paper-cream', elements: [] } })),
   media: [],
 };
@@ -192,4 +192,17 @@ test('zoom: + / − step the page size, the percentage button fits it back; Ctrl
   expect(zoom()).toBe('1');
   act(() => { container.querySelector('.edit-stage')!.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, ctrlKey: true, bubbles: true, cancelable: true })); });
   expect(zoom()).toBe('1.25');
+});
+
+test('Effect adds a page effect; Album background saves the album effect and shows it behind the page', async () => {
+  const user = userEvent.setup();
+  const api = { ...okApi(), updateAlbum: vi.fn().mockResolvedValue({}) };
+  const { container } = setup(api);
+  await user.click(screen.getByRole('button', { name: 'Effect' }));
+  await user.click(screen.getByRole('button', { name: 'Sparkles effect' }));
+  expect(container.querySelector('.edit-page .el-effect .fx-sparkles')).not.toBeNull();
+  await user.click(screen.getByRole('button', { name: 'Album background' }));
+  await user.click(screen.getByRole('button', { name: 'Snow background' }));
+  expect(api.updateAlbum).toHaveBeenCalledWith('a1', { backgroundEffect: 'snow' });
+  expect(container.querySelector('.edit-main .bgfx-snow')).not.toBeNull();
 });

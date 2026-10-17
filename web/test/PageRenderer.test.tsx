@@ -76,3 +76,28 @@ test('every frame style renders its class; photo corners add four corner tabs', 
     unmount();
   }
 });
+
+test('page effects render particles inside their box; unknown-free and deterministic', async () => {
+  const { PAGE_EFFECTS } = await import('@scrapbook/shared');
+  for (const effect of PAGE_EFFECTS) {
+    const el = { type: 'effect' as const, id: 'fx', x: 0, y: 0, w: 0.5, h: 0.5, rotation: 0, z: 9, effect };
+    const a = setup([el]);
+    const box = a.container.querySelector(`.el-effect .fx-${effect}`)!;
+    expect(box).not.toBeNull();
+    const html = box.innerHTML;
+    a.unmount();
+    expect(setup([el]).container.querySelector(`.fx-${effect}`)!.innerHTML).toBe(html); // same particles every render
+    cleanup();
+  }
+});
+
+test('album background effect renders particles; none renders nothing', async () => {
+  const { BackgroundEffectView } = await import('../src/render/effects');
+  const { BACKGROUND_EFFECTS } = await import('@scrapbook/shared');
+  for (const kind of BACKGROUND_EFFECTS) {
+    const { container, unmount } = render(<BackgroundEffectView kind={kind} />);
+    if (kind === 'none') expect(container.innerHTML).toBe('');
+    else expect(container.querySelectorAll(`.bgfx-${kind} > i`).length).toBeGreaterThan(5);
+    unmount();
+  }
+});

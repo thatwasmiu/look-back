@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { FRAME_STYLES, type FrameEl, type PageElement, type PageLayout, type TextEl } from '@scrapbook/shared';
+import { BACKGROUND_EFFECTS, FRAME_STYLES, PAGE_EFFECTS, type BackgroundEffect, type FrameEl, type PageElement, type PageLayout, type TextEl } from '@scrapbook/shared';
+import { EffectView, backgroundEffectLabels, pageEffectLabels } from '../render/effects';
 import { Tape, fontFamily, frameStyleLabels, stickers, tapeStyles } from '../render/decor';
 import { FrameView } from '../render/FrameView';
-import { addElement, bringForward, newFrame, newSticker, newTape, newText, removeElement, sendBackward, setFrameStyle, updateElement } from './layoutOps';
+import { addElement, bringForward, newEffect, newFrame, newSticker, newTape, newText, removeElement, sendBackward, setFrameStyle, updateElement } from './layoutOps';
 import type { SaveStatus } from './useAutosave';
 
 type Props = {
@@ -12,6 +13,7 @@ type Props = {
   status: SaveStatus; save(): void;
   crop?(): void; // selected filled frame → crop mode (double-tap alone is unreliable on phones)
   zoom: number; setZoom(z: number): void;
+  bgEffect: BackgroundEffect; setBgEffect(e: BackgroundEffect): void;
 };
 
 const backgrounds: PageLayout['background'][] = ['paper-cream', 'paper-kraft', 'paper-grid', 'paper-dots'];
@@ -26,8 +28,8 @@ const statusLabel: Record<SaveStatus, string> = { saved: 'Saved', saving: 'Savin
 
 // Laptop: a bar above the page. Phone (coarse pointer or < 700px, see CSS): a sheet pinned to the bottom,
 // pickers open above it.
-export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo, status, save, crop, zoom, setZoom }: Props) {
-  const [picker, setPicker] = useState<'frame' | 'frameStyle' | 'sticker' | 'tape' | 'bg' | null>(null);
+export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo, status, save, crop, zoom, setZoom, bgEffect, setBgEffect }: Props) {
+  const [picker, setPicker] = useState<'frame' | 'frameStyle' | 'sticker' | 'tape' | 'bg' | 'effect' | 'albumFx' | null>(null);
   const toggle = (p: typeof picker) => setPicker((cur) => (cur === p ? null : p));
   const ref = useRef<HTMLDivElement>(null);
   // An open picker closes on a press anywhere outside the toolbar, or on Escape.
@@ -58,6 +60,14 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
               <FrameView el={{ ...SAMPLE, frameStyle: s }} media={undefined} mode="view" active={false} />
             </button>
           ))}
+          {picker === 'effect' && PAGE_EFFECTS.map((e) => (
+            <button key={e} type="button" className="swatch effect-swatch" aria-label={`${pageEffectLabels[e]} effect`} title={pageEffectLabels[e]}
+              onClick={() => add(newEffect(e))}><EffectView effect={e} /></button>
+          ))}
+          {picker === 'albumFx' && BACKGROUND_EFFECTS.map((e) => (
+            <button key={e} type="button" className="album-fx-option" aria-label={`${backgroundEffectLabels[e]} background`} aria-pressed={bgEffect === e}
+              onClick={() => { setBgEffect(e); setPicker(null); }}>{backgroundEffectLabels[e]}</button>
+          ))}
           {picker === 'sticker' && Object.entries(stickers).map(([id, { label, Svg }]) => (
             <button key={id} type="button" className="swatch sticker-swatch" aria-label={label} title={label} onClick={() => add(newSticker(id))}><Svg /></button>
           ))}
@@ -77,6 +87,8 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
         <button type="button" aria-expanded={picker === 'tape'} onClick={() => toggle('tape')}>Tape</button>
         <button type="button" onClick={() => add(newText())}>Text</button>
         <button type="button" aria-expanded={picker === 'bg'} onClick={() => toggle('bg')}>Paper</button>
+        <button type="button" aria-expanded={picker === 'effect'} onClick={() => toggle('effect')}>Effect</button>
+        <button type="button" aria-expanded={picker === 'albumFx'} onClick={() => toggle('albumFx')}>Album background</button>
         {crop && selected?.type === 'frame' && selected.mediaId && <button type="button" onClick={crop}>Crop</button>}
         <span className="sep" />
         <button type="button" disabled={!sel} aria-label="Bring forward" title="Bring forward" onClick={() => sel && commit(bringForward(layout, sel))}>↑</button>

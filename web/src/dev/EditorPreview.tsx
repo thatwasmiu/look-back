@@ -3,7 +3,7 @@
 // Uploads are faked too: a media row in 'uploading' as soon as the upload "starts" (like tus create), progress
 // ticks, then 'processing' that turns 'ready' (showing one of the sample photos) ~4 s later. A file named *.heic fails like the server's HEIC check.
 import { useEffect, useRef, useState } from 'react';
-import type { AlbumBundle, MediaDTO, PageDTO } from '@scrapbook/shared';
+import type { BackgroundEffect, AlbumBundle, MediaDTO, PageDTO } from '@scrapbook/shared';
 import { instantiateTemplate } from '@scrapbook/shared';
 import { EditorView, type EditorApi } from '../pages/Editor';
 import type { Uploader, UploadItem } from '../editor/useUpload';
@@ -17,6 +17,7 @@ let pages: PageDTO[] = JSON.parse(sessionStorage.getItem(KEY) ?? 'null')
   ?? samples.slice(0, 3).map((p, i) => ({ id: `page${i}`, albumId: 'dev', position: i, layout: p.layout }));
 const media = new Map<string, MediaDTO & { readyAt?: number }>(JSON.parse(sessionStorage.getItem(MKEY) ?? 'null') ?? [...sampleMedia]);
 let cover: string | null = null;
+let bg: BackgroundEffect = 'snow';
 const store = () => {
   sessionStorage.setItem(KEY, JSON.stringify(pages));
   sessionStorage.setItem(MKEY, JSON.stringify([...media]));
@@ -62,7 +63,10 @@ const fakeApi: EditorApi = {
     if (cover === id) cover = null;
     store();
   },
-  async updateAlbum(id, patch) { await wait(); cover = patch.coverMediaId ?? cover; return { id, title: 'dev', coverMediaId: cover }; },
+  async updateAlbum(id, patch) {
+    await wait(); cover = patch.coverMediaId ?? cover; bg = patch.backgroundEffect ?? bg;
+    return { id, title: 'dev', coverMediaId: cover, backgroundEffect: bg };
+  },
 };
 
 function useFakeUpload(albumId: string, onCreated: (mediaId: string, targetFrameId?: string) => boolean | void): Uploader {
@@ -109,6 +113,6 @@ function useFakeUpload(albumId: string, onCreated: (mediaId: string, targetFrame
 }
 
 export default function EditorPreview() {
-  const bundle: AlbumBundle = { album: { id: 'dev', title: 'Đà Lạt (dev editor)', coverMediaId: cover }, pages: structuredClone(pages), media: structuredClone([...media.values()]) };
+  const bundle: AlbumBundle = { album: { id: 'dev', title: 'Đà Lạt (dev editor)', coverMediaId: cover, backgroundEffect: bg }, pages: structuredClone(pages), media: structuredClone([...media.values()]) };
   return <EditorView bundle={bundle} api={fakeApi} uploader={useFakeUpload} />;
 }

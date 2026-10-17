@@ -141,6 +141,13 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .bg-swatch[aria-pressed='true'] { outline: 3px solid var(--accent); }
 
 .edit-main { flex: 1; min-height: 0; display: flex; }
+/* Album background effect plays behind the page (editor desk) and the book (viewer). */
+.edit-main, .viewer { position: relative; }
+.edit-main > :not(.bgfx), .viewer > :not(.bgfx) { position: relative; z-index: 1; }
+.effect-swatch { position: relative; width: 4.4rem; height: 4.4rem; padding: 0; overflow: hidden; container-type: size; background: #6b4a33; }
+.effect-swatch .fx { --u: 5px; }
+.album-fx-option { padding: .4rem .8rem; background: #f3ead7; color: var(--ink); }
+.album-fx-option[aria-pressed='true'] { outline: 3px solid var(--accent); }
 .edit-stage { flex: 1; min-height: 0; container-type: size; display: grid; place-items: safe center; overflow: auto; isolation: isolate; /* Moveable's z-index stays under the tools */ }
 .edit-page { position: relative; width: calc(min(100cqw - 24px, (100cqh - 24px) * .75) * var(--zoom, 1)); touch-action: none; }
 .edit-page.editing .el-text > .text:not(.text-editing) { visibility: hidden; }
