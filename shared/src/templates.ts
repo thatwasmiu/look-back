@@ -37,7 +37,7 @@ export const templates: Template[] = [
     sticker('s1', [0.76, 0.14, 0.15, 0.11, 6], 'leaf'),
   ] } },
   { id: 'three-collage', name: 'Collage of three', layout: { background: 'paper-grid', elements: [
-    frame('f1', [0.06, 0.08, 0.62, 0.405, -3]),
+    frame('f1', [0.07, 0.08, 0.62, 0.405, -3]),
     frame('f2', [0.52, 0.4, 0.42, 0.3465, 5]),
     frame('f3', [0.1, 0.52, 0.4, 0.42, -2]),
     tape('t1', [0.27, 0.06, 0.2, 0.045, 4], 'yellow'),
@@ -77,5 +77,7 @@ export const templates: Template[] = [
 export function instantiateTemplate(id: string, newId: () => string): PageLayout {
   const t = templates.find((x) => x.id === id)
   if (!t) throw new Error(`unknown template: ${id}`)
-  return { ...t.layout, elements: t.layout.elements.map((e) => ({ ...e, id: newId() })) }
+  const layout = structuredClone(t.layout) // deep: nested crop objects must not be shared with the template
+  for (const e of layout.elements) e.id = newId()
+  return layout
 }

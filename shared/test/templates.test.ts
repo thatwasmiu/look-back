@@ -15,12 +15,12 @@ describe('templates', () => {
 
       it('parses with pageLayoutSchema', () => expect(pageLayoutSchema.safeParse(t.layout).success).toBe(true))
 
-      it('keeps every frame box inside the page', () => {
+      it('keeps every frame box inside the page with a 5% margin', () => {
         for (const f of frames) {
-          expect(f.x).toBeGreaterThanOrEqual(0)
-          expect(f.y).toBeGreaterThanOrEqual(0)
-          expect(f.x + f.w).toBeLessThanOrEqual(1)
-          expect(f.y + f.h).toBeLessThanOrEqual(1)
+          expect(f.x).toBeGreaterThanOrEqual(0.05)
+          expect(f.y).toBeGreaterThanOrEqual(0.05)
+          expect(f.x + f.w).toBeLessThanOrEqual(0.95)
+          expect(f.y + f.h).toBeLessThanOrEqual(0.95)
         }
       })
 
@@ -56,6 +56,15 @@ describe('instantiateTemplate', () => {
     for (const id of aIds) expect(old.has(id)).toBe(false)
     for (const id of aIds) expect(bIds).not.toContain(id)
     expect(pageLayoutSchema.safeParse(a).success).toBe(true)
+  })
+
+  it('does not share nested objects with the template', () => {
+    const before = structuredClone(templates.find((x) => x.id === 'cover')!.layout)
+    const inst = instantiateTemplate('cover', () => 'x')
+    const f = inst.elements.find((e) => e.type === 'frame')!
+    if (f.type === 'frame') f.crop.x = 0.1
+    inst.background = 'paper-dots'
+    expect(templates.find((x) => x.id === 'cover')!.layout).toEqual(before)
   })
 
   it('throws on unknown id', () => {
