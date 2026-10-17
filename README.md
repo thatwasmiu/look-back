@@ -18,6 +18,11 @@ Production runs as Docker Compose: `db` (Postgres 16), `api`, `worker` (ffmpeg/s
        `fullchain.pem` and `privkey.pem` from `/etc/letsencrypt/live/your.domain/`; or
      - Cloudflare Origin Certificate: save the cert as `fullchain.pem` and the key as `privkey.pem`, SSL mode "Full (strict)".
 3. `docker compose -f deploy/compose.yml up -d --build`
+   - Or, on a VPS, skip building and use the published images (`dastewasmiu/scrapbook-{api,worker,nginx}` on Docker Hub):
+     copy `deploy/compose.yml`, `deploy/.env` and `deploy/certs/` there, then
+     `docker compose -f compose.yml pull && docker compose -f compose.yml up -d`.
+     Pin a version with `IMAGE_TAG=<commit>` in `.env`; use another registry/user with `IMAGE_PREFIX=<user>/scrapbook`.
+   - Publish new images: `docker compose -f deploy/compose.yml build && docker compose -f deploy/compose.yml push`.
 4. `SMOKE_PASSWORD='your password' bash deploy/smoke.sh` (add `BASE=https://your.domain` for a remote host). All lines should say PASS.
 
 If you redeploy only the api container, run `docker compose -f deploy/compose.yml restart nginx` too (nginx caches the api IP at startup).

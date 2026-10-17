@@ -24,13 +24,16 @@ services:
       - pgdata:/var/lib/postgresql/data
   api:
     <<: *app
+    image: ${IMAGE_PREFIX:-dastewasmiu/scrapbook}-api:${IMAGE_TAG:-latest}
     build: { context: .., dockerfile: deploy/Dockerfile, target: api }
   worker:
     <<: *app
+    image: ${IMAGE_PREFIX:-dastewasmiu/scrapbook}-worker:${IMAGE_TAG:-latest}
     build: { context: .., dockerfile: deploy/Dockerfile, target: worker }
     cpus: 1.0
     mem_limit: 1g
   nginx:
+    image: ${IMAGE_PREFIX:-dastewasmiu/scrapbook}-nginx:${IMAGE_TAG:-latest}
     build: { context: .., dockerfile: deploy/Dockerfile, target: nginx }
     restart: unless-stopped
     depends_on: [api]
