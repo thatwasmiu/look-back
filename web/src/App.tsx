@@ -1,5 +1,5 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useParams } from 'react-router-dom';
 import { api } from './api';
 import Login from './pages/Login';
 import AlbumList from './pages/AlbumList';
@@ -8,11 +8,15 @@ import AlbumList from './pages/AlbumList';
 const Viewer = () => <p>Viewer {useParams().id}</p>;
 const Editor = () => <p>Editor {useParams().id}</p>;
 
-function Gate({ children }: { children: ReactNode }) {
-  const [ok, setOk] = useState<boolean | null>(null);
-  useEffect(() => { api.check().then(setOk); }, []);
-  if (ok === null) return null;
-  return ok ? <>{children}</> : <Navigate to="/login" replace />;
+// Layout route: check() runs once on load for all protected routes.
+function Gate() {
+  const [state, setState] = useState<'wait' | 'ok' | 'out' | 'down'>('wait');
+  useEffect(() => {
+    api.check().then((ok) => setState(ok ? 'ok' : 'out'), () => setState('down'));
+  }, []);
+  if (state === 'wait') return null;
+  if (state === 'down') return <p className="empty">Can't reach server</p>;
+  return state === 'ok' ? <Outlet /> : <Navigate to="/login" replace />;
 }
 
 export default function App() {
@@ -20,9 +24,11 @@ export default function App() {
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/" element={<Gate><AlbumList /></Gate>} />
-        <Route path="/albums/:id" element={<Gate><Viewer /></Gate>} />
-        <Route path="/albums/:id/edit" element={<Gate><Editor /></Gate>} />
+        <Route element={<Gate />}>
+          <Route path="/" element={<AlbumList />} />
+          <Route path="/albums/:id" element={<Viewer />} />
+          <Route path="/albums/:id/edit" element={<Editor />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );

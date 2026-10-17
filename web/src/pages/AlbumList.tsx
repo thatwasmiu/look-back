@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import type { AlbumSummary } from '@scrapbook/shared';
-import { api } from '../api';
+import { api, ApiError } from '../api';
 import { mediaUrl } from '../mediaUrl';
 
 export default function AlbumList() {
@@ -9,15 +9,28 @@ export default function AlbumList() {
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState('');
 
-  useEffect(() => { api.listAlbums().then(setAlbums).catch(() => setAlbums([])); }, []);
+  const [loadError, setLoadError] = useState(false);
+  const [createError, setCreateError] = useState('');
+
+  const load = () => {
+    setLoadError(false);
+    api.listAlbums().then(setAlbums, (e) => {
+      if (!(e instanceof ApiError && e.status === 401)) setLoadError(true); // 401: redirect in progress
+    });
+  };
+  useEffect(load, []);
 
   async function create(e: FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
-    const a = await api.createAlbum(title.trim());
-    setAlbums((cur) => [...(cur ?? []), { ...a, coverThumb: null, pageCount: 0 }]);
-    setTitle('');
-    setCreating(false);
+    try {
+      const a = await api.createAlbum(title.trim());
+      setAlbums((cur) => [...(cur ?? []), { ...a, coverThumb: null, pageCount: 0 }]);
+      setTitle('');
+      setCreating(false);
+    } catch (err) {
+      if (!(err instanceof ApiError && err.status === 401)) setCreateError("Couldn't create album");
+    }
   }
 
   return (
@@ -28,12 +41,16 @@ export default function AlbumList() {
           <form onSubmit={create} className="new-album">
             <input aria-label="Album title" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
             <button type="submit">Create</button>
-            <button type="button" onClick={() => setCreating(false)}>Cancel</button>
+            <button type="button" onClick={() => { setCreating(false); setTitle(''); setCreateError(''); }}>Cancel</button>
+            {createError && <p role="alert" className="error">{createError}</p>}
           </form>
         ) : (
           <button onClick={() => setCreating(true)}>New album</button>
         )}
       </header>
+      {loadError && (
+        <p role="alert" className="empty">Couldn't load albums <button onClick={load}>Retry</button></p>
+      )}
       {albums && albums.length === 0 && <p className="empty">No albums yet.</p>}
       <ul className="grid">
         {albums?.map((a, i) => (

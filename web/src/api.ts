@@ -25,7 +25,12 @@ async function req<T>(method: string, path: string, body?: unknown, quiet = fals
 export const api = {
   login: (password: string) => req<void>('POST', '/auth/login', { password }, true),
   logout: () => req<void>('POST', '/auth/logout'),
-  check: () => req<void>('GET', '/auth/check', undefined, true).then(() => true, () => false),
+  // false only on 401; network/5xx errors propagate so callers can tell "logged out" from "server down".
+  check: () =>
+    req<void>('GET', '/auth/check', undefined, true).then(
+      () => true,
+      (e) => { if (e instanceof ApiError && e.status === 401) return false; throw e; },
+    ),
   listAlbums: () => req<AlbumSummary[]>('GET', '/albums'),
   createAlbum: (title: string) => req<AlbumDTO>('POST', '/albums', { title }),
   updateAlbum: (id: string, patch: { title?: string; coverMediaId?: string | null }) =>
