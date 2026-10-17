@@ -7,7 +7,8 @@ export async function createQueue(databaseUrl: string): Promise<PgBoss> {
   const boss = new PgBoss(databaseUrl);
   boss.on('error', (e) => console.error('pg-boss', e));
   await boss.start();
-  const opts = { name: JOB_PROCESS_MEDIA, retryLimit: 1 };
+  // pg-boss expires (and retries) a job after 15 min by default, while ffmpeg keeps running.
+  const opts = { name: JOB_PROCESS_MEDIA, retryLimit: 1, expireInSeconds: 4 * 3600 };
   await boss.createQueue(JOB_PROCESS_MEDIA, opts);
   await boss.updateQueue(JOB_PROCESS_MEDIA, opts); // createQueue is a no-op for an existing queue
   return boss;
