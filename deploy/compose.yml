@@ -1,0 +1,45 @@
+name: scrapbook-prod
+x-app: &app
+  build: { context: .., dockerfile: deploy/Dockerfile }
+  env_file: .env
+  restart: unless-stopped
+  depends_on: { db: { condition: service_healthy } }
+  volumes:
+    - media:/data/media
+    - uploads:/data/uploads
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: scrapbook
+      POSTGRES_USER: ${POSTGRES_USER:-scrapbook}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-scrapbook}"]
+      interval: 3s
+      retries: 20
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+  api:
+    <<: *app
+    build: { context: .., dockerfile: deploy/Dockerfile, target: api }
+  worker:
+    <<: *app
+    build: { context: .., dockerfile: deploy/Dockerfile, target: worker }
+    cpus: 1.0
+    mem_limit: 1g
+  nginx:
+    build: { context: .., dockerfile: deploy/Dockerfile, target: nginx }
+    restart: unless-stopped
+    depends_on: [api]
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./certs:/etc/nginx/certs:ro
+      - media:/data/media:ro
+
+volumes:
+  pgdata:
+  media:
+  uploads:
