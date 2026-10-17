@@ -80,3 +80,38 @@ test('an upload id arriving early goes into its frame (uploading… chip); a fra
   act(() => { placed = onCreated!('u2', 'gone'); });
   expect(placed).toBe(false);
 });
+
+const frameEmpty = { type: 'frame' as const, id: 'f1', x: 0.1, y: 0.1, w: 0.5, h: 0.4, rotation: 0, z: 1, frameStyle: 'polaroid' as const, mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } };
+const row = (status: 'uploading' | 'processing' | 'ready') => ({ id: 'u1', albumId: 'a1', kind: 'image' as const, status, width: 4, height: 3, durationSec: null, blurDataUrl: null, variants: status === 'ready' ? { original: 'u1/o.jpg', display: 'u1/d.webp' } : null, error: null });
+
+test("after a reload, 'uploading' media from the bundle is polled until it settles", async () => {
+  vi.useFakeTimers();
+  try {
+    const getMedia = vi.fn().mockResolvedValueOnce(row('uploading')).mockResolvedValueOnce(row('processing')).mockResolvedValue(row('ready'));
+    const api = { ...okApi(), getMedia };
+    const b: AlbumBundle = { ...bundle, media: [row('uploading')], pages: [{ ...bundle.pages[0], layout: { background: 'paper-cream', elements: [{ ...frameEmpty, mediaId: 'u1' }] } }] };
+    const uploader = (() => ({ items: [], add: vi.fn(), retry: vi.fn() })) as never;
+    const { container } = render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={b} api={api} uploader={uploader} /></MemoryRouter>);
+    expect(container.querySelector('[data-frame-id=f1] .chip')?.textContent).toBe('uploading…');
+    await act(() => vi.advanceTimersByTimeAsync(60_000));
+    expect(getMedia).toHaveBeenCalledWith('u1');
+    expect(container.querySelector('[data-frame-id=f1] .chip')).toBeNull();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('a 4xx after the early frame assign leaves the media shown as failed, not stuck uploading', () => {
+  let onCreated: ((id: string, frameId?: string) => boolean | void) | null = null;
+  let items: unknown[] = [];
+  const uploader = ((_a: string, cb: typeof onCreated) => { onCreated = cb; return { items, add: vi.fn(), retry: vi.fn() }; }) as never;
+  const b: AlbumBundle = { ...bundle, pages: [{ ...bundle.pages[0], layout: { background: 'paper-cream', elements: [frameEmpty] } }] };
+  const api = okApi();
+  const ui = () => <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={b} api={api} uploader={uploader} /></MemoryRouter>;
+  const { container, rerender } = render(ui());
+  act(() => { onCreated!('u1', 'f1'); });
+  expect(container.querySelector('[data-frame-id=f1] .chip')?.textContent).toBe('uploading…');
+  items = [{ localId: 'l1', name: 'a.jpg', progress: 0.5, mediaId: 'u1', state: 'error', error: 'gone', retryable: false }];
+  rerender(ui());
+  expect(container.querySelector('[data-frame-id=f1] .chip')?.textContent).toBe('upload failed');
+});

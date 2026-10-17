@@ -38,6 +38,7 @@ const EMPTY: PageLayout = { background: 'paper-cream', elements: [] };
 const noMedia = new Map();
 const PAGE_DRAG = 'application/x-scrapbook-page';
 const POLLS = 3; // media polled at once
+const UPLOADING_POLL_MS = 15_000;
 const placeholder = (id: string, albumId: string): MediaDTO => ({
   id, albumId, kind: 'image', status: 'uploading', width: null, height: null, durationSec: null, blurDataUrl: null, variants: null, error: null,
 });
@@ -123,6 +124,24 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
     pump();
   }, [get]);
   useEffect(() => { bundle.media.forEach((m) => m.status === 'processing' && watch(m.id)); }, [bundle.media, watch]);
+  // 'uploading' rows from the bundle: an upload running in the background, or one abandoned before a reload (the
+  // server marks those failed). Polled slowly and outside the POLLS slots, since they can take hours to move on.
+  useEffect(() => {
+    let alive = true;
+    for (const m of bundle.media) {
+      if (m.status !== 'uploading') continue;
+      void (async () => {
+        while (alive && mediaRef.current.get(m.id)?.status === 'uploading') {
+          await new Promise((r) => setTimeout(r, UPLOADING_POLL_MS));
+          if (!alive) return;
+          const next = await get(m.id).catch(() => null);
+          if (!next) return; // deleted / unmounted
+          if (next.status === 'processing') return watch(m.id);
+        }
+      })();
+    }
+    return () => { alive = false; };
+  }, [bundle.media, get, watch]);
 
   // tus created the upload: the media row exists server-side ('uploading'), so it may go into a frame (and be
   // autosaved) right away. Returns false when the target frame isn't on the current page (or editing is frozen).
@@ -135,15 +154,19 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
     return true;
   });
   // Upload finished: the worker takes over (processing → ready/failed).
+  // A 4xx after the early frame assign: the upload can't finish, so show it failed (the server marks the row
+  // failed once the tus upload expires).
   useEffect(() => {
     for (const u of upload.items) {
-      if (u.state !== 'done' || !u.mediaId) continue;
       const id = u.mediaId;
+      const failed = u.state === 'error' && u.retryable === false;
+      if (!id || !(u.state === 'done' || failed)) continue;
       setMedia((cur) => {
         const m = cur.get(id);
-        return m?.status === 'uploading' ? new Map(cur).set(id, { ...m, status: 'processing' }) : cur;
+        if (m?.status !== 'uploading') return cur;
+        return new Map(cur).set(id, failed ? { ...m, status: 'failed', error: u.error ?? 'upload failed' } : { ...m, status: 'processing' });
       });
-      watch(id);
+      if (!failed) watch(id);
     }
   }, [upload.items, watch]);
   const framePick = useRef<{ input: HTMLInputElement | null; frameId: string }>({ input: null, frameId: '' });
