@@ -11,6 +11,7 @@ check() { # name expected-status curl-args...
 }
 check "health"                 200 "$BASE/api/health"
 check "albums needs login"     401 "$BASE/api/albums"
+check "encoded /api needs login" 401 "$BASE/%61pi/albums"
 check "media needs login"      401 "$BASE/media/x"
 check "login"                  204 -c "$JAR" -H 'Content-Type: application/json' -d "{\"password\":\"$PW\"}" "$BASE/api/auth/login"
 check "albums with cookie"     200 -b "$JAR" "$BASE/api/albums"
