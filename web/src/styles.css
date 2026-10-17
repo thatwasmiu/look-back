@@ -174,6 +174,7 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .tray-upload-item button { align-self: start; padding: .1rem .5rem; font-size: .8rem; }
 .tray-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tray-error { color: #ffb4a3; }
+.tray-notice { opacity: .8; font-style: italic; }
 .tray-thumb { position: relative; aspect-ratio: 1; padding: 0; overflow: hidden; border-radius: 4px; background: #e8dfcc center / cover;
   touch-action: pan-y; /* the list scrolls vertically; other directions start a drag */ cursor: grab; }
 .tray-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }

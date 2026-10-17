@@ -1,7 +1,7 @@
 // Dev-only editor against a fake api (route /dev/editor). Pages persist in sessionStorage so "reload → layout
 // persisted" can be checked; ?reset starts over from the /dev/preview sample pages.
-// Uploads are faked too: progress ticks, then a media row in 'processing' that turns 'ready' (showing one of the
-// sample photos) ~4 s later. A file named *.heic fails like the server's HEIC check.
+// Uploads are faked too: a media row in 'uploading' as soon as the upload "starts" (like tus create), progress
+// ticks, then 'processing' that turns 'ready' (showing one of the sample photos) ~4 s later. A file named *.heic fails like the server's HEIC check.
 import { useEffect, useRef, useState } from 'react';
 import type { AlbumBundle, MediaDTO, PageDTO } from '@scrapbook/shared';
 import { instantiateTemplate } from '@scrapbook/shared';
@@ -65,7 +65,7 @@ const fakeApi: EditorApi = {
   async updateAlbum(id, patch) { await wait(); cover = patch.coverMediaId ?? cover; return { id, title: 'dev', coverMediaId: cover }; },
 };
 
-function useFakeUpload(albumId: string, onCreated: (mediaId: string, targetFrameId?: string) => void): Uploader {
+function useFakeUpload(albumId: string, onCreated: (mediaId: string, targetFrameId?: string) => boolean | void): Uploader {
   const [items, setItems] = useState<UploadItem[]>([]);
   const cb = useRef(onCreated);
   cb.current = onCreated;
@@ -77,19 +77,22 @@ function useFakeUpload(albumId: string, onCreated: (mediaId: string, targetFrame
       patch(localId, { state: 'error', error: "HEIC not supported — choose 'Most Compatible' or let the browser convert to JPEG" });
       return;
     }
+    const id = `fake-${Date.now()}-${n++}`;
+    media.set(id, { id, albumId, kind: file.type.startsWith('video/') ? 'video' : 'image', status: 'uploading', width: null, height: null,
+      durationSec: null, blurDataUrl: null, variants: null, error: null });
+    store();
+    const placed = cb.current(id, frameId);
+    patch(localId, { mediaId: id, ...(frameId && placed === false && { notice: 'added to tray — page changed' }) });
     let progress = 0;
     const t = setInterval(() => {
-      progress = Math.min(1, progress + 0.2);
+      progress = Math.min(1, progress + 0.1);
       patch(localId, { progress });
       if (progress < 1) return;
       clearInterval(t);
-      const id = `fake-${Date.now()}-${n++}`;
-      media.set(id, { id, albumId, kind: file.type.startsWith('video/') ? 'video' : 'image', status: 'processing', width: null, height: null,
-        durationSec: null, blurDataUrl: null, variants: null, error: null, readyAt: Date.now() + 4000 });
+      Object.assign(media.get(id) ?? {}, { status: 'processing', readyAt: Date.now() + 4000 });
       store();
-      patch(localId, { state: 'done', mediaId: id });
-      cb.current(id, frameId);
-    }, 300);
+      patch(localId, { state: 'done' });
+    }, 400);
     timers.current.push(t);
   };
   return {

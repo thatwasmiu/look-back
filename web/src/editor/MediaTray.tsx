@@ -23,7 +23,7 @@ export function MediaTray({ media, items, coverMediaId, onUpload, onRetry, onPic
   const [open, setOpen] = useState(false);
   const [ghost, setGhost] = useState<{ x: number; y: number; m: MediaDTO } | null>(null);
   const dragged = useRef(false); // swallow the click that ends a drag
-  const pending = items.filter((i) => i.state !== 'done');
+  const pending = items.filter((i) => i.state !== 'done' || i.notice);
 
   // Pointer-based drag (mouse and touch). A move of > 8px turns the press into a drag; the frame under the
   // pointer gets .drop-target. touch-action on the item (CSS) leaves the tray's own scroll axis to the browser.
@@ -79,15 +79,17 @@ export function MediaTray({ media, items, coverMediaId, onUpload, onRetry, onPic
           <li key={u.localId} className="tray-item tray-upload-item">
             <span className="tray-name" title={u.name}>{u.name}</span>
             {u.state === 'error'
-              ? <><span className="tray-error" role="alert">{u.error}</span><button type="button" onClick={() => onRetry(u.localId)}>Retry</button></>
+              ? <><span className="tray-error" role="alert">{u.error}</span>
+                {u.retryable !== false && <button type="button" onClick={() => onRetry(u.localId)}>Retry</button>}</>
               : <progress value={u.progress} max={1} aria-label={`Uploading ${u.name}`} />}
+            {u.notice && <span className="tray-notice">{u.notice}</span>}
           </li>
         ))}
         {media.map((m) => {
           const src = thumbOf(m);
           return (
             <li key={m.id} className="tray-item">
-              <button type="button" className="tray-thumb" aria-label={`${m.kind} ${m.id.slice(0, 8)}`}
+              <button type="button" className="tray-thumb" aria-label={`${m.kind} ${m.id.slice(0, 8)}, ${chip[m.status] ?? 'ready'}`}
                 style={!src && m.blurDataUrl ? { backgroundImage: `url("${m.blurDataUrl}")` } : undefined}
                 onPointerDown={(e) => startDrag(e, m)}
                 onClick={() => { if (!dragged.current) onPick(m.id); }}>

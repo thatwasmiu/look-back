@@ -39,7 +39,7 @@ const noMedia = new Map();
 const PAGE_DRAG = 'application/x-scrapbook-page';
 const POLLS = 3; // media polled at once
 const placeholder = (id: string, albumId: string): MediaDTO => ({
-  id, albumId, kind: 'image', status: 'processing', width: null, height: null, durationSec: null, blurDataUrl: null, variants: null, error: null,
+  id, albumId, kind: 'image', status: 'uploading', width: null, height: null, durationSec: null, blurDataUrl: null, variants: null, error: null,
 });
 
 // `uploader` is swappable so /dev/editor can fake uploads without a server.
@@ -90,7 +90,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   }, []);
 
   // Media status polling (processing → ready/failed), at most POLLS at once; stops on unmount or when the media
-  // is deleted. Transient fetch errors keep polling.
+  // is deleted. Transient fetch errors keep polling. `watched` is never cleared: each id is polled once.
   const polls = useRef({ alive: true, running: 0, queue: [] as string[], watched: new Set<string>() });
   useEffect(() => {
     polls.current.alive = true;
@@ -117,19 +117,35 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
       while (p.running < POLLS && p.queue.length) {
         const next = p.queue.shift()!;
         p.running++;
-        pollUntilSettled(next, get).catch(() => {}).finally(() => { p.running--; p.watched.delete(next); pump(); });
+        pollUntilSettled(next, get).catch(() => {}).finally(() => { p.running--; pump(); });
       }
     };
     pump();
   }, [get]);
   useEffect(() => { bundle.media.forEach((m) => m.status === 'processing' && watch(m.id)); }, [bundle.media, watch]);
 
-  // Upload finished: the media row exists (processing); put it in its target frame if that's still on this page.
+  // tus created the upload: the media row exists server-side ('uploading'), so it may go into a frame (and be
+  // autosaved) right away. Returns false when the target frame isn't on the current page (or editing is frozen).
   const upload = uploader(albumId, (mediaId, frameId) => {
     setMedia((cur) => (cur.has(mediaId) ? cur : new Map(cur).set(mediaId, placeholder(mediaId, albumId))));
-    if (frameId) commit((l) => (l.elements.some((e) => e.id === frameId && e.type === 'frame') ? assignMedia(l, frameId, mediaId) : l));
-    watch(mediaId);
+    if (!frameId) return true;
+    const { layout: l, busy: b } = latest.current;
+    if (b || !l.elements.some((e) => e.id === frameId && e.type === 'frame')) return false;
+    commit((x) => assignMedia(x, frameId, mediaId));
+    return true;
   });
+  // Upload finished: the worker takes over (processing → ready/failed).
+  useEffect(() => {
+    for (const u of upload.items) {
+      if (u.state !== 'done' || !u.mediaId) continue;
+      const id = u.mediaId;
+      setMedia((cur) => {
+        const m = cur.get(id);
+        return m?.status === 'uploading' ? new Map(cur).set(id, { ...m, status: 'processing' }) : cur;
+      });
+      watch(id);
+    }
+  }, [upload.items, watch]);
   const framePick = useRef<{ input: HTMLInputElement | null; frameId: string }>({ input: null, frameId: '' });
   const addToFrame = (frameId: string) => {
     framePick.current.frameId = frameId;

@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import type { AlbumBundle } from '@scrapbook/shared';
@@ -64,4 +64,19 @@ test('deleting media from the tray empties its frames locally, so the next save 
   await waitFor(() => expect(api.savePage).toHaveBeenCalledWith('p0', expect.objectContaining({
     elements: [expect.objectContaining({ id: 'f1', mediaId: null })] }), undefined), { timeout: 3000 });
   expect(screen.queryByRole('button', { name: 'Delete from album' })).toBeNull();
+});
+
+test('an upload id arriving early goes into its frame (uploading… chip); a frame not on this page reports false', () => {
+  let onCreated: ((id: string, frameId?: string) => boolean | void) | null = null;
+  const uploader = ((_a: string, cb: typeof onCreated) => { onCreated = cb; return { items: [], add: vi.fn(), retry: vi.fn() }; }) as never;
+  const withEmpty: AlbumBundle = { ...bundle, pages: [{ ...bundle.pages[0], layout: { background: 'paper-cream', elements: [
+    { type: 'frame', id: 'f1', x: 0.1, y: 0.1, w: 0.5, h: 0.4, rotation: 0, z: 1, frameStyle: 'polaroid', mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } },
+  ] } }] };
+  const { container } = render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={withEmpty} api={okApi()} uploader={uploader} /></MemoryRouter>);
+  let placed: boolean | void = undefined;
+  act(() => { placed = onCreated!('u1', 'f1'); });
+  expect(placed).toBe(true);
+  expect(container.querySelector('.edit-page [data-frame-id=f1] .chip')?.textContent).toBe('uploading…');
+  act(() => { placed = onCreated!('u2', 'gone'); });
+  expect(placed).toBe(false);
 });

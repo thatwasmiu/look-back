@@ -8,6 +8,8 @@ export const ACCEPT = 'image/jpeg,image/png,image/webp,video/mp4,video/quicktime
 export type UploadItem = {
   localId: string; name: string; progress: number; mediaId: string | null;
   state: 'uploading' | 'paused' | 'error' | 'done'; error?: string;
+  retryable?: boolean; // false for 4xx (HEIC, too large): retrying can't help
+  notice?: string;
 };
 export type Uploader = { items: UploadItem[]; add(files: File[], targetFrameId?: string): void; retry(localId: string): void };
 
@@ -24,10 +26,15 @@ export async function pollUntilSettled(id: string, get: (id: string) => Promise<
 
 type Resp = { status?: number; body?: { xhr?: { responseText?: string } } } | undefined;
 
-// Resumable uploads through tus (Uppy core + tus plugin, no Uppy UI). The tus upload id is the media row id,
-// so the media id is the last segment of the upload URL. tus-js-client keeps each upload's URL in
+// Resumable uploads through tus (Uppy core + tus plugin, no Uppy UI). The tus upload id is the media row id
+// (created server-side with status 'uploading'), so the media id is the last segment of the upload URL and is
+// known as soon as tus has that URL: onCreated fires then, once per item. It may return false to say the target
+// frame wasn't available (the item then gets a notice). tus-js-client keeps each upload's URL in
 // localStorage under the file's fingerprint, so re-adding / retrying an interrupted file resumes it.
-export function useUpload(albumId: string, onCreated: (mediaId: string, targetFrameId?: string) => void): Uploader {
+const PAGE_CHANGED = 'added to tray — page changed';
+const idOf = (url: string | null | undefined) => url?.split('/').pop() || null;
+
+export function useUpload(albumId: string, onCreated: (mediaId: string, targetFrameId?: string) => boolean | void): Uploader {
   const [items, setItems] = useState<UploadItem[]>([]);
   const cb = useRef(onCreated);
   cb.current = onCreated;
@@ -47,22 +54,35 @@ export function useUpload(albumId: string, onCreated: (mediaId: string, targetFr
     ref.current = uppy;
     const patch = (id: string | undefined, p: Partial<UploadItem>) =>
       setItems((xs) => xs.map((x) => (x.localId === id ? { ...x, ...p } : x)));
-    uppy.on('upload-progress', (f, p) => patch(f?.id, { progress: p.bytesTotal ? p.bytesUploaded / p.bytesTotal : 0 }));
+    const created = new Set<string>();
+    const announce = (fileId: string, mediaId: string | null) => {
+      if (!mediaId || created.has(fileId)) return;
+      created.add(fileId);
+      const target = (uppy.getFile(fileId)?.meta as { targetFrameId?: string } | undefined)?.targetFrameId;
+      const placed = cb.current(mediaId, target);
+      patch(fileId, { mediaId, ...(target && placed === false && { notice: PAGE_CHANGED }) });
+    };
+    // @uppy/tus stores file.tus.uploadUrl right before each progress event (tus-js-client's own
+    // onUploadUrlAvailable has no per-file context).
+    uppy.on('upload-progress', (f, p) => {
+      if (!f) return;
+      patch(f.id, { progress: p.bytesTotal ? p.bytesUploaded / p.bytesTotal : 0 });
+      announce(f.id, idOf((f as { tus?: { uploadUrl?: string } }).tus?.uploadUrl));
+    });
     uppy.on('upload-pause', (f, paused) => patch(f?.id, { state: paused ? 'paused' : 'uploading' }));
     uppy.on('upload-success', (f, res) => {
       if (!f) return;
-      const mediaId = res.uploadURL?.split('/').pop() ?? null;
-      patch(f.id, { state: 'done', progress: 1, mediaId });
-      const target = (uppy.getFile(f.id)?.meta as { targetFrameId?: string } | undefined)?.targetFrameId;
+      announce(f.id, idOf(res.uploadURL)); // no-op if progress already announced it
+      patch(f.id, { state: 'done', progress: 1 });
       // Done: drop the File so memory doesn't grow. Not synchronously: @uppy/tus emits this event before releasing
       // the upload, and a removal then terminates (DELETEs) the finished upload on the server.
       setTimeout(() => { if (uppy.getFile(f.id)) uppy.removeFile(f.id); });
-      if (mediaId) cb.current(mediaId, target);
     });
     uppy.on('upload-error', (f, err, res) => {
       const r = res as Resp;
       const error = r?.status === 413 ? 'File too large' : r?.status === 400 && r.body?.xhr?.responseText || err.message;
-      patch(f?.id, { state: 'error', error });
+      const status = r?.status ?? 0;
+      patch(f?.id, { state: 'error', error, retryable: !(status >= 400 && status < 500) });
     });
     return () => { uppy.destroy(); ref.current = null; };
   }, []);
@@ -78,7 +98,7 @@ export function useUpload(albumId: string, onCreated: (mediaId: string, targetFr
         });
         setItems((xs) => [...xs, { localId, name: file.name, progress: 0, mediaId: null, state: 'uploading' }]);
       } catch (e) { // e.g. the same file is already uploading
-        setItems((xs) => [...xs, { localId: `x${Date.now()}${xs.length}`, name: file.name, progress: 0, mediaId: null, state: 'error', error: (e as Error).message }]);
+        setItems((xs) => [...xs, { localId: `x${Date.now()}${xs.length}`, name: file.name, progress: 0, mediaId: null, state: 'error', error: (e as Error).message, retryable: false }]);
       }
     }
   };

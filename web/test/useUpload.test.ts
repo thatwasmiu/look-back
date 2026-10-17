@@ -69,6 +69,29 @@ test('upload-success: mediaId is the last segment of uploadURL, passed to onCrea
   expect(h.removed).toContain(id);
 });
 
+test('mediaId is known as soon as tus has the upload URL: onCreated fires then (once), not only on success', () => {
+  const onCreated = vi.fn();
+  const { result } = renderHook(() => useUpload('a1', onCreated));
+  act(() => result.current.add([file('big.mp4', 'video/mp4')], 'frame1'));
+  const id = result.current.items[0].localId;
+  const url = '/api/uploads/11111111-2222-4333-8444-555555555555';
+  act(() => h.uppy!.emit('upload-progress', { id, tus: { uploadUrl: url } }, { bytesUploaded: 10, bytesTotal: 100 }));
+  expect(onCreated).toHaveBeenCalledWith('11111111-2222-4333-8444-555555555555', 'frame1');
+  expect(result.current.items[0]).toMatchObject({ state: 'uploading', mediaId: '11111111-2222-4333-8444-555555555555', progress: 0.1 });
+  act(() => h.uppy!.emit('upload-progress', { id, tus: { uploadUrl: url } }, { bytesUploaded: 50, bytesTotal: 100 }));
+  act(() => h.uppy!.emit('upload-success', { id }, { uploadURL: url }));
+  expect(onCreated).toHaveBeenCalledTimes(1);
+  expect(result.current.items[0].state).toBe('done');
+});
+
+test('onCreated returning false (target frame no longer on the page) leaves a notice on the item', () => {
+  const { result } = renderHook(() => useUpload('a1', () => false));
+  act(() => result.current.add([file('a.jpg')], 'frame1'));
+  const id = result.current.items[0].localId;
+  act(() => h.uppy!.emit('upload-progress', { id, tus: { uploadUrl: '/api/uploads/u1' } }, { bytesUploaded: 1, bytesTotal: 2 }));
+  expect(result.current.items[0].notice).toBe('added to tray — page changed');
+});
+
 test("upload-error: the server's HEIC 400 message is shown on the item", () => {
   const { result } = renderHook(() => useUpload('a1', vi.fn()));
   act(() => result.current.add([file('IMG_1.jpg')]));
@@ -76,5 +99,5 @@ test("upload-error: the server's HEIC 400 message is shown on the item", () => {
   const msg = "HEIC not supported — choose 'Most Compatible' or let the browser convert to JPEG";
   act(() => h.uppy!.emit('upload-error', { id }, { name: 'Error', message: `tus: unexpected response while creating upload, response code: 400, response text: ${msg}` },
     { status: 400, body: { xhr: { responseText: msg } } }));
-  expect(result.current.items[0]).toMatchObject({ state: 'error', error: msg });
+  expect(result.current.items[0]).toMatchObject({ state: 'error', error: msg, retryable: false });
 });
