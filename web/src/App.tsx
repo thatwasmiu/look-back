@@ -11,6 +11,7 @@ const Editor = () => <p>Editor {useParams().id}</p>;
 // Dev-only renderer/viewer showcases; import.meta.env.DEV is false in builds, so they're tree-shaken out.
 const Preview = import.meta.env.DEV ? lazy(() => import('./dev/Preview')) : null;
 const ViewerPreview = import.meta.env.DEV ? lazy(() => import('./dev/ViewerPreview')) : null;
+const TemplatesPreview = import.meta.env.DEV ? lazy(() => import('./dev/Templates')) : null;
 
 // Layout route: check() runs once on load for all protected routes.
 function Gate() {
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         {Preview && <Route path="/dev/preview" element={<Suspense><Preview /></Suspense>} />}
         {ViewerPreview && <Route path="/dev/viewer" element={<Suspense><ViewerPreview /></Suspense>} />}
+        {TemplatesPreview && <Route path="/dev/templates" element={<Suspense><TemplatesPreview /></Suspense>} />}
         <Route element={<Gate />}>
           <Route path="/" element={<AlbumList />} />
           <Route path="/albums/:id" element={<Viewer />} />
