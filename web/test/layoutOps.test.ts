@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { pageLayoutSchema, type PageElement, type PageLayout } from '@scrapbook/shared';
 import {
-  addElement, assignMedia, bringForward, newFrame, newSticker, newTape, newText, removeElement, sendBackward, updateElement,
+  addElement, assignMedia, bringForward, newFrame, newSticker, newTape, newText, removeElement, sendBackward, setFrameStyle, updateElement,
 } from '../src/editor/layoutOps';
 
 const tape = (id: string, z: number): PageElement => ({ type: 'tape', id, x: 0.1, y: 0.1, w: 0.2, h: 0.05, rotation: 0, z, tapeStyle: 'yellow' });
@@ -63,4 +63,24 @@ test('new elements are centered, slightly tilted and valid', () => {
     expect(pageLayoutSchema.safeParse({ background: 'paper-cream', elements: [el] }).success).toBe(true);
   }
   expect(newSticker('a').id).not.toBe(newSticker('a').id);
+});
+
+test('newFrame takes a style; round shapes start visually square', () => {
+  expect(newFrame().frameStyle).toBe('polaroid');
+  const c = newFrame('circle');
+  expect(c.frameStyle).toBe('circle');
+  expect(c.h).toBeCloseTo(c.w * 0.75);
+});
+
+test('setFrameStyle keeps photo and crop; circle/heart become visually square around the same center', () => {
+  const l = setFrameStyle(layout, 'f', 'heart');
+  const f = l.elements.find((e) => e.id === 'f')! as Extract<PageElement, { type: 'frame' }>;
+  expect(f.frameStyle).toBe('heart');
+  expect(f.mediaId).toBe('m1');
+  expect(f.crop).toEqual({ x: 0.2, y: 0.8, scale: 2 });
+  expect(f.h).toBeCloseTo(f.w * 0.75);
+  expect(f.y + f.h / 2).toBeCloseTo(0.25);
+  const g = setFrameStyle(layout, 'f', 'film').elements.find((e) => e.id === 'f')!;
+  expect([g.w, g.h]).toEqual([0.5, 0.5]);
+  expect(pageLayoutSchema.safeParse(l).success).toBe(true);
 });

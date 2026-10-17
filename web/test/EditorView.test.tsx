@@ -125,3 +125,16 @@ test('a 4xx after the early frame assign leaves the media shown as failed, not s
   rerender(ui());
   expect(container.querySelector('[data-frame-id=f1] .chip')?.textContent).toBe('upload failed');
 });
+
+test('Frame opens a list of styles; with a frame selected, Frame style switches it', async () => {
+  const user = userEvent.setup();
+  const { container } = setup(okApi());
+  await user.click(screen.getByRole('button', { name: 'Frame' }));
+  expect(screen.getAllByRole('button', { name: /frame$/i }).length).toBeGreaterThanOrEqual(14);
+  await user.click(screen.getByRole('button', { name: 'Heart frame' }));
+  expect(container.querySelector('.edit-page .frame-heart')).not.toBeNull();
+  await user.click(screen.getByRole('button', { name: 'Frame style' }));
+  await user.click(screen.getByRole('button', { name: 'Film strip frame' }));
+  expect(container.querySelector('.edit-page .frame-heart')).toBeNull();
+  expect(container.querySelectorAll('.edit-page .frame-film')).toHaveLength(1);
+});

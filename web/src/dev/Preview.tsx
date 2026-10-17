@@ -1,7 +1,7 @@
 // Dev-only visual check of PageRenderer (route /dev/preview, registered only when import.meta.env.DEV).
 // Sample files live in ./samples; keys "dev-samples/<file>" go through mediaUrl() → /media/dev-samples/<file>,
 // which the Vite dev proxy rewrites to /src/dev/samples/<file> (see vite.config.ts) instead of the API.
-import type { FrameEl, MediaDTO, PageElement, PageLayout } from '@scrapbook/shared';
+import { FRAME_STYLES, type FrameEl, type MediaDTO, type PageElement, type PageLayout } from '@scrapbook/shared';
 import { PageRenderer } from '../render/PageRenderer';
 import blur from './samples/blur.json';
 
@@ -80,6 +80,17 @@ export const pages: { label: string; mode: 'view' | 'edit'; layout: PageLayout }
     text(g(0.56, 0.9, 0.4, 0.06, -4, 5), 'ghi chú ở đây…', 'dancing-script', 0.04),
   ] } },
 ];
+
+// Every frame style with a photo, 3 per row (round shapes visually square: h = 0.75w).
+const photos = ['sunset', 'lake', 'pine', 'beach', 'video'];
+const gallery = (styles: readonly FrameEl['frameStyle'][], bg: PageLayout['background']): PageLayout => ({ background: bg, elements: styles.map((s, i) => {
+  const col = i % 3, row = Math.floor(i / 3), round = s === 'circle' || s === 'heart';
+  return frame(g(0.04 + col * 0.32, 0.04 + row * 0.24, 0.28, round ? 0.21 : 0.2, (i % 2 ? 3 : -3), 1), s, photos[i % photos.length]);
+}) });
+pages.push(
+  { label: 'frames 1–9', mode: 'view', layout: gallery(FRAME_STYLES.slice(0, 9), 'paper-cream') },
+  { label: 'frames 10–14', mode: 'view', layout: gallery(FRAME_STYLES.slice(9), 'paper-kraft') },
+);
 
 export default function Preview() {
   return (

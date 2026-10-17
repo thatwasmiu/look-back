@@ -66,3 +66,13 @@ test('unknown sticker renders nothing and does not crash', () => {
   const { container } = setup([{ type: 'sticker', id: 's1', x: 0, y: 0, w: 0.1, h: 0.1, rotation: 0, z: 0, stickerId: 'nope' }]);
   expect(container.querySelector('[data-el="s1"]')?.childElementCount).toBe(0);
 });
+
+test('every frame style renders its class; photo corners add four corner tabs', async () => {
+  const { FRAME_STYLES } = await import('@scrapbook/shared');
+  for (const s of FRAME_STYLES) {
+    const { container, unmount } = setup([{ ...frame(null), frameStyle: s }]);
+    expect(container.querySelector(`.frame-${s}`)).not.toBeNull();
+    expect(container.querySelectorAll('.frame-corner')).toHaveLength(s === 'corners' ? 4 : 0);
+    unmount();
+  }
+});

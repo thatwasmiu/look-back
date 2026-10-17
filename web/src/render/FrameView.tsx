@@ -24,6 +24,7 @@ export function FrameView({ el, media, mode, active }: Props) {
   return (
     <div className={`frame frame-${el.frameStyle}`} data-frame-id={el.id} style={el.frameStyle === 'torn' ? { clipPath: TORN_CLIP } : undefined}>
       <div className="frame-window">{content(el, media, mode, active)}</div>
+      {el.frameStyle === 'corners' && ['tl', 'tr', 'bl', 'br'].map((c) => <i key={c} className={`frame-corner frame-corner-${c}`} aria-hidden />)}
     </div>
   );
 }

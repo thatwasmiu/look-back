@@ -18,10 +18,16 @@ const baseShape = {
   z: z.number().int().min(0),
 }
 
+// Picker order. 'plain' is shown as "Thin white".
+export const FRAME_STYLES = [
+  'polaroid', 'instant-mini', 'plain', 'rounded', 'corners', 'stamp', 'film', 'scallop',
+  'kraft-mat', 'double-line', 'doodle', 'torn', 'circle', 'heart',
+] as const
+
 const frameSchema = z.object({
   ...baseShape,
   type: z.literal('frame'),
-  frameStyle: z.enum(['polaroid', 'plain', 'torn']),
+  frameStyle: z.enum(FRAME_STYLES),
   mediaId: z.string().nullable(),
   crop: cropSchema,
 })

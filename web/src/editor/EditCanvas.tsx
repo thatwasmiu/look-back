@@ -97,7 +97,7 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
       <PageRenderer layout={shown} media={media} mode="edit" renderOverlay={renderOverlay} />
       <Moveable ref={moveableRef} target={target} className="editor-moveable" zoom={coarse ? 1.7 : 1}
         draggable resizable rotatable pinchable={['resizable', 'rotatable']} origin={false}
-        renderDirections={['nw', 'ne', 'sw', 'se']} keepRatio={selected?.type === 'sticker'} rotationPosition="top"
+        renderDirections={['nw', 'ne', 'sw', 'se']} keepRatio={selected?.type === 'sticker' || (selected?.type === 'frame' && ['circle', 'heart'].includes(selected.frameStyle))} rotationPosition="top"
         onDragStart={begin}
         onDrag={(e) => { const { W, H } = size(); preview({ x: e.left / W, y: e.top / H }); }}
         onDragEnd={end}

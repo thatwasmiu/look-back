@@ -41,3 +41,16 @@ describe('pageLayoutSchema', () => {
     expect(ok(l)).toBe(false)
   })
 })
+
+describe('frame styles', () => {
+  it('accepts every style in FRAME_STYLES and rejects unknown ones', async () => {
+    const { FRAME_STYLES } = await import('../src/index')
+    expect(FRAME_STYLES).toHaveLength(14)
+    for (const s of FRAME_STYLES) {
+      const l = sample(); (l.elements[0] as { frameStyle: string }).frameStyle = s
+      expect(ok(l)).toBe(true)
+    }
+    const l = sample(); (l.elements[0] as { frameStyle: string }).frameStyle = 'oval'
+    expect(ok(l)).toBe(false)
+  })
+})

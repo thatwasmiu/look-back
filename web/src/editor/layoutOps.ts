@@ -58,6 +58,17 @@ export const newSticker = (stickerId: string): StickerEl => ({ type: 'sticker', 
 export const newTape = (tapeStyle: TapeEl['tapeStyle']): TapeEl => ({ type: 'tape', ...box(0.22, 0.045), tapeStyle });
 export const newText = (): TextEl =>
   ({ type: 'text', ...box(0.5, 0.08), text: 'ghi chú', font: 'patrick-hand', color: '#4a3b2c', size: 0.045 });
-// Polaroid with a square photo window (h = 0.825w, see templates.ts).
-export const newFrame = (): FrameEl =>
-  ({ type: 'frame', ...box(0.5, 0.4125), frameStyle: 'polaroid', mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } });
+// Round shapes (circle, heart) are kept visually square: h = 0.75w on the 3:4 page.
+const ROUND: FrameEl['frameStyle'][] = ['circle', 'heart'];
+// Polaroid with a square photo window (h = 0.825w, see templates.ts); round shapes start square.
+export const newFrame = (frameStyle: FrameEl['frameStyle'] = 'polaroid'): FrameEl =>
+  ({ type: 'frame', ...(ROUND.includes(frameStyle) ? box(0.4, 0.3) : box(0.5, 0.4125)), frameStyle, mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } });
+
+// Switch a frame's look; photo and crop stay. Round shapes become visually square around the same center.
+export function setFrameStyle(l: PageLayout, id: string, frameStyle: FrameEl['frameStyle']): PageLayout {
+  const f = l.elements.find((e) => e.id === id);
+  if (f?.type !== 'frame') return l;
+  if (!ROUND.includes(frameStyle)) return updateElement(l, id, { frameStyle });
+  const h = f.w * 0.75;
+  return updateElement(l, id, { frameStyle, h, y: f.y + (f.h - h) / 2 });
+}

@@ -49,6 +49,72 @@
 .frame-plain { padding: 2.5%; background: #fffdf8; }
 .frame-torn { padding: 6%; background: url(../assets/paper-grain.webp), #fbf6ea; }
 
+/* Paper-white frames share one cheap two-layer shadow. */
+.frame-instant-mini, .frame-rounded, .frame-kraft-mat, .frame-double-line, .frame-film, .frame-circle {
+  box-shadow: 0 .25cqh .4cqh rgba(40, 28, 10, .2), 0 1.2cqh 1.8cqh -.4cqh rgba(40, 28, 10, .2);
+}
+/* Shaped frames (mask / clip) take their shadow from a filter on the element box, like torn. */
+.el-frame:has(> .frame-stamp), .el-frame:has(> .frame-scallop), .el-frame:has(> .frame-heart) {
+  filter: drop-shadow(0 .5cqh .7cqh rgba(40, 28, 10, .25));
+}
+.frame-instant-mini { padding: 4% 4% 7%; background: linear-gradient(165deg, #fffefa, #f5f1e7); }
+.frame-rounded { border-radius: 2.2cqh; overflow: hidden; }
+.frame-rounded .frame-window { border-radius: 2.2cqh; }
+/* Black album corners tucking the photo in. */
+.frame-corners { position: relative; }
+.frame-corners .frame-window { box-shadow: 0 .3cqh .6cqh rgba(40, 28, 10, .25); }
+.frame-corner { position: absolute; width: 14%; aspect-ratio: 1; background: #2c2723; }
+.frame-corner-tl { left: -2.5%; top: -2.5%; clip-path: polygon(0 0, 100% 0, 0 100%); }
+.frame-corner-tr { right: -2.5%; top: -2.5%; clip-path: polygon(0 0, 100% 0, 100% 100%); }
+.frame-corner-bl { left: -2.5%; bottom: -2.5%; clip-path: polygon(0 0, 0 100%, 100% 100%); }
+.frame-corner-br { right: -2.5%; bottom: -2.5%; clip-path: polygon(100% 0, 0 100%, 100% 100%); }
+/* Perforated stamp: holes along the edge only (hole pattern ∪ solid inner rect). */
+.frame-stamp {
+  padding: 2.4cqh; background: #fffdf8;
+  -webkit-mask: radial-gradient(circle, transparent .55cqh, #000 .62cqh) -.8cqh -.8cqh / 1.6cqh 1.6cqh round,
+    linear-gradient(#000 0 0) center / calc(100% - 1.6cqh) calc(100% - 1.6cqh) no-repeat;
+  mask: radial-gradient(circle, transparent .55cqh, #000 .62cqh) -.8cqh -.8cqh / 1.6cqh 1.6cqh round,
+    linear-gradient(#000 0 0) center / calc(100% - 1.6cqh) calc(100% - 1.6cqh) no-repeat;
+}
+/* Film strip with sprocket holes top and bottom. */
+.frame-film { position: relative; padding: 4.2cqh 1.6cqh; background: #1f1c19; }
+.frame-film::before, .frame-film::after {
+  content: ''; position: absolute; left: 1.6cqh; right: 1.6cqh; height: 1.4cqh; border-radius: .2cqh;
+  background: repeating-linear-gradient(90deg, #e9e1d0 0 1.4cqh, transparent 1.4cqh 3cqh);
+}
+.frame-film::before { top: 1.4cqh; }
+.frame-film::after { bottom: 1.4cqh; }
+/* Scalloped vintage edge: bumps along the edge (circle pattern ∪ solid inner rect). */
+.frame-scallop {
+  padding: 2.6cqh; background: #fffdf7;
+  -webkit-mask: radial-gradient(circle, #000 .9cqh, transparent .95cqh) 0 0 / 1.8cqh 1.8cqh round,
+    linear-gradient(#000 0 0) center / calc(100% - 1.8cqh) calc(100% - 1.8cqh) no-repeat;
+  mask: radial-gradient(circle, #000 .9cqh, transparent .95cqh) 0 0 / 1.8cqh 1.8cqh round,
+    linear-gradient(#000 0 0) center / calc(100% - 1.8cqh) calc(100% - 1.8cqh) no-repeat;
+}
+.frame-kraft-mat { padding: 6%; background: url(../assets/paper-grain.webp), #c4a074; }
+.frame-kraft-mat .frame-window { outline: .35cqh solid #fff8ea; outline-offset: .6cqh; }
+.frame-double-line { position: relative; padding: 5%; background: #fffdf8; }
+.frame-double-line::after { content: ''; position: absolute; inset: 2.2%; border: .2cqh solid #8a7a62; pointer-events: none; }
+/* Hand-drawn pen outline, no paper. */
+.frame-doodle { position: relative; padding: 3%; }
+.frame-doodle::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  border: .45cqh solid #5a4330; border-radius: 1.2cqh 3cqh 1.6cqh 2.6cqh / 2.6cqh 1.2cqh 3cqh 1.6cqh;
+}
+.frame-doodle .frame-window { border-radius: .8cqh 2cqh 1cqh 1.8cqh / 1.8cqh .8cqh 2cqh 1cqh; }
+.frame-circle { border-radius: 50%; padding: 3%; background: #fffdf8; }
+.frame-circle .frame-window { border-radius: 50%; }
+/* Heart: white rim = the frame's heart, photo = a smaller heart inside. */
+.frame-heart {
+  padding: 4%; background: #fffdf8;
+  -webkit-mask: var(--heart) center / 100% 100% no-repeat; mask: var(--heart) center / 100% 100% no-repeat;
+}
+.frame-heart .frame-window { -webkit-mask: var(--heart) center / 100% 100% no-repeat; mask: var(--heart) center / 100% 100% no-repeat; }
+.frame-heart, .frame-heart .frame-window {
+  --heart: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 90' preserveAspectRatio='none'%3E%3Cpath d='M50 88C10 60 0 38 0 24 0 10 11 0 25 0c11 0 20 6 25 15C55 6 64 0 75 0c14 0 25 10 25 24 0 14-10 36-50 64z'/%3E%3C/svg%3E");
+}
+
 .slot-paper { position: absolute; inset: 0; background: url(../assets/paper-grain.webp), #ede4d1; }
 .slot-empty {
   position: absolute; inset: 5%; display: grid; place-items: center;

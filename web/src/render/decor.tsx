@@ -1,11 +1,16 @@
 import type { ComponentType, ReactNode } from 'react';
-import type { TapeEl, TextEl } from '@scrapbook/shared';
+import type { FrameEl, TapeEl, TextEl } from '@scrapbook/shared';
 
 export const fontFamily: Record<TextEl['font'], string> = {
   'dancing-script': "'Dancing Script', cursive",
   'patrick-hand': "'Patrick Hand', cursive",
 };
 
+export const frameStyleLabels: Record<FrameEl['frameStyle'], string> = {
+  polaroid: 'Polaroid', 'instant-mini': 'Instant mini', plain: 'Thin white', rounded: 'Rounded', corners: 'Photo corners',
+  stamp: 'Stamp', film: 'Film strip', scallop: 'Scalloped', 'kraft-mat': 'Kraft mat', 'double-line': 'Double line',
+  doodle: 'Hand-drawn', torn: 'Torn paper', circle: 'Circle', heart: 'Heart',
+};
 export const tapeStyles: TapeEl['tapeStyle'][] = ['yellow', 'pink', 'mint', 'kraft'];
 
 export const Tape = ({ tapeStyle }: { tapeStyle: TapeEl['tapeStyle'] }) => <div className={`tape tape-${tapeStyle}`} />;

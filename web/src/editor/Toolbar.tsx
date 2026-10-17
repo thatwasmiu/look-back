@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import type { PageElement, PageLayout, TextEl } from '@scrapbook/shared';
-import { Tape, fontFamily, stickers, tapeStyles } from '../render/decor';
-import { addElement, bringForward, newFrame, newSticker, newTape, newText, removeElement, sendBackward, updateElement } from './layoutOps';
+import { FRAME_STYLES, type FrameEl, type PageElement, type PageLayout, type TextEl } from '@scrapbook/shared';
+import { Tape, fontFamily, frameStyleLabels, stickers, tapeStyles } from '../render/decor';
+import { FrameView } from '../render/FrameView';
+import { addElement, bringForward, newFrame, newSticker, newTape, newText, removeElement, sendBackward, setFrameStyle, updateElement } from './layoutOps';
 import type { SaveStatus } from './useAutosave';
 
 type Props = {
@@ -14,22 +15,34 @@ type Props = {
 
 const backgrounds: PageLayout['background'][] = ['paper-cream', 'paper-kraft', 'paper-grid', 'paper-dots'];
 const inks = ['#4a3b2c', '#3b2a1a', '#7a4a2e', '#a33a2a', '#2f5d7c', '#3f6b3a'];
+// Swatch preview: an empty frame (paper inside), drawn by the real renderer so the list matches the page.
+const SAMPLE: FrameEl = { type: 'frame', id: 'sample', x: 0, y: 0, w: 1, h: 1, rotation: 0, z: 0, frameStyle: 'polaroid', mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } };
 const statusLabel: Record<SaveStatus, string> = { saved: 'Saved', saving: 'Saving…', unsaved: 'Unsaved', error: 'Save failed' };
 
 // Laptop: a bar above the page. Phone (coarse pointer or < 700px, see CSS): a sheet pinned to the bottom,
 // pickers open above it.
 export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo, status, save, crop }: Props) {
-  const [picker, setPicker] = useState<'sticker' | 'tape' | 'bg' | null>(null);
+  const [picker, setPicker] = useState<'frame' | 'frameStyle' | 'sticker' | 'tape' | 'bg' | null>(null);
   const toggle = (p: typeof picker) => setPicker((cur) => (cur === p ? null : p));
   const add = (el: PageElement) => { commit(addElement(layout, el), el.id); setPicker(null); };
   const sel = selected?.id;
   const text = selected?.type === 'text' ? selected : null;
+  const frame = selected?.type === 'frame' ? selected : null;
+  const pickFrame = (s: FrameEl['frameStyle']) => {
+    if (picker === 'frameStyle' && frame) { commit(setFrameStyle(layout, frame.id, s)); setPicker(null); } else add(newFrame(s));
+  };
   const setText = (patch: Partial<TextEl>, coalesce?: string) => text && commit(updateElement(layout, text.id, patch), undefined, coalesce);
 
   return (
     <div className="toolbar" role="toolbar" aria-label="Editor tools">
       {picker && (
         <div className="picker">
+          {(picker === 'frame' || picker === 'frameStyle') && FRAME_STYLES.map((s) => (
+            <button key={s} type="button" className="swatch frame-swatch" aria-label={`${frameStyleLabels[s]} frame`} title={frameStyleLabels[s]}
+              aria-pressed={picker === 'frameStyle' && frame?.frameStyle === s} onClick={() => pickFrame(s)}>
+              <FrameView el={{ ...SAMPLE, frameStyle: s }} media={undefined} mode="view" active={false} />
+            </button>
+          ))}
           {picker === 'sticker' && Object.entries(stickers).map(([id, { label, Svg }]) => (
             <button key={id} type="button" className="swatch sticker-swatch" aria-label={label} title={label} onClick={() => add(newSticker(id))}><Svg /></button>
           ))}
@@ -43,7 +56,8 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
         </div>
       )}
       <div className="tools">
-        <button type="button" onClick={() => add(newFrame())}>Frame</button>
+        <button type="button" aria-expanded={picker === 'frame'} onClick={() => toggle('frame')}>Frame</button>
+        {frame && <button type="button" aria-expanded={picker === 'frameStyle'} onClick={() => toggle('frameStyle')}>Frame style</button>}
         <button type="button" aria-expanded={picker === 'sticker'} onClick={() => toggle('sticker')}>Sticker</button>
         <button type="button" aria-expanded={picker === 'tape'} onClick={() => toggle('tape')}>Tape</button>
         <button type="button" onClick={() => add(newText())}>Text</button>
