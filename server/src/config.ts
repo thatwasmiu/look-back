@@ -9,6 +9,7 @@ export type Config = {
   videoRenditions: number[];
   ffmpegPreset: string;
   cookieSecure: boolean;
+  trustProxy: boolean;
 };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -26,5 +27,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     videoRenditions: (env.VIDEO_RENDITIONS ?? '720').split(',').map(Number),
     ffmpegPreset: env.FFMPEG_PRESET ?? 'veryfast',
     cookieSecure: env.COOKIE_SECURE !== 'false',
+    trustProxy: env.TRUST_PROXY === 'true',
   };
 }

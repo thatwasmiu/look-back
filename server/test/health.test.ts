@@ -25,6 +25,10 @@ describe('loadConfig', () => {
     expect(loadConfig({ ...base, VIDEO_RENDITIONS: '720,1080' }).videoRenditions).toEqual([720, 1080]);
     expect(loadConfig(base).videoRenditions).toEqual([720]);
   });
+  it('TRUST_PROXY defaults false', () => {
+    expect(loadConfig(base).trustProxy).toBe(false);
+    expect(loadConfig({ ...base, TRUST_PROXY: 'true' }).trustProxy).toBe(true);
+  });
   it('COOKIE_SECURE', () => {
     expect(loadConfig(base).cookieSecure).toBe(true);
     expect(loadConfig({ ...base, COOKIE_SECURE: 'false' }).cookieSecure).toBe(false);

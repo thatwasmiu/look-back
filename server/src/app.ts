@@ -6,7 +6,7 @@ import type { Config } from './config.js';
 
 // pool/boss are consumed by routes added in later tasks.
 export async function buildApp(config: Config, _pool: pg.Pool, _boss: PgBoss | null): Promise<FastifyInstance> {
-  const app = Fastify();
+  const app = Fastify({ trustProxy: config.trustProxy });
   registerAuth(app, config);
   app.get('/api/health', async () => ({ ok: true }));
   return app;
