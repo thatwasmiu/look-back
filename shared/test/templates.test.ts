@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { instantiateTemplate, pageLayoutSchema, templates } from '../src/index'
 
-const required = ['cover', 'blank', 'one-hero', 'two-tilted', 'three-collage', 'four-grid-loose', 'hero-plus-two', 'video-feature']
+const required = ['cover', 'blank', 'one-hero', 'two-tilted', 'three-collage', 'four-grid-loose', 'hero-plus-two', 'video-feature',
+  'memories', 'film-day', 'postcard', 'sweet-heart', 'old-album', 'vintage', 'journal', 'instant-fan']
+// Sticker ids in the web registry (web/src/render/decor.tsx); shared can't import web code.
+const stickerIds = ['flower', 'heart', 'star', 'leaf', 'sun', 'moon', 'camera', 'plane', 'ticket', 'coffee', 'cloud', 'arrow', 'butterfly']
 
 describe('templates', () => {
   it('has every required template', () => {
@@ -24,19 +27,19 @@ describe('templates', () => {
         }
       })
 
-      it('tilts within ±8°', () => {
-        for (const e of els) expect(Math.abs(e.rotation)).toBeLessThanOrEqual(8)
+      it('tilts within ±8° (tape may cross a corner diagonally, ±45°)', () => {
+        for (const e of els) expect(Math.abs(e.rotation)).toBeLessThanOrEqual(e.type === 'tape' ? 45 : 8)
+      })
+
+      it('uses only stickers that exist', () => {
+        for (const e of els) if (e.type === 'sticker') expect(stickerIds).toContain(e.stickerId)
       })
 
       if (t.id === 'blank') return
-      it('uses empty polaroid frames and 1–3 tape strips', () => {
+      it('uses empty frames and at most 3 tape strips', () => {
         expect(frames.length).toBeGreaterThan(0)
-        for (const f of frames) {
-          expect(f).toMatchObject({ frameStyle: 'polaroid', mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } })
-        }
-        const tapes = els.filter((e) => e.type === 'tape').length
-        expect(tapes).toBeGreaterThanOrEqual(1)
-        expect(tapes).toBeLessThanOrEqual(3)
+        for (const f of frames) expect(f).toMatchObject({ mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } })
+        expect(els.filter((e) => e.type === 'tape').length).toBeLessThanOrEqual(3)
       })
     })
   }
