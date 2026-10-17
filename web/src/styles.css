@@ -163,6 +163,7 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .inline-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
 .inline-confirm .secondary { background: #e2d6bd; color: var(--ink); }
 .template-picker { display: grid; grid-template-columns: repeat(auto-fill, 6rem); justify-content: center; gap: .75rem; width: min(40rem, calc(100vw - 16px)); max-height: 60vh; overflow-y: auto; }
+.template-cancel { grid-column: 1 / -1; justify-self: center; padding: .4rem 1.4rem; }
 .template { padding: 0; background: none; color: var(--ink); display: flex; flex-direction: column; gap: .3rem; font-family: var(--hand-plain); }
 
 /* ---- Media tray: side panel (laptop), tab + horizontal strip (phone) ---- */
@@ -196,6 +197,7 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .crop-overlay { position: absolute; inset: 0; z-index: 1; cursor: move; touch-action: none; outline: .5cqh dashed #fffaf0; box-shadow: 0 0 0 100vmax #0005; }
 .crop-done { position: absolute; left: 50%; top: 100%; translate: -50% .6rem; padding: .35rem 1rem; background: var(--accent); color: #fff; }
 
+.panels-toggle { display: none; flex: none; padding: .3rem .7rem; background: #fffaf0; color: var(--ink); font-size: .9rem; }
 /* Phone: tools become a bottom sheet (thumb reach), pickers open upwards. */
 @media (pointer: coarse), (max-width: 699px) {
   .editor .toolbar { order: 9; padding-bottom: max(.35rem, env(safe-area-inset-bottom)); box-shadow: 0 -2px 8px #0004; border-radius: 12px 12px 0 0; }
@@ -210,5 +212,20 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
   .tray-list { display: none; grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 4.5rem; overflow: auto hidden; padding: 0 .75rem .5rem; }
   .tray.open .tray-list { display: grid; }
   .tray-thumb { touch-action: pan-x; }
+  .panels-toggle { display: inline-block; }
+  .editor.panels-hidden :is(.tray, .page-strip, .toolbar) { display: none; }
+}
+/* PC: tools become a left column so the page gets the full height; pickers open to the right of it. */
+@media (pointer: fine) and (min-width: 700px) {
+  .editor { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .editor > * { grid-column: 2; }
+  .editor > .editor-bar { grid-column: 1 / -1; }
+  .editor > .toolbar { grid-column: 1; grid-row: 2 / span 9; width: 8.5rem; padding: .6rem .5rem; box-shadow: 2px 0 8px #0004; }
+  .editor > .edit-main { min-height: 0; }
+  .toolbar .tools { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
+  .toolbar .tools .sep { width: auto; height: 1px; margin: .2rem 0; }
+  .toolbar .tools .status { min-width: 0; }
+  .toolbar .text-tools { flex-direction: row; flex-wrap: wrap; justify-content: flex-start; margin-top: .6rem; }
+  .editor .picker { left: 100%; top: .5rem; translate: .5rem 0; width: min(36rem, calc(100vw - 10rem)); justify-content: flex-start; }
 }
 .editor.busy :is(.toolbar, .edit-stage, .page-strip, .tray) { pointer-events: none; opacity: .75; }

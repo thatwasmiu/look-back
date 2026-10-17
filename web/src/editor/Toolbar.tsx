@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FRAME_STYLES, type FrameEl, type PageElement, type PageLayout, type TextEl } from '@scrapbook/shared';
 import { Tape, fontFamily, frameStyleLabels, stickers, tapeStyles } from '../render/decor';
 import { FrameView } from '../render/FrameView';
@@ -24,6 +24,16 @@ const statusLabel: Record<SaveStatus, string> = { saved: 'Saved', saving: 'Savin
 export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo, status, save, crop }: Props) {
   const [picker, setPicker] = useState<'frame' | 'frameStyle' | 'sticker' | 'tape' | 'bg' | null>(null);
   const toggle = (p: typeof picker) => setPicker((cur) => (cur === p ? null : p));
+  const ref = useRef<HTMLDivElement>(null);
+  // An open picker closes on a press anywhere outside the toolbar, or on Escape.
+  useEffect(() => {
+    if (!picker) return;
+    const outside = (e: PointerEvent) => { if (!ref.current?.contains(e.target as Node)) setPicker(null); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setPicker(null); };
+    document.addEventListener('pointerdown', outside);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', esc); };
+  }, [picker]);
   const add = (el: PageElement) => { commit(addElement(layout, el), el.id); setPicker(null); };
   const sel = selected?.id;
   const text = selected?.type === 'text' ? selected : null;
@@ -34,7 +44,7 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
   const setText = (patch: Partial<TextEl>, coalesce?: string) => text && commit(updateElement(layout, text.id, patch), undefined, coalesce);
 
   return (
-    <div className="toolbar" role="toolbar" aria-label="Editor tools">
+    <div className="toolbar" role="toolbar" aria-label="Editor tools" ref={ref}>
       {picker && (
         <div className="picker">
           {(picker === 'frame' || picker === 'frameStyle') && FRAME_STYLES.map((s) => (

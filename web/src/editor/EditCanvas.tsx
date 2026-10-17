@@ -73,7 +73,19 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
     if (id === selectedId) return;
     const m = moveableRef.current;
     const native = e.nativeEvent;
-    if (id && m) m.waitToChangeTarget().then(() => m.dragStart(native)); // select and drag in one gesture
+    if (id && m) {
+      // Select and drag in one gesture — but only if the button is still down once the handles attach.
+      // A quick click releases first; starting the drag then would never see a pointerup (item stuck to the mouse).
+      let held = true;
+      const release = () => { held = false; };
+      window.addEventListener('pointerup', release, { once: true });
+      window.addEventListener('pointercancel', release, { once: true });
+      m.waitToChangeTarget().then(() => {
+        window.removeEventListener('pointerup', release);
+        window.removeEventListener('pointercancel', release);
+        if (held) m.dragStart(native);
+      });
+    }
     onSelect(id); // tap on empty page clears selection
   };
   const startEditing = (id: string | null) => {

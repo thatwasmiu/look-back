@@ -138,3 +138,42 @@ test('Frame opens a list of styles; with a frame selected, Frame style switches 
   expect(container.querySelector('.edit-page .frame-heart')).toBeNull();
   expect(container.querySelectorAll('.edit-page .frame-film')).toHaveLength(1);
 });
+
+test('phone: Hide tools tucks the photos, pages and tools away; Show tools brings them back', async () => {
+  const user = userEvent.setup();
+  const { container } = setup(okApi());
+  const main = () => container.querySelector('main.editor')!;
+  await user.click(screen.getByRole('button', { name: 'Hide tools' }));
+  expect(main().classList.contains('panels-hidden')).toBe(true);
+  await user.click(screen.getByRole('button', { name: 'Show tools' }));
+  expect(main().classList.contains('panels-hidden')).toBe(false);
+});
+
+test('an open picker closes on a click outside it (and on Escape)', async () => {
+  const user = userEvent.setup();
+  const { container } = setup(okApi());
+  await user.click(screen.getByRole('button', { name: 'Sticker' }));
+  expect(container.querySelector('.picker')).not.toBeNull();
+  await user.click(container.querySelector('.edit-stage')!);
+  expect(container.querySelector('.picker')).toBeNull();
+  await user.click(screen.getByRole('button', { name: 'Frame' }));
+  expect(container.querySelector('.picker')).not.toBeNull();
+  await user.keyboard('{Escape}');
+  expect(container.querySelector('.picker')).toBeNull();
+});
+
+test('the add-page template list has Cancel and also closes on an outside click or Escape', async () => {
+  const user = userEvent.setup();
+  const { container } = setup(okApi());
+  const open = () => user.click(screen.getByRole('button', { name: 'Add page' }));
+  const list = () => screen.queryByRole('dialog', { name: 'Pick a template' });
+  await open();
+  await user.click(screen.getByRole('button', { name: 'Cancel' }));
+  expect(list()).toBeNull();
+  await open();
+  await user.click(container.querySelector('.edit-stage')!);
+  expect(list()).toBeNull();
+  await open();
+  await user.keyboard('{Escape}');
+  expect(list()).toBeNull();
+});

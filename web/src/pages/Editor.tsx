@@ -57,7 +57,21 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   const [hist, setHist] = useState(() => initHistory(page?.layout ?? EMPTY));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
+  const pickRef = useRef<HTMLDivElement>(null);
+  // The template list closes on a press outside it (the "+" button toggles it itself) or on Escape.
+  useEffect(() => {
+    if (!picking) return;
+    const outside = (e: PointerEvent) => {
+      const t = e.target as Element;
+      if (!pickRef.current?.contains(t) && !t.closest?.('.thumb-add')) setPicking(false);
+    };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setPicking(false); };
+    document.addEventListener('pointerdown', outside);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', esc); };
+  }, [picking]);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [panelsHidden, setPanelsHidden] = useState(false); // phone: tuck photos/pages/tools away for a bigger page
   const [opError, setOpError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false); // page op in progress: editing frozen so nothing lands mid-switch/delete
   const navigate = useNavigate();
@@ -278,10 +292,13 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
 
   const shownPages = withCurrent();
   return (
-    <main className={`editor${busy ? ' busy' : ''}`} aria-busy={busy}>
+    <main className={`editor${busy ? ' busy' : ''}${panelsHidden ? ' panels-hidden' : ''}`} aria-busy={busy}>
       <header className="editor-bar">
         <Link to={`/albums/${albumId}`} onClick={leave}>← Done</Link>
         <h1>{bundle.album.title}</h1>
+        <button type="button" className="panels-toggle" aria-pressed={panelsHidden} onClick={() => setPanelsHidden((v) => !v)}>
+          {panelsHidden ? 'Show tools' : 'Hide tools'}
+        </button>
       </header>
       {page && (
         <Toolbar layout={layout} selected={selected} commit={commit}
@@ -335,13 +352,14 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
         </div>
       )}
       {picking && (
-        <div className="template-picker" role="dialog" aria-label="Pick a template">
+        <div className="template-picker" role="dialog" aria-label="Pick a template" ref={pickRef}>
           {templates.map((t) => (
             <button key={t.id} type="button" className="template" onClick={() => addPage(t.id)}>
               <PageRenderer layout={t.layout} media={noMedia} mode="edit" active={false} />
               <span>{t.name}</span>
             </button>
           ))}
+          <button type="button" className="secondary template-cancel" onClick={() => setPicking(false)}>Cancel</button>
         </div>
       )}
     </main>
