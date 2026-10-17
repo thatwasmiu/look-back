@@ -1,0 +1,34 @@
+import { useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { api, ApiError } from '../api';
+
+export default function Login() {
+  const nav = useNavigate();
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    try {
+      await api.login(password);
+      nav('/');
+    } catch (err) {
+      const s = err instanceof ApiError ? err.status : 0;
+      setError(s === 401 ? 'Wrong password' : s === 429 ? 'Too many attempts, try again later' : 'Something went wrong');
+    }
+  }
+
+  return (
+    <main className="login">
+      <form className="paper-card" onSubmit={submit}>
+        <h1>Our Scrapbook</h1>
+        <label>
+          Password
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoFocus />
+        </label>
+        {error && <p role="alert" className="error">{error}</p>}
+        <button type="submit">Enter</button>
+      </form>
+    </main>
+  );
+}
