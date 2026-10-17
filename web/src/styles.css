@@ -169,3 +169,4 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
   .editor-bar h1 { font-size: 1.2rem; }
   .inline-confirm, .template-picker { bottom: 10rem; }
 }
+.editor.busy :is(.toolbar, .edit-stage, .page-strip) { pointer-events: none; opacity: .75; }

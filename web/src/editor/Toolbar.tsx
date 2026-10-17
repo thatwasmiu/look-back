@@ -6,7 +6,7 @@ import type { SaveStatus } from './useAutosave';
 
 type Props = {
   layout: PageLayout; selected: PageElement | null;
-  commit(l: PageLayout, select?: string | null): void;
+  commit(next: PageLayout | ((l: PageLayout) => PageLayout), select?: string | null, coalesce?: string): void;
   undo(): void; redo(): void; canUndo: boolean; canRedo: boolean;
   status: SaveStatus; save(): void;
 };
@@ -23,7 +23,7 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
   const add = (el: PageElement) => { commit(addElement(layout, el), el.id); setPicker(null); };
   const sel = selected?.id;
   const text = selected?.type === 'text' ? selected : null;
-  const setText = (patch: Partial<TextEl>) => text && commit(updateElement(layout, text.id, patch));
+  const setText = (patch: Partial<TextEl>, coalesce?: string) => text && commit(updateElement(layout, text.id, patch), undefined, coalesce);
 
   return (
     <div className="toolbar" role="toolbar" aria-label="Editor tools">
@@ -65,7 +65,7 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
           {inks.map((c) => (
             <button key={c} type="button" className="ink" aria-label={`ink ${c}`} aria-pressed={text.color === c} style={{ background: c }} onClick={() => setText({ color: c })} />
           ))}
-          <input type="color" aria-label="Text color" value={text.color} onChange={(e) => setText({ color: e.target.value })} />
+          <input type="color" aria-label="Text color" value={text.color} onChange={(e) => setText({ color: e.target.value }, `color:${text.id}`)} />
           <small>double-tap text to edit</small>
         </div>
       )}

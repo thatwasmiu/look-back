@@ -59,3 +59,78 @@ test('switching page resets: the new page layout is not saved', async () => {
   expect(save).not.toHaveBeenCalled();
   expect(result.current.status).toBe('saved');
 });
+
+test('tab hidden → flush with keepalive', async () => {
+  const save = vi.fn().mockResolvedValue(undefined);
+  const { rerender } = setup(save);
+  const l = L(1);
+  rerender({ id: 'p1', layout: l });
+  Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+  await act(async () => { document.dispatchEvent(new Event('visibilitychange')); });
+  Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+  expect(save).toHaveBeenCalledWith('p1', l, { keepalive: true });
+});
+
+test('unmount (route leave) → flush with keepalive', async () => {
+  const save = vi.fn().mockResolvedValue(undefined);
+  const { rerender, unmount } = setup(save);
+  const l = L(1);
+  rerender({ id: 'p1', layout: l });
+  unmount();
+  await act(() => vi.advanceTimersByTimeAsync(0));
+  expect(save).toHaveBeenCalledTimes(1);
+  expect(save).toHaveBeenCalledWith('p1', l, { keepalive: true });
+});
+
+test('retry after error: the failed layout is kept and the next flush saves it', async () => {
+  const save = vi.fn().mockRejectedValueOnce(new Error('500')).mockResolvedValue(undefined);
+  const { result, rerender } = setup(save);
+  const l = L(1);
+  rerender({ id: 'p1', layout: l });
+  let ok: boolean | undefined;
+  await act(async () => { ok = await result.current.flush(); });
+  expect(ok).toBe(false);
+  expect(result.current.status).toBe('error');
+  await act(async () => { ok = await result.current.flush(); });
+  expect(ok).toBe(true);
+  expect(save).toHaveBeenLastCalledWith('p1', l);
+  expect(result.current.status).toBe('saved');
+});
+
+test('an edit during an in-flight save waits for it, then saves the latest; flush waits for both', async () => {
+  const log: string[] = [];
+  let release!: () => void;
+  const save = vi.fn((_id: string, l: PageLayout) => {
+    log.push(`start ${l.elements.length}`);
+    const done = () => log.push(`end ${l.elements.length}`);
+    if (l.elements.length === 1) return new Promise<void>((r) => { release = () => { done(); r(); }; });
+    done();
+    return Promise.resolve();
+  });
+  const { result, rerender } = setup(save);
+  rerender({ id: 'p1', layout: L(1) });
+  await act(() => vi.advanceTimersByTimeAsync(1000)); // save A in flight
+  rerender({ id: 'p1', layout: L(2) });
+  await act(() => vi.advanceTimersByTimeAsync(1000)); // B's timer fires while A is still running
+  expect(log).toEqual(['start 1']);
+  let flushed = false;
+  const f = result.current.flush().then((ok) => { flushed = ok; });
+  await act(() => vi.advanceTimersByTimeAsync(0));
+  expect(flushed).toBe(false); // still waiting on A
+  await act(async () => { release(); await f; });
+  expect(log).toEqual(['start 1', 'end 1', 'start 2', 'end 2']);
+  expect(flushed).toBe(true);
+  expect(result.current.status).toBe('saved');
+});
+
+test('a failed save survives a page change and is retried for its own page', async () => {
+  const save = vi.fn().mockRejectedValueOnce(new Error('500')).mockResolvedValue(undefined);
+  const { result, rerender } = setup(save);
+  const l = L(1);
+  rerender({ id: 'p1', layout: l });
+  await act(async () => { await result.current.flush(); });
+  rerender({ id: 'p2', layout: L(3) });
+  expect(result.current.status).toBe('error');
+  await act(async () => { await result.current.flush(); });
+  expect(save).toHaveBeenLastCalledWith('p1', l);
+});

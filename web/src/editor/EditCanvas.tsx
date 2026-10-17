@@ -27,7 +27,7 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
   const shown = live ?? layout;
   const selected = layout.elements.find((e) => e.id === selectedId) ?? null;
   const target = selected && editingId !== selected.id
-    ? pageRef.current?.querySelector<HTMLElement>(`[data-el="${CSS.escape(selected.id)}"]`) ?? null : null;
+    ? [...pageRef.current?.querySelectorAll<HTMLElement>('[data-el]') ?? []].find((n) => n.dataset.el === selected.id) ?? null : null;
 
   const size = () => {
     const r = pageRef.current!.querySelector('.page')!.getBoundingClientRect();

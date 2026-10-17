@@ -7,9 +7,10 @@ export class ApiError extends Error {
 }
 
 // `quiet` calls (login, check) handle 401 themselves instead of redirecting.
-async function req<T>(method: string, path: string, body?: unknown, quiet = false): Promise<T> {
+// keepalive: the request survives page unload (flush on tab hide / route leave).
+async function req<T>(method: string, path: string, body?: unknown, quiet = false, keepalive = false): Promise<T> {
   const res = await fetch(`/api${path}`, {
-    method,
+    method, keepalive,
     credentials: 'same-origin',
     headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -39,7 +40,8 @@ export const api = {
   getAlbum: (id: string) => req<AlbumBundle>('GET', `/albums/${id}`),
   addPage: (albumId: string, templateId: string, position?: number) =>
     req<PageDTO>('POST', `/albums/${albumId}/pages`, { templateId, position }),
-  savePage: (id: string, layout: PageLayout) => req<PageDTO>('PUT', `/pages/${id}`, { layout }),
+  savePage: (id: string, layout: PageLayout, opts?: { keepalive?: boolean }) =>
+    req<PageDTO>('PUT', `/pages/${id}`, { layout }, false, opts?.keepalive),
   deletePage: (id: string) => req<void>('DELETE', `/pages/${id}`),
   reorderPages: (albumId: string, pageIds: string[]) => req<void>('PUT', `/albums/${albumId}/page-order`, { pageIds }),
   getMedia: (id: string) => req<MediaDTO>('GET', `/media/${id}`),

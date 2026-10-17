@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { pageLayoutSchema, templates, type AlbumBundle, type PageDTO, type PageLayout } from '@scrapbook/shared';
 import { api as realApi, ApiError } from '../api';
 import { PageRenderer } from '../render/PageRenderer';
@@ -33,6 +33,7 @@ export default function Editor() {
 
 const EMPTY: PageLayout = { background: 'paper-cream', elements: [] };
 const noMedia = new Map();
+const PAGE_DRAG = 'application/x-scrapbook-page';
 
 export function EditorView({ bundle, api }: { bundle: AlbumBundle; api: EditorApi }) {
   const albumId = bundle.album.id;
@@ -45,59 +46,85 @@ export function EditorView({ bundle, api }: { bundle: AlbumBundle; api: EditorAp
   const [picking, setPicking] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [opError, setOpError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false); // page op in progress: editing frozen so nothing lands mid-switch/delete
+  const navigate = useNavigate();
   const layout = hist.present;
+  // Async page ops read the state as it is after their awaits, not as it was when they started.
+  const latest = useRef({ pages, cur, layout, busy });
+  latest.current = { pages, cur, layout, busy };
 
   // Never send a layout the server would reject: a validation failure shows as the "Save failed" status.
-  const save = useCallback((id: string, l: PageLayout) => {
+  const save = useCallback((id: string, l: PageLayout, opts?: { keepalive?: boolean }) => {
     const r = pageLayoutSchema.safeParse(l);
     if (!r.success) { console.error('invalid layout', r.error.issues); return Promise.reject(r.error); }
-    return api.savePage(id, r.data);
+    return api.savePage(id, r.data, opts);
   }, [api]);
   const { status, flush } = useAutosave(page?.id ?? '', layout, save);
 
-  const commit = useCallback((l: PageLayout, select?: string | null) => {
-    setHist((h) => (l === h.present ? h : push(h, l)));
+  // `coalesce`: consecutive commits with the same key within 500 ms (arrow-key repeats, dragging the colour
+  // picker) replace the last history entry instead of pushing one each.
+  const lastCommit = useRef({ key: '', t: 0 });
+  const commit = useCallback((next: PageLayout | ((l: PageLayout) => PageLayout), select?: string | null, coalesce?: string) => {
+    if (latest.current.busy) return;
+    const now = Date.now();
+    const merge = !!coalesce && lastCommit.current.key === coalesce && now - lastCommit.current.t < 500;
+    lastCommit.current = { key: coalesce ?? '', t: now };
+    setHist((h) => {
+      const l = typeof next === 'function' ? next(h.present) : next;
+      if (l === h.present) return h;
+      return merge ? { ...h, present: l } : push(h, l);
+    });
     if (select !== undefined) setSelectedId(select);
   }, []);
 
   // Pages list keeps the current page's latest layout too (thumbnails, and switching back).
-  const withCurrent = (ps: PageDTO[]) => ps.map((p, i) => (i === cur ? { ...p, layout } : p));
-  const switchTo = async (i: number, ps = withCurrent(pages)) => {
-    await flush();
+  const withCurrent = ({ pages: ps, cur: c, layout: l } = latest.current) => ps.map((p, i) => (i === c ? { ...p, layout: l } : p));
+  const show = (ps: PageDTO[], i: number) => {
     setPages(ps);
     setCur(i);
     setHist(initHistory(ps[i]?.layout ?? EMPTY));
     setSelectedId(null);
     setConfirmDelete(false);
   };
+  // Leaving the current page (switch, delete, route leave) needs its edits saved; a failed save blocks it.
+  const saved = async () => {
+    if (await flush()) return true;
+    setOpError("This page didn't save. Press Save to retry.");
+    return false;
+  };
   const run = async (what: string, f: () => Promise<void>) => {
     setOpError(null);
-    try { await f(); } catch { setOpError(`Couldn't ${what}`); }
+    setBusy(true);
+    latest.current.busy = true;
+    try { await f(); } catch { setOpError(`Couldn't ${what}`); } finally { setBusy(false); }
   };
 
+  const switchTo = (i: number) => run('switch page', async () => {
+    if (await saved()) show(withCurrent(), i);
+  });
   const addPage = (templateId: string) => run('add page', async () => {
     setPicking(false);
-    const at = pages.length ? cur + 1 : 0;
+    if (!(await saved())) return;
+    const at = latest.current.pages.length ? latest.current.cur + 1 : 0;
     const p = await api.addPage(albumId, templateId, at);
-    const ps = withCurrent(pages);
+    const ps = withCurrent();
     ps.splice(at, 0, p);
-    await switchTo(at, ps);
+    show(ps, at);
   });
   const deletePage = () => run('delete page', async () => {
-    if (!page) return;
-    await flush();
-    await api.deletePage(page.id);
-    const ps = pages.filter((p) => p.id !== page.id);
-    setPages(ps);
-    const i = Math.min(cur, ps.length - 1);
-    setCur(Math.max(i, 0));
-    setHist(initHistory(ps[i]?.layout ?? EMPTY));
-    setSelectedId(null);
-    setConfirmDelete(false);
+    const id = page?.id;
+    if (!id || !(await saved())) return;
+    await api.deletePage(id);
+    const ps = latest.current.pages.filter((p) => p.id !== id);
+    show(ps, Math.max(0, Math.min(latest.current.cur, ps.length - 1)));
   });
+  const leave = (e: MouseEvent) => {
+    e.preventDefault();
+    void run('leave', async () => { if (await saved()) navigate(`/albums/${albumId}`); });
+  };
   const move = (from: number, to: number) => run('reorder pages', async () => {
     if (from === to || to < 0 || to >= pages.length) return;
-    const ps = withCurrent(pages);
+    const ps = withCurrent();
     const [p] = ps.splice(from, 1);
     ps.splice(to, 0, p);
     const curId = page?.id;
@@ -110,36 +137,41 @@ export function EditorView({ bundle, api }: { bundle: AlbumBundle; api: EditorAp
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
-      if (t.isContentEditable || t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') return;
+      if (latest.current.busy || t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName)) return;
       const mod = e.ctrlKey || e.metaKey;
       if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); setHist(e.shiftKey ? redo : undo); return; }
       if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); setHist(redo); return; }
       if (!selectedId) return;
-      // Derive from h.present, not the render's layout: key repeats can arrive before a re-render.
-      const edit = (f: (l: PageLayout) => PageLayout) => { e.preventDefault(); setHist((h) => push(h, f(h.present))); };
-      if (e.key === 'Delete' || e.key === 'Backspace') { edit((l) => removeElement(l, selectedId)); setSelectedId(null); return; }
+      // commit(fn) derives from h.present, not this render's layout: key repeats can arrive before a re-render.
+      if ((e.key === 'Delete' || e.key === 'Backspace') && t.tagName !== 'BUTTON') {
+        e.preventDefault();
+        commit((l) => removeElement(l, selectedId), null);
+        return;
+      }
       const nudge: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
       const d = nudge[e.key];
-      if (d) edit((l) => {
+      if (!d) return;
+      e.preventDefault();
+      commit((l) => {
         const el = l.elements.find((x) => x.id === selectedId);
         return el ? updateElement(l, el.id, { x: el.x + d[0] * 0.005, y: el.y + d[1] * 0.005 }) : l;
-      });
+      }, undefined, `nudge:${selectedId}`);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selectedId]);
+  }, [selectedId, commit]);
 
-  const shownPages = withCurrent(pages);
+  const shownPages = withCurrent();
   return (
-    <main className="editor">
+    <main className={`editor${busy ? ' busy' : ''}`} aria-busy={busy}>
       <header className="editor-bar">
-        <Link to={`/albums/${albumId}`}>← Done</Link>
+        <Link to={`/albums/${albumId}`} onClick={leave}>← Done</Link>
         <h1>{bundle.album.title}</h1>
       </header>
       {page && (
         <Toolbar layout={layout} selected={selected} commit={commit}
           undo={() => setHist(undo)} redo={() => setHist(redo)} canUndo={hist.past.length > 0} canRedo={hist.future.length > 0}
-          status={status} save={() => void flush()} />
+          status={status} save={() => void flush().then((ok) => ok && setOpError(null))} />
       )}
       <div className="edit-stage">
         {page ? <EditCanvas layout={layout} media={media} selectedId={selectedId} onSelect={setSelectedId} onCommit={commit} />
@@ -149,9 +181,12 @@ export function EditorView({ bundle, api }: { bundle: AlbumBundle; api: EditorAp
       <nav className="page-strip" aria-label="Pages">
         {shownPages.map((p, i) => (
           <div key={p.id} className={`thumb${i === cur ? ' current' : ''}`} draggable
-            onDragStart={(e) => e.dataTransfer.setData('text/plain', String(i))}
+            onDragStart={(e) => e.dataTransfer.setData(PAGE_DRAG, String(i))}
             onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => { e.preventDefault(); move(Number(e.dataTransfer.getData('text/plain')), i); }}>
+            onDrop={(e) => {
+              const from = e.dataTransfer.getData(PAGE_DRAG); // '' for drops that aren't a page thumbnail
+              if (from) { e.preventDefault(); move(Number(from), i); }
+            }}>
             <button type="button" className="thumb-page" aria-label={`Page ${i + 1}`} aria-current={i === cur}
               onClick={() => i !== cur && void switchTo(i)}>
               <PageRenderer layout={p.layout} media={media} mode="edit" active={false} />
