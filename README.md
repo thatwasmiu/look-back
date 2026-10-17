@@ -20,6 +20,8 @@ Production runs as Docker Compose: `db` (Postgres 16), `api`, `worker` (ffmpeg/s
 3. `docker compose -f deploy/compose.yml up -d --build`
 4. `SMOKE_PASSWORD='your password' bash deploy/smoke.sh` (add `BASE=https://your.domain` for a remote host). All lines should say PASS.
 
+If you redeploy only the api container, run `docker compose -f deploy/compose.yml restart nginx` too (nginx caches the api IP at startup).
+
 Stop: `docker compose -f deploy/compose.yml down` (volumes `pgdata`, `media`, `uploads` are kept; add `-v` only to wipe everything).
 
 ## Backups
