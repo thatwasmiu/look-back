@@ -16,8 +16,8 @@ export async function runProcessMedia(job: ProcessMediaJob, pool: pg.Pool, confi
   const { mediaId, uploadPath } = job;
   const mediaPath = absPath(config.mediaDir, mediaId);
   try {
-    const { rows } = await pool.query('select kind, mime from media where id=$1', [mediaId]);
-    if (!rows[0]) return; // deleted meanwhile
+    const { rows } = await pool.query('select kind, mime, status from media where id=$1', [mediaId]);
+    if (!rows[0] || rows[0].status !== 'processing') return; // deleted, or already finished by an earlier attempt
     const { kind, mime } = rows[0];
     try {
       const ext = EXT[mime];
@@ -26,13 +26,13 @@ export async function runProcessMedia(job: ProcessMediaJob, pool: pg.Pool, confi
         ? await processVideo(uploadPath, mediaId, config.mediaDir, ext, config.videoRenditions, config.ffmpegPreset)
         : await processImage(uploadPath, mediaId, config.mediaDir, ext);
       const u = await pool.query(
-        `update media set status='ready', width=$2, height=$3, duration_sec=$4, blur_data_url=$5, variants=$6, error=null where id=$1`,
+        `update media set status='ready', width=$2, height=$3, duration_sec=$4, blur_data_url=$5, variants=$6, error=null where id=$1 and status='processing'`,
         [mediaId, r.width, r.height, r.durationSec, r.blurDataUrl, JSON.stringify(r.variants)]);
       if (u.rowCount === 0) await rm(mediaPath, { recursive: true, force: true }); // deleted while processing
     } catch (e) {
-      await rm(mediaPath, { recursive: true, force: true });
       const msg = (e instanceof Error ? e.message : String(e)).slice(0, 500) || 'processing failed';
-      await pool.query(`update media set status='failed', error=$2 where id=$1`, [mediaId, msg]);
+      await rm(mediaPath, { recursive: true, force: true });
+      await pool.query(`update media set status='failed', error=$2 where id=$1 and status='processing'`, [mediaId, msg]);
     }
   } finally {
     await rm(uploadPath, { force: true });

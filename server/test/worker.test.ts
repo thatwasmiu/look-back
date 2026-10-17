@@ -69,4 +69,13 @@ describe('runProcessMedia', () => {
     expect(existsSync(uploadPath)).toBe(false);
     expect(existsSync(join(t.config.mediaDir, id))).toBe(false);
   });
+
+  it('retry after success: ready row and its files are left alone', async () => {
+    const { t, id, uploadPath } = await setup('image/jpeg', 'x.jpg', join(fx, 'rotated.jpg'));
+    apps.push(t);
+    await runProcessMedia({ mediaId: id, uploadPath }, t.pool, t.config);
+    await runProcessMedia({ mediaId: id, uploadPath }, t.pool, t.config); // upload file now gone
+    expect((await row(t, id)).status).toBe('ready');
+    expect(existsSync(join(t.config.mediaDir, id, 'display.webp'))).toBe(true);
+  });
 });
