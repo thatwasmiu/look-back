@@ -154,3 +154,20 @@ test('"copy the design of" lists only albums of the chosen mode; a default creat
   await userEvent.click(screen.getByRole('button', { name: 'Create' }));
   expect(JSON.parse(fetchMock.mock.calls[1][1].body).mode).not.toBe('manga');
 });
+
+test('Manga mode offers manga templates (not scrapbook ones); a picked one is sent as a manga design in the chosen direction', async () => {
+  const created = { ...albumOf('m2', 'Đi phượt', 'manga'), readingDirection: 'rtl' };
+  const fetchMock = vi.fn().mockResolvedValueOnce(json(200, [])).mockResolvedValueOnce(json(201, created));
+  setup(fetchMock);
+  await userEvent.click(await screen.findByRole('button', { name: 'New album' }));
+  await userEvent.type(screen.getByLabelText('Album title'), 'Đi phượt');
+  expect(screen.queryByRole('radio', { name: 'Hành trình' })).toBeNull(); // scrapbook mode: no manga templates
+  await userEvent.click(screen.getByRole('radio', { name: 'Manga' }));
+  expect(screen.queryByRole('radio', { name: 'Trip' })).toBeNull();
+  await userEvent.click(screen.getByRole('radio', { name: 'Hành trình' }));
+  await userEvent.click(screen.getByRole('radio', { name: 'Right → left' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+  const body = JSON.parse(fetchMock.mock.calls[1][1].body);
+  expect(body.design).toMatchObject({ mode: 'manga', readingDirection: 'rtl' });
+  expect(body.design.pages.length).toBeGreaterThanOrEqual(3);
+});

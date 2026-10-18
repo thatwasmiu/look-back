@@ -88,7 +88,7 @@ export default function AlbumList() {
     if (!title.trim()) return;
     try {
       const [kind, id] = from.split(':');
-      const design = kind === 'tpl' ? albumTemplates.find((t) => t.id === id)?.design() : undefined;
+      const design = kind === 'tpl' ? albumTemplates.find((t) => t.id === id)?.design(direction) : undefined;
       const source = design ? { design } : kind === 'album' ? { fromAlbumId: id } : undefined;
       // A copied album keeps its own mode and direction (server side); a new manga album sends them.
       const a = await api.createAlbum(title.trim(), source, mode === 'manga' && kind !== 'album' ? { mode: 'manga', readingDirection: direction } : undefined);
@@ -159,7 +159,7 @@ export default function AlbumList() {
             <div className="start-from" role="radiogroup" aria-label="Template">
               <span className="start-label">Template</span>
               <div className="start-grid">
-                {[{ value: '', name: 'Empty album', icon: 'sparkle' }, ...(mode === 'manga' ? [] : albumTemplates.map((t) => ({ value: `tpl:${t.id}`, name: t.name, icon: t.icon })))].map((o) => {
+                {[{ value: '', name: 'Empty album', icon: 'sparkle' }, ...albumTemplates.filter((t) => (t.mode ?? 'scrapbook') === mode).map((t) => ({ value: `tpl:${t.id}`, name: t.name, icon: t.icon }))].map((o) => {
                   const Icon = stickers[o.icon]?.Svg;
                   return (
                     <button key={o.value} type="button" role="radio" aria-checked={from === o.value} className="start-card" onClick={() => setFrom(o.value)}>
