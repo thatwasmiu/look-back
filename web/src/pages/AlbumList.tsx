@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import type { AlbumSummary } from '@scrapbook/shared';
+import type { AlbumMode, AlbumSummary, ReadingDirection } from '@scrapbook/shared';
 import { api, ApiError } from '../api';
 import { exampleAlbum, exampleCover } from '../example/lookBack';
 import { albumTemplates } from '../example/albumTemplates';
@@ -24,6 +24,11 @@ export default function AlbumList() {
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState('');
   const [from, setFrom] = useState(''); // '' empty album · 'tpl:<id>' built-in template · 'album:<id>' copy that album's design
+  // Album mode, fixed at creation. Manga albums also get a reading direction; built-in templates are scrapbook.
+  const [mode, setMode] = useState<AlbumMode>('scrapbook');
+  const [direction, setDirection] = useState<ReadingDirection>('ltr');
+  const pickMode = (m: AlbumMode) => { setMode(m); setFrom(''); };
+  const sameMode = albums?.filter((a) => (a.mode ?? 'scrapbook') === mode) ?? [];
 
   const [loadError, setLoadError] = useState(false);
   const [createError, setCreateError] = useState('');
@@ -70,7 +75,7 @@ export default function AlbumList() {
   };
   useEffect(load, []);
 
-  const closeCreate = () => { setCreating(false); setTitle(''); setFrom(''); setCreateError(''); };
+  const closeCreate = () => { setCreating(false); setTitle(''); setFrom(''); setMode('scrapbook'); setDirection('ltr'); setCreateError(''); };
   useEffect(() => {
     if (!creating) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeCreate(); };
@@ -84,7 +89,9 @@ export default function AlbumList() {
     try {
       const [kind, id] = from.split(':');
       const design = kind === 'tpl' ? albumTemplates.find((t) => t.id === id)?.design() : undefined;
-      const a = await api.createAlbum(title.trim(), design ? { design } : kind === 'album' ? { fromAlbumId: id } : undefined);
+      const source = design ? { design } : kind === 'album' ? { fromAlbumId: id } : undefined;
+      // A copied album keeps its own mode and direction (server side); a new manga album sends them.
+      const a = await api.createAlbum(title.trim(), source, mode === 'manga' && kind !== 'album' ? { mode: 'manga', readingDirection: direction } : undefined);
       const pageCount = design?.pages.length ?? (kind === 'album' ? albums?.find((x) => x.id === id)?.pageCount ?? 0 : 1);
       setAlbums((cur) => [{ ...a, coverThumb: null, pageCount }, ...(cur ?? [])]); // newest first, like the server's list
       closeCreate();
@@ -137,10 +144,22 @@ export default function AlbumList() {
             <h2 id="new-album-h">New album</h2>
             <input aria-label="Album title" placeholder="e.g. Tà Xùa 2026" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
             {/* Picker cards: template icon is one of the app's own stickers; an album shows its cover. */}
+            <div className="mode-switch" role="radiogroup" aria-label="Mode">
+              {(['scrapbook', 'manga'] as const).map((m) => (
+                <button key={m} type="button" role="radio" aria-checked={mode === m} onClick={() => pickMode(m)}>{m === 'scrapbook' ? 'Scrapbook' : 'Manga'}</button>
+              ))}
+            </div>
+            {mode === 'manga' && (
+              <div className="mode-switch" role="radiogroup" aria-label="Reading direction">
+                {(['ltr', 'rtl'] as const).map((d) => (
+                  <button key={d} type="button" role="radio" aria-checked={direction === d} onClick={() => setDirection(d)}>{d === 'ltr' ? 'Left → right' : 'Right → left'}</button>
+                ))}
+              </div>
+            )}
             <div className="start-from" role="radiogroup" aria-label="Template">
               <span className="start-label">Template</span>
               <div className="start-grid">
-                {[{ value: '', name: 'Empty album', icon: 'sparkle' }, ...albumTemplates.map((t) => ({ value: `tpl:${t.id}`, name: t.name, icon: t.icon }))].map((o) => {
+                {[{ value: '', name: 'Empty album', icon: 'sparkle' }, ...(mode === 'manga' ? [] : albumTemplates.map((t) => ({ value: `tpl:${t.id}`, name: t.name, icon: t.icon })))].map((o) => {
                   const Icon = stickers[o.icon]?.Svg;
                   return (
                     <button key={o.value} type="button" role="radio" aria-checked={from === o.value} className="start-card" onClick={() => setFrom(o.value)}>
@@ -149,10 +168,10 @@ export default function AlbumList() {
                   );
                 })}
               </div>
-              {!!albums?.length && <>
+              {!!sameMode.length && <>
                 <span className="start-label">Chép thiết kế của album (không kèm ảnh)</span>
                 <div className="start-grid">
-                  {albums.map((a) => (
+                  {sameMode.map((a) => (
                     <button key={a.id} type="button" role="radio" aria-checked={from === `album:${a.id}`} className="start-card" onClick={() => setFrom(`album:${a.id}`)}>
                       <span className="start-icon"><AlbumCover a={a} /></span>{a.title}
                     </button>
