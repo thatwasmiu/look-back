@@ -12,6 +12,22 @@ export default function AlbumList() {
 
   const [loadError, setLoadError] = useState(false);
   const [createError, setCreateError] = useState('');
+  const [confirming, setConfirming] = useState<AlbumSummary | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // Permanent (pages, photos and videos go too), so it always asks first.
+  async function remove(a: AlbumSummary) {
+    setDeleting(true);
+    try {
+      await api.deleteAlbum(a.id);
+      setAlbums((cur) => cur?.filter((x) => x.id !== a.id) ?? cur);
+      setConfirming(null);
+    } catch (err) {
+      if (!(err instanceof ApiError && err.status === 401)) setLoadError(true);
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   const load = () => {
     setLoadError(false);
@@ -60,7 +76,10 @@ export default function AlbumList() {
               {a.coverThumb ? <img src={mediaUrl(a.coverThumb)} alt="" loading="lazy" /> : <div className="blank" />}
               <strong>{a.title}</strong>
             </Link>
-            <small>{a.pageCount} pages · <Link to={`/albums/${a.id}/edit`}>Edit</Link></small>
+            <small>
+              {a.pageCount} pages · <Link to={`/albums/${a.id}/edit`}>Edit</Link> ·{' '}
+              <button type="button" className="link-btn" aria-label={`Delete ${a.title}`} onClick={() => setConfirming(a)}>Delete</button>
+            </small>
           </li>
         ))}
         {albums && (
@@ -73,6 +92,13 @@ export default function AlbumList() {
           </li>
         )}
       </ul>
+      {confirming && (
+        <div className="inline-confirm album-confirm" role="alertdialog" aria-label="Delete album">
+          Delete "{confirming.title}" and all its photos and videos? This can't be undone.
+          <button type="button" className="danger" disabled={deleting} onClick={() => void remove(confirming)}>Delete album</button>
+          <button type="button" className="secondary" disabled={deleting} onClick={() => setConfirming(null)}>Cancel</button>
+        </div>
+      )}
     </main>
   );
 }

@@ -74,6 +74,19 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [panelsHidden, setPanelsHidden] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [title, setTitle] = useState(bundle.album.title);
+  const [renaming, setRenaming] = useState(false);
+  const renameCancelled = useRef(false);
+  // Inline rename: Enter / blur saves (optimistic, rolled back on failure), Escape cancels, empty is ignored.
+  const rename = (next: string) => {
+    setRenaming(false);
+    if (renameCancelled.current) { renameCancelled.current = false; return; }
+    const t = next.trim().slice(0, 200);
+    if (!t || t === title) return;
+    const prev = title;
+    setTitle(t);
+    api.updateAlbum(albumId, { title: t }).catch(() => { setTitle(prev); setOpError("Couldn't rename the album."); });
+  };
   const [bgEffect, setBgEffectState] = useState(bundle.album.backgroundEffect);
   const [bgColor, setBgColorState] = useState(bundle.album.backgroundColor);
   const setBgColor = (c: BackgroundColor) => {
@@ -243,7 +256,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   // Leaving the current page (switch, delete, route leave) needs its edits saved; a failed save blocks it.
   const saved = async () => {
     if (await flush()) return true;
-    setOpError("This page didn't save. Press Save to retry.");
+    setOpError("This page didn't save. Press Retry save.");
     return false;
   };
   const run = async (what: string, f: () => Promise<void>) => {
@@ -323,7 +336,20 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
     <main className={`editor desk-${bgColor}${busy ? ' busy' : ''}${panelsHidden ? ' panels-hidden' : ''}`} aria-busy={busy}>
       <header className="editor-bar">
         <Link to={`/albums/${albumId}`} onClick={leave}>← Done</Link>
-        <h1>{bundle.album.title}</h1>
+        <h1>
+          {renaming ? (
+            <input className="title-input" aria-label="Album name" defaultValue={title} maxLength={200} autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.currentTarget.blur();
+                if (e.key === 'Escape') { renameCancelled.current = true; e.currentTarget.blur(); }
+              }}
+              onBlur={(e) => rename(e.currentTarget.value)} />
+          ) : (
+            <button type="button" className="title-btn" aria-label={`Rename album: ${title}`} title="Rename album" onClick={() => setRenaming(true)}>
+              {title} <span className="title-pen" aria-hidden>✎</span>
+            </button>
+          )}
+        </h1>
         <button type="button" className="panels-toggle" aria-pressed={panelsHidden} onClick={() => setPanelsHidden((v) => !v)}>
           {panelsHidden ? 'Show tools' : 'Hide tools'}
         </button>

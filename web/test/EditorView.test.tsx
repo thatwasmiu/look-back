@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import type { AlbumBundle } from '@scrapbook/shared';
@@ -25,14 +25,16 @@ test('a failed save blocks switching page; Save retries, then the switch goes th
   };
   const user = userEvent.setup();
   setup(api);
+  expect(screen.queryByRole('button', { name: 'Retry save' })).toBeNull(); // autosave: no button while saves succeed
   await user.click(screen.getByRole('button', { name: 'Text' }));
   await user.click(screen.getByRole('button', { name: 'Page 2' }));
   expect((await screen.findByRole('alert')).textContent).toContain("didn't save");
   expect(screen.getByRole('button', { name: 'Page 1' }).getAttribute('aria-current')).toBe('true');
   expect(screen.getByRole('status').textContent).toBe('Save failed');
 
-  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await user.click(screen.getByRole('button', { name: 'Retry save' }));
   await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Saved'));
+  expect(screen.queryByRole('button', { name: 'Retry save' })).toBeNull();
   expect(api.savePage).toHaveBeenLastCalledWith('p0', expect.objectContaining({ elements: [expect.objectContaining({ type: 'text' })] }), undefined);
   await user.click(screen.getByRole('button', { name: 'Page 2' }));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Page 2' }).getAttribute('aria-current')).toBe('true'));
@@ -216,4 +218,42 @@ test('Album background also picks the desk color: saved for the album and applie
   await user.click(screen.getByRole('button', { name: 'Ocean desk color' }));
   expect(api.updateAlbum).toHaveBeenCalledWith('a1', { backgroundColor: 'ocean' });
   expect(container.querySelector('main.editor')!.classList.contains('desk-ocean')).toBe(true);
+});
+
+test('Remove photo empties the selected frame (frame stays, one undo step); undo/redo sit in one row', async () => {
+  const user = userEvent.setup();
+  const m = { id: 'm1', albumId: 'a1', kind: 'image' as const, status: 'ready' as const, width: 4, height: 3, durationSec: null, blurDataUrl: null, variants: { original: 'm1/o.jpg', display: 'm1/d.webp' }, error: null };
+  const b: AlbumBundle = { ...bundle, media: [m], pages: [{ ...bundle.pages[0], layout: { background: 'paper-cream', elements: [
+    { type: 'frame', id: 'f1', x: 0.1, y: 0.1, w: 0.5, h: 0.4, rotation: 0, z: 1, frameStyle: 'polaroid', mediaId: 'm1', crop: { x: 0.3, y: 0.5, scale: 2 } },
+  ] } }] };
+  const { container } = render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={b} api={okApi()} /></MemoryRouter>);
+  expect(screen.queryByRole('button', { name: 'Remove photo' })).toBeNull(); // nothing selected
+  fireEvent.pointerDown(container.querySelector('[data-el="f1"]')!);
+  await user.click(screen.getByRole('button', { name: 'Remove photo' }));
+  expect(container.querySelector('[data-frame-id="f1"] .slot-empty')).not.toBeNull();
+  expect(container.querySelector('[data-el="f1"]')).not.toBeNull();
+  await user.click(screen.getByRole('button', { name: 'Undo' }));
+  expect(container.querySelector('[data-frame-id="f1"] .slot-empty')).toBeNull();
+  expect(screen.getByRole('button', { name: 'Undo' }).parentElement).toBe(screen.getByRole('button', { name: 'Redo' }).parentElement);
+  expect(screen.getByRole('button', { name: 'Undo' }).parentElement!.classList.contains('row')).toBe(true);
+});
+
+test('click the album title to rename it: Enter saves, Escape cancels, empty names are ignored', async () => {
+  const user = userEvent.setup();
+  const api = { ...okApi(), updateAlbum: vi.fn().mockResolvedValue({}) };
+  setup(api);
+  await user.click(screen.getByRole('button', { name: /Rename album/ }));
+  const input = screen.getByRole('textbox', { name: 'Album name' });
+  await user.clear(input);
+  await user.type(input, 'Summer 2026{Enter}');
+  expect(api.updateAlbum).toHaveBeenCalledWith('a1', { title: 'Summer 2026' });
+  expect(screen.getByRole('button', { name: /Rename album/ }).textContent).toContain('Summer 2026');
+
+  await user.click(screen.getByRole('button', { name: /Rename album/ }));
+  await user.type(screen.getByRole('textbox', { name: 'Album name' }), ' extra{Escape}');
+  await user.click(screen.getByRole('button', { name: /Rename album/ }));
+  await user.clear(screen.getByRole('textbox', { name: 'Album name' }));
+  await user.keyboard('{Enter}');
+  expect(api.updateAlbum).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole('button', { name: /Rename album/ }).textContent).toContain('Summer 2026');
 });

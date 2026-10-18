@@ -104,3 +104,15 @@ test('a drag whose release was missed keeps the position from while the button w
   expect(stopDrag).toHaveBeenCalled();
   expect(onCommit).toHaveBeenCalledTimes(1); // the held position, once — not again on drag end
 });
+
+test('crop mode has Remove photo: empties the frame and leaves crop mode', async () => {
+  const filled: PageLayout = { background: 'paper-cream', elements: [
+    { type: 'frame', id: 'f1', x: 0.1, y: 0.1, w: 0.4, h: 0.3, rotation: 0, z: 1, frameStyle: 'polaroid', mediaId: 'm1', crop: { x: 0.2, y: 0.5, scale: 2 } },
+  ] };
+  const onCommit = vi.fn();
+  const onCrop = vi.fn();
+  const { getByRole } = render(<EditCanvas layout={filled} media={new Map()} selectedId="f1" onSelect={() => {}} onCommit={onCommit} cropId="f1" onCrop={onCrop} />);
+  fireEvent.click(getByRole('button', { name: 'Remove photo' }));
+  expect(onCommit).toHaveBeenCalledWith(expect.objectContaining({ elements: [expect.objectContaining({ id: 'f1', mediaId: null })] }));
+  expect(onCrop).toHaveBeenCalledWith(null);
+});

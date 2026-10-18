@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import AlbumList from '../src/pages/AlbumList';
@@ -34,4 +34,20 @@ test('the built-in example album is listed (view only) after your albums', async
   const link = await screen.findByRole('link', { name: /Look Back — a tribute/ });
   expect(link.getAttribute('href')).toBe('/albums/example-look-back');
   expect(screen.getByText(/Example/)).toBeTruthy();
+});
+
+test('Delete asks first; Cancel keeps the album, Delete removes it via the API', async () => {
+  const album = { id: 'a1', title: 'Trip', coverMediaId: null, backgroundEffect: 'none', backgroundColor: 'walnut', coverThumb: null, pageCount: 2 };
+  const fetchMock = vi.fn().mockResolvedValueOnce(json(200, [album])).mockResolvedValueOnce(new Response(null, { status: 204 }));
+  setup(fetchMock);
+  await userEvent.click(await screen.findByRole('button', { name: 'Delete Trip' }));
+  expect(screen.getByRole('alertdialog').textContent).toContain("can't be undone");
+  await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  expect(screen.queryByRole('alertdialog')).toBeNull();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+
+  await userEvent.click(screen.getByRole('button', { name: 'Delete Trip' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Delete album' }));
+  expect(fetchMock).toHaveBeenLastCalledWith('/api/albums/a1', expect.objectContaining({ method: 'DELETE' }));
+  await waitFor(() => expect(screen.queryByRole('link', { name: /^Trip/ })).toBeNull());
 });

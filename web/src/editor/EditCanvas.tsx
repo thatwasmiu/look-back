@@ -4,7 +4,7 @@ import Moveable from 'react-moveable';
 import type { FrameEl, MediaDTO, PageElement, PageLayout, TextEl } from '@scrapbook/shared';
 import { PageRenderer } from '../render/PageRenderer';
 import { fontFamily } from '../render/decor';
-import { updateElement } from './layoutOps';
+import { assignMedia, updateElement } from './layoutOps';
 
 type Props = {
   layout: PageLayout; media: Map<string, MediaDTO>;
@@ -109,7 +109,8 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
   };
 
   const renderOverlay = (el: PageElement) => el.id === cropId && el.type === 'frame'
-    ? <CropOverlay el={el} media={el.mediaId ? media.get(el.mediaId) : undefined} onChange={setCropLive} onDone={finishCrop} />
+    ? <CropOverlay el={el} media={el.mediaId ? media.get(el.mediaId) : undefined} onChange={setCropLive} onDone={finishCrop}
+      onRemove={() => { onCommit(assignMedia(layout, el.id, null)); onCrop?.(null); }} />
     : el.id === editingId && el.type === 'text'
     ? <TextEditor el={el} onDone={(text) => {
       setEditingId(null);
@@ -178,7 +179,9 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
 // Crop mode: drag pans (the photo follows the finger), wheel / pinch zooms. Pointer deltas are rotated into the
 // frame's own axes. With cover-fit and scale about the crop point (BlurImage), the image's left edge sits at
 // -crop.x * (renderedWidth - windowWidth), so a pan of dx px is Δcrop.x = -dx / (renderedWidth - windowWidth).
-function CropOverlay({ el, media, onChange, onDone }: { el: FrameEl; media: MediaDTO | undefined; onChange(c: Crop): void; onDone(): void }) {
+function CropOverlay({ el, media, onChange, onDone, onRemove }: {
+  el: FrameEl; media: MediaDTO | undefined; onChange(c: Crop): void; onDone(): void; onRemove(): void;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const cur = useRef(el.crop); // latest crop, ahead of re-renders
   const pts = useRef(new Map<number, { x: number; y: number }>());
@@ -235,7 +238,10 @@ function CropOverlay({ el, media, onChange, onDone }: { el: FrameEl; media: Medi
         rebase();
       }}
       onPointerMove={onMove} onPointerUp={lift} onPointerCancel={lift}>
-      <button type="button" className="crop-done" onClick={onDone}>Done</button>
+      <div className="crop-actions">
+        <button type="button" className="crop-remove" onClick={onRemove}>Remove photo</button>
+        <button type="button" className="crop-done" onClick={onDone}>Done</button>
+      </div>
     </div>
   );
 }

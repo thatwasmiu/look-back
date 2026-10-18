@@ -3,7 +3,7 @@ import { BACKGROUND_COLORS, BACKGROUND_EFFECTS, FRAME_STYLES, PAGE_EFFECTS, type
 import { EffectView, backgroundEffectLabels, deskColorLabels, pageEffectLabels } from '../render/effects';
 import { Tape, fontFamily, frameStyleLabels, stickers, tapeStyles } from '../render/decor';
 import { FrameView } from '../render/FrameView';
-import { addElement, bringForward, newEffect, newFrame, newSticker, newTape, newText, removeElement, sendBackward, setFrameStyle, updateElement } from './layoutOps';
+import { addElement, assignMedia, bringForward, newEffect, newFrame, newSticker, newTape, newText, removeElement, sendBackward, setFrameStyle, updateElement } from './layoutOps';
 import type { SaveStatus } from './useAutosave';
 
 type Props = {
@@ -99,6 +99,7 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
         <button type="button" aria-expanded={picker === 'effect'} onClick={() => toggle('effect')}>Effect</button>
         <button type="button" aria-expanded={picker === 'albumFx'} onClick={() => toggle('albumFx')}>Background</button>
         {crop && selected?.type === 'frame' && selected.mediaId && <button type="button" onClick={crop}>Crop</button>}
+        {frame?.mediaId && <button type="button" onClick={() => commit(assignMedia(layout, frame.id, null))}>Remove photo</button>}
         <span className="sep" />
         <span className="row">
           <button type="button" disabled={!sel} aria-label="Bring forward" title="Bring forward" onClick={() => sel && commit(bringForward(layout, sel))}>↑</button>
@@ -106,9 +107,12 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
           <button type="button" disabled={!sel} aria-label="Delete" title="Delete" onClick={() => sel && commit(removeElement(layout, sel), null)}>🗑</button>
         </span>
         <span className="sep" />
-        <button type="button" disabled={!canUndo} aria-label="Undo" title="Undo (Ctrl+Z)" onClick={undo}>↶</button>
-        <button type="button" disabled={!canRedo} aria-label="Redo" title="Redo (Ctrl+Shift+Z)" onClick={redo}>↷</button>
-        <button type="button" onClick={save}>Save</button>
+        <span className="row">
+          <button type="button" disabled={!canUndo} aria-label="Undo" title="Undo (Ctrl+Z)" onClick={undo}>↶</button>
+          <button type="button" disabled={!canRedo} aria-label="Redo" title="Redo (Ctrl+Shift+Z)" onClick={redo}>↷</button>
+        </span>
+        {/* Autosave handles normal edits; the button only appears when a save failed, to retry it. */}
+        {status === 'error' && <button type="button" className="save-retry" onClick={save}>Retry save</button>}
         <span className="sep" />
         <span className="zoom">
           <button type="button" aria-label="Zoom out" title="Zoom out" disabled={zoom <= ZOOMS[0]} onClick={() => setZoom(stepZoom(zoom, -1))}>−</button>
