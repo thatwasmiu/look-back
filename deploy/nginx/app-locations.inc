@@ -15,6 +15,9 @@ proxy_set_header X-Forwarded-Proto $fwd_proto;
 location / {
   try_files $uri /index.html;
   add_header Cache-Control "no-cache" always;
+  # index.html's link-preview tags need absolute URLs: fill in this site's own origin.
+  sub_filter_once off;
+  sub_filter '__ORIGIN__' '$fwd_proto://$host';
 }
 location /assets/ {
   try_files $uri =404;
