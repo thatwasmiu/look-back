@@ -18,4 +18,6 @@ test('the guide has a Manga section with reading direction', () => {
   render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><Guide /></MemoryRouter>);
   expect(screen.getByRole('heading', { level: 2, name: /Manga/ })).toBeTruthy();
   expect(screen.getByRole('heading', { level: 3, name: 'Đọc từ phải sang trái' })).toBeTruthy();
+  expect(screen.getByRole('heading', { level: 3, name: 'Khung tranh tự do (Shape)' })).toBeTruthy();
+  expect(screen.getByText(/Tail/, { selector: 'strong' })).toBeTruthy();
 });
