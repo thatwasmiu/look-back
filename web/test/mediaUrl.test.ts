@@ -18,3 +18,7 @@ test.each([
 ])('base %j → %s', async (base, want) => {
   expect((await load(base))('a/thumb.webp')).toBe(want);
 });
+
+test('keys that are already absolute paths (built-in example album art) pass through unchanged', async () => {
+  expect((await load('https://cdn.example/m'))('/example/look-back/desk.svg')).toBe('/example/look-back/desk.svg');
+});

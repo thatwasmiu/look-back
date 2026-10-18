@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { AlbumBundle } from '@scrapbook/shared';
 import { api, ApiError } from '../api';
+import { EXAMPLE_ALBUM_ID, exampleAlbum } from '../example/lookBack';
 import { BackgroundEffectView } from '../render/effects';
 import { PageRenderer } from '../render/PageRenderer';
 import { planPreload, runPreload } from '../viewer/preload';
@@ -10,10 +11,11 @@ import { useFlip, useSpread } from '../viewer/useFlip';
 
 export default function Viewer() {
   const { id = '' } = useParams();
-  const [bundle, setBundle] = useState<AlbumBundle | null>(null);
+  const [bundle, setBundle] = useState<AlbumBundle | null>(id === EXAMPLE_ALBUM_ID ? exampleAlbum : null);
   const [loadError, setLoadError] = useState(false);
   const load = useCallback(() => {
     setLoadError(false);
+    if (id === EXAMPLE_ALBUM_ID) return setBundle(exampleAlbum); // built in, read-only
     api.getAlbum(id).then(setBundle, (e) => {
       if (!(e instanceof ApiError && e.status === 401)) setLoadError(true); // 401: redirect in progress
     });
@@ -61,7 +63,7 @@ export function Book({ bundle }: { bundle: AlbumBundle }) {
         <Link to="/">← Albums</Link>
         <h1>{album.title}</h1>
         {total > 0 && <span className="counter">{visible.map((i) => i + 1).join('–')} / {total}</span>}
-        <Link className="btn" to={`/albums/${album.id}/edit`}>Edit</Link>
+        {album.id !== EXAMPLE_ALBUM_ID && <Link className="btn" to={`/albums/${album.id}/edit`}>Edit</Link>}
       </header>
       {total === 0 ? <p className="empty">No pages yet.</p> : (
         <div className="stage">

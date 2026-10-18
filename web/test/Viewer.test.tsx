@@ -86,3 +86,17 @@ test("the viewer's desk uses the album's color", async () => {
   await screen.findByText('1 / 5');
   expect(container.querySelector('main.viewer.desk-plum')).not.toBeNull();
 });
+
+test('the built-in example album opens without the server and has no Edit button', async () => {
+  const { EXAMPLE_ALBUM_ID } = await import('../src/example/lookBack');
+  const fetchMock = vi.fn();
+  vi.stubGlobal('fetch', fetchMock);
+  render(
+    <MemoryRouter initialEntries={[`/albums/${EXAMPLE_ALBUM_ID}`]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <Routes><Route path="/albums/:id" element={<Viewer />} /></Routes>
+    </MemoryRouter>,
+  );
+  expect(await screen.findByText('Look Back — a tribute')).toBeTruthy();
+  expect(screen.queryByRole('link', { name: 'Edit' })).toBeNull();
+  expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining('/api/albums/'), expect.anything());
+});

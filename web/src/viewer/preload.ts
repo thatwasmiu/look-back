@@ -47,7 +47,8 @@ export function planPreload(pages: PageDTO[], media: Map<string, MediaDTO>, visi
 const decode = (key: string) => {
   const img = new Image();
   img.src = mediaUrl(key);
-  return img.decode().catch(() => {}); // a broken image must not stall the queue
+  // A broken image must not stall the queue; without decode() (old engines, jsdom) just fire the request.
+  return img.decode ? img.decode().catch(() => {}) : Promise.resolve();
 };
 const whenIdle = (fn: () => void) =>
   typeof requestIdleCallback === 'function' ? requestIdleCallback(fn) : setTimeout(fn, 200);

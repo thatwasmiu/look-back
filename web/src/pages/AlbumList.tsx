@@ -2,6 +2,7 @@ import { useEffect, useState, type CSSProperties, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import type { AlbumSummary } from '@scrapbook/shared';
 import { api, ApiError } from '../api';
+import { exampleAlbum, exampleCover } from '../example/lookBack';
 import { mediaUrl } from '../mediaUrl';
 
 export default function AlbumList() {
@@ -62,6 +63,15 @@ export default function AlbumList() {
             <small>{a.pageCount} pages · <Link to={`/albums/${a.id}/edit`}>Edit</Link></small>
           </li>
         ))}
+        {albums && (
+          <li className="polaroid example" style={{ '--tilt': '1.5deg' } as CSSProperties}>
+            <Link to={`/albums/${exampleAlbum.album.id}`}>
+              <img src={exampleCover} alt="" loading="lazy" />
+              <strong>{exampleAlbum.album.title}</strong>
+            </Link>
+            <small>Example · {exampleAlbum.pages.length} pages · view only</small>
+          </li>
+        )}
       </ul>
     </main>
   );

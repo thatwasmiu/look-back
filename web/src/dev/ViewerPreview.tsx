@@ -3,6 +3,7 @@
 // must never show a request for it.
 import type { AlbumBundle, PageElement } from '@scrapbook/shared';
 import { Book } from '../pages/Viewer';
+import { exampleAlbum } from '../example/lookBack';
 import { media, pages } from './Preview';
 
 const label = (n: number): PageElement => ({
@@ -19,6 +20,7 @@ const bundle: AlbumBundle = {
   media: [...media.values()].map((m) => ({ ...m, variants: m.variants && { ...m.variants, original: 'dev-samples/NEVER-original.jpg' } })),
 };
 
+// ?example shows the built-in example album instead (no login needed in dev).
 export default function ViewerPreview() {
-  return <Book bundle={bundle} />;
+  return <Book bundle={new URLSearchParams(location.search).has('example') ? exampleAlbum : bundle} />;
 }

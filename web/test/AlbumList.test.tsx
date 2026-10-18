@@ -27,3 +27,11 @@ test('create failure shows an inline error', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Create' }));
   expect(await screen.findByText("Couldn't create album")).toBeTruthy();
 });
+
+test('the built-in example album is listed (view only) after your albums', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } })));
+  render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><AlbumList /></MemoryRouter>);
+  const link = await screen.findByRole('link', { name: /Look Back — a tribute/ });
+  expect(link.getAttribute('href')).toBe('/albums/example-look-back');
+  expect(screen.getByText(/Example/)).toBeTruthy();
+});
