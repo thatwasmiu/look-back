@@ -54,6 +54,8 @@ const tilt = () => Math.round((Math.random() * 8 - 4) * 10) / 10;
 // Centered box; the page is 3:4, so a visually square box of page-width w has page-height h = 0.75w.
 const box = (w: number, h: number) => ({ id: newId(), x: 0.5 - w / 2, y: 0.5 - h / 2, w, h, rotation: tilt(), z: 0 });
 
+// Copy with a fresh id, nudged down-right so it doesn't hide the original; copies start unpinned.
+export const duplicate = <E extends PageElement>(el: E): E => clampGeometry({ ...el, id: newId(), x: el.x + 0.03, y: el.y + 0.03, pinned: undefined });
 export const newSticker = (stickerId: string): StickerEl => ({ type: 'sticker', ...box(0.18, 0.135), stickerId });
 export const newTape = (tapeStyle: TapeEl['tapeStyle']): TapeEl => ({ type: 'tape', ...box(0.22, 0.045), tapeStyle });
 // Particle effects start as a visually square box; a light leak covers the whole page, untilted.

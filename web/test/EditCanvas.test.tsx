@@ -116,3 +116,17 @@ test('crop mode has Remove photo: empties the frame and leaves crop mode', async
   expect(onCommit).toHaveBeenCalledWith(expect.objectContaining({ elements: [expect.objectContaining({ id: 'f1', mediaId: null })] }));
   expect(onCrop).toHaveBeenCalledWith(null);
 });
+
+test('crop mode Size slider can make the photo smaller than the frame; Fill resets it; Done commits', () => {
+  const filled: PageLayout = { background: 'paper-cream', elements: [
+    { type: 'frame', id: 'f1', x: 0.1, y: 0.1, w: 0.4, h: 0.3, rotation: 0, z: 1, frameStyle: 'polaroid', mediaId: 'm1', crop: { x: 0.5, y: 0.5, scale: 1 } },
+  ] };
+  const onCommit = vi.fn();
+  const { getByRole } = render(<EditCanvas layout={filled} media={new Map()} selectedId="f1" onSelect={() => {}} onCommit={onCommit} cropId="f1" onCrop={() => {}} />);
+  fireEvent.change(getByRole('slider', { name: 'Photo size' }), { target: { value: '0.6' } });
+  expect((getByRole('slider', { name: 'Photo size' }) as HTMLInputElement).value).toBe('0.6');
+  fireEvent.click(getByRole('button', { name: 'Done' }));
+  expect(onCommit).toHaveBeenLastCalledWith(expect.objectContaining({ elements: [expect.objectContaining({ crop: { x: 0.5, y: 0.5, scale: 0.6 } })] }));
+  fireEvent.click(getByRole('button', { name: 'Fill' }));
+  expect((getByRole('slider', { name: 'Photo size' }) as HTMLInputElement).value).toBe('1');
+});

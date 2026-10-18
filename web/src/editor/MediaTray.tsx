@@ -12,7 +12,7 @@ type Props = {
 };
 
 const chip: Partial<Record<MediaDTO['status'], string>> = { uploading: 'uploading…', processing: 'processing…', failed: 'upload failed' };
-const thumbOf = (m: MediaDTO) => (m.status === 'ready' && (m.variants?.thumb ?? m.variants?.poster)) || null;
+export const thumbOf = (m: MediaDTO) => (m.status === 'ready' && (m.variants?.thumb ?? m.variants?.poster)) || null;
 
 // Frame under the pointer on the editing page (not the page-strip thumbnails), or null.
 const frameAt = (x: number, y: number) =>

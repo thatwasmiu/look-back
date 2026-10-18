@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { pageLayoutSchema, templates, type AlbumBundle, type BackgroundColor, type BackgroundEffect, type MediaDTO, type PageDTO, type PageLayout } from '@scrapbook/shared';
+import { pageLayoutSchema, templates, type AlbumBundle, type BackgroundColor, type BackgroundEffect, type MediaDTO, type PageDTO, type PageElement, type PageLayout } from '@scrapbook/shared';
 import { api as realApi, ApiError } from '../api';
 import { PageRenderer } from '../render/PageRenderer';
 import { EditCanvas } from '../editor/EditCanvas';
 import { Toolbar, stepZoom } from '../editor/Toolbar';
 import { BackgroundEffectView } from '../render/effects';
 import { initHistory, push, redo, undo } from '../editor/history';
-import { assignMedia, clearMedia, removeElement, updateElement } from '../editor/layoutOps';
+import { addElement, assignMedia, clearMedia, duplicate, removeElement, updateElement } from '../editor/layoutOps';
 import { useAutosave } from '../editor/useAutosave';
-import { MediaTray } from '../editor/MediaTray';
+import { MediaTray, thumbOf } from '../editor/MediaTray';
+import { mediaUrl } from '../mediaUrl';
 import { ACCEPT, pollUntilSettled, useUpload } from '../editor/useUpload';
 
 export type EditorApi = Pick<typeof realApi,
@@ -228,9 +230,16 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
     }
   }, [upload.items, watch]);
   const framePick = useRef<{ input: HTMLInputElement | null; frameId: string }>({ input: null, frameId: '' });
-  const addToFrame = (frameId: string) => {
+  // "+ add" on an empty frame: pick from what's already uploaded, or upload new (first option).
+  // With nothing uploaded yet it goes straight to the file dialog.
+  const [frameMenu, setFrameMenu] = useState<string | null>(null);
+  const uploadToFrame = (frameId: string) => {
     framePick.current.frameId = frameId;
     framePick.current.input?.click();
+  };
+  const addToFrame = (frameId: string) => {
+    if (trayMedia.some((m) => m.status !== 'failed')) setFrameMenu(frameId);
+    else uploadToFrame(frameId);
   };
   const putInFrame = (mediaId: string, frameId: string) => commit((l) => assignMedia(l, frameId, mediaId), frameId);
   // The server empties frames on delete; mirror that everywhere here (pages, undo history) so no later save
@@ -307,11 +316,35 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   const selected = layout.elements.find((e) => e.id === selectedId) ?? null;
   useEffect(() => { if (cropId !== selectedId) setCropId(null); }, [cropId, selectedId]);
   const trayMedia = useMemo(() => [...media.values()].reverse(), [media]); // newest first
+  // Ctrl+C keeps a copy of the selected item (in memory, so it also pastes onto another page).
+  const clip = useRef<PageElement | null>(null);
   useEffect(() => {
+    const ignore = (t: EventTarget | null) => latest.current.busy
+      || (t instanceof HTMLElement && (!!t.closest('[aria-modal]') || t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName)));
+    // Paste: an image/video on the clipboard (screenshot, "Copy image") uploads — into the selected empty frame
+    // if there is one, else to Photos. Otherwise the last copied item is pasted as a new copy.
+    const onPaste = (e: ClipboardEvent) => {
+      if (ignore(e.target)) return;
+      const files = [...e.clipboardData?.files ?? []].filter((f) => /^(image|video)\//.test(f.type));
+      if (files.length) {
+        e.preventDefault();
+        const sel = latest.current.layout.elements.find((x) => x.id === selectedId);
+        upload.add(files, sel?.type === 'frame' && !sel.mediaId ? sel.id : undefined);
+        return;
+      }
+      if (!clip.current) return;
+      e.preventDefault();
+      const copy = duplicate(clip.current);
+      clip.current = copy; // the next paste lands a step further
+      commit((l) => addElement(l, copy), copy.id);
+    };
     const onKey = (e: KeyboardEvent) => {
-      const t = e.target as HTMLElement;
-      if (latest.current.busy || t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName)) return;
+      if (ignore(e.target)) return;
       const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.key.toLowerCase() === 'c' && selectedId) {
+        clip.current = latest.current.layout.elements.find((x) => x.id === selectedId) ?? null;
+        return;
+      }
       if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); setHist(e.shiftKey ? redo : undo); return; }
       if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); setHist(redo); return; }
       if (!selectedId) {
@@ -335,12 +368,13 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
       e.preventDefault();
       commit((l) => {
         const el = l.elements.find((x) => x.id === selectedId);
-        return el ? updateElement(l, el.id, { x: el.x + d[0] * 0.005, y: el.y + d[1] * 0.005 }) : l;
+        return el && !el.pinned ? updateElement(l, el.id, { x: el.x + d[0] * 0.005, y: el.y + d[1] * 0.005 }) : l;
       }, undefined, `nudge:${selectedId}`);
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [selectedId, commit]);
+    window.addEventListener('paste', onPaste);
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('paste', onPaste); };
+  }, [selectedId, commit, upload]);
 
   const shownPages = withCurrent();
   return (
@@ -373,7 +407,8 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
       )}
       <div className="edit-main">
         <BackgroundEffectView kind={bgEffect} />
-        <div className="stage-wrap">
+        {/* Tapping the desk around the page clears the selection, same as tapping empty page. */}
+        <div className="stage-wrap" onPointerDown={(e) => { if (e.target === e.currentTarget || e.target === stageRef.current) setSelectedId(null); }}>
           <div className="edit-stage" ref={stageRef}>
             {page ? <EditCanvas layout={layout} media={media} selectedId={selectedId} onSelect={setSelectedId} onCommit={commit}
               onFrameAddMedia={addToFrame} cropId={cropId} onCrop={setCropId} zoom={zoom} />
@@ -391,6 +426,30 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
           onUpload={(files) => upload.add(files)} onRetry={upload.retry}
           onPick={(id) => selected?.type === 'frame' && putInFrame(id, selected.id)} onDrop={putInFrame}
           onDelete={deleteMedia} onSetCover={setCover} />
+        {/* Portal: inside .edit-main's stacking context the tools would paint over the backdrop. */}
+        {frameMenu && createPortal(
+          <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setFrameMenu(null); }}
+            onKeyDown={(e) => { if (e.key === 'Escape') setFrameMenu(null); }}>
+            <div className="modal frame-menu" role="dialog" aria-modal="true" aria-label="Add photo or video">
+              <button type="button" className="modal-close" aria-label="Close" onClick={() => setFrameMenu(null)} autoFocus>×</button>
+              <h2>Add to frame</h2>
+              <div className="frame-menu-grid">
+                <button type="button" className="frame-menu-upload" onClick={() => { uploadToFrame(frameMenu); setFrameMenu(null); }}>⬆<span>Upload</span></button>
+                {trayMedia.filter((m) => m.status !== 'failed').map((m) => {
+                  const src = thumbOf(m);
+                  return (
+                    <button type="button" key={m.id} aria-label={`Use ${m.kind} ${m.id.slice(0, 8)}`}
+                      onClick={() => { putInFrame(m.id, frameMenu); setFrameMenu(null); }}>
+                      {src ? <img src={mediaUrl(src)} alt="" /> : <span>{m.status}…</span>}
+                      {m.kind === 'video' && <span className="play-badge" aria-hidden>▶</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
         <input type="file" accept={ACCEPT} hidden aria-label="Upload into frame" ref={(n) => { framePick.current.input = n; }}
           onChange={(e) => { upload.add([...e.target.files ?? []], framePick.current.frameId); e.target.value = ''; }} />
       </div>

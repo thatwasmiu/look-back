@@ -5,7 +5,7 @@ export const PAGE_ASPECT = 3 / 4
 const cropSchema = z.object({
   x: z.number().min(0).max(1),
   y: z.number().min(0).max(1),
-  scale: z.number().min(1).max(5),
+  scale: z.number().min(0.25).max(5), // < 1: photo smaller than the frame (paper shows around it)
 })
 
 const baseShape = {
@@ -16,6 +16,7 @@ const baseShape = {
   h: z.number().gt(0).max(1.5),
   rotation: z.number().min(-180).max(180),
   z: z.number().int().min(0),
+  pinned: z.boolean().optional(), // locked in place: no drag / resize / rotate / nudge until unpinned
 }
 
 // Picker order. 'plain' is shown as "Thin white".

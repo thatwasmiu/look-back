@@ -314,3 +314,60 @@ test('on phones the Pages strip starts folded', async () => {
     vi.unstubAllGlobals();
   }
 });
+
+test('tapping the desk around the page clears the selection', () => {
+  const b: AlbumBundle = { ...bundle, pages: [{ ...bundle.pages[0], layout: { background: 'paper-cream', elements: [
+    { type: 'frame', id: 'f1', x: 0.1, y: 0.1, w: 0.5, h: 0.4, rotation: 0, z: 1, frameStyle: 'polaroid', mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } },
+  ] } }] };
+  const { container } = render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={b} api={okApi()} /></MemoryRouter>);
+  fireEvent.pointerDown(container.querySelector('[data-el="f1"]')!);
+  const del = () => (screen.getByRole('button', { name: 'Delete' }) as HTMLButtonElement).disabled;
+  expect(del()).toBe(false);
+  fireEvent.pointerDown(container.querySelector('.edit-stage')!);
+  expect(del()).toBe(true);
+});
+
+test('a pinned item ignores arrow nudges until it is unpinned', async () => {
+  const user = userEvent.setup();
+  const { container } = setup(okApi());
+  await user.click(screen.getByRole('button', { name: 'Text' }));
+  const el = () => container.querySelector<HTMLElement>('.edit-page .el-text')!;
+  const x0 = el().style.left;
+  await user.click(screen.getByRole('button', { name: '📌 Pin' }));
+  expect(screen.getByRole('button', { name: '📌 Unpin' }).getAttribute('aria-pressed')).toBe('true');
+  await user.keyboard('{ArrowRight}');
+  expect(el().style.left).toBe(x0);
+  await user.click(screen.getByRole('button', { name: '📌 Unpin' }));
+  await user.keyboard('{ArrowRight}');
+  expect(el().style.left).not.toBe(x0);
+});
+
+test('Ctrl+C / Ctrl+V pastes a copy of the selected item (also on another page); Duplicate does the same', async () => {
+  const user = userEvent.setup();
+  const { container } = setup(okApi());
+  await user.click(screen.getByRole('button', { name: 'Text' }));
+  const count = () => container.querySelectorAll('.edit-page [data-el]').length;
+  expect(count()).toBe(1);
+  await user.keyboard('{Control>}c{/Control}');
+  fireEvent(window, Object.assign(new Event('paste'), { clipboardData: { files: [] } }));
+  expect(count()).toBe(2);
+  await user.click(screen.getByRole('button', { name: '⧉ Duplicate' }));
+  expect(count()).toBe(3);
+  await user.click(screen.getByRole('button', { name: 'Next page' }));
+  await waitFor(() => expect(count()).toBe(0));
+  fireEvent(window, Object.assign(new Event('paste'), { clipboardData: { files: [] } }));
+  expect(count()).toBe(1);
+});
+
+test('pasting a clipboard image uploads it into the selected empty frame', () => {
+  const add = vi.fn();
+  const uploader = (() => ({ items: [], add, retry: vi.fn() })) as never;
+  const b: AlbumBundle = { ...bundle, pages: [{ ...bundle.pages[0], layout: { background: 'paper-cream', elements: [frameEmpty] } }] };
+  const { container } = render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={b} api={okApi()} uploader={uploader} /></MemoryRouter>);
+  const png = new File(['x'], 'shot.png', { type: 'image/png' });
+  fireEvent(window, Object.assign(new Event('paste'), { clipboardData: { files: [png] } }));
+  expect(add).toHaveBeenLastCalledWith([png], undefined); // nothing selected → Photos
+  fireEvent.pointerDown(container.querySelector('[data-el="f1"]')!);
+  fireEvent(window, Object.assign(new Event('paste'), { clipboardData: { files: [png] } }));
+  expect(add).toHaveBeenLastCalledWith([png], 'f1');
+});

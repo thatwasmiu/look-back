@@ -114,7 +114,7 @@ export default function AlbumList() {
           <form onSubmit={create} className="modal" role="dialog" aria-modal="true" aria-labelledby="new-album-h">
             <button type="button" className="modal-close" aria-label="Close" onClick={closeCreate}>×</button>
             <h2 id="new-album-h">New album</h2>
-            <input aria-label="Album title" placeholder="e.g. Đà Lạt 2026" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
+            <input aria-label="Album title" placeholder="e.g. Tà Xùa 2026" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
             {createError && <p role="alert" className="error">{createError}</p>}
             <div className="modal-actions">
               <button type="button" className="secondary" onClick={closeCreate}>Cancel</button>

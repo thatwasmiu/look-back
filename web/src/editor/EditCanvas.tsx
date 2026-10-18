@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { flushSync } from 'react-dom';
 import Moveable from 'react-moveable';
 import type { FrameEl, MediaDTO, PageElement, PageLayout, TextEl } from '@scrapbook/shared';
@@ -39,6 +39,7 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
   }, []);
   const shown = cropId && cropLive ? updateElement(live ?? layout, cropId, { crop: cropLive }) : live ?? layout;
   const selected = layout.elements.find((e) => e.id === selectedId) ?? null;
+  const pinned = !!selected?.pinned;
   const finishCrop = () => {
     if (cropId && cropLive) onCommit(updateElement(layout, cropId, { crop: cropLive }));
     onCrop?.(null);
@@ -124,8 +125,8 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
       onDoubleClick={(e) => startEditing((e.target as Element).closest('[data-el]')?.getAttribute('data-el') ?? null)}>
       <PageRenderer layout={shown} media={media} mode="edit" renderOverlay={renderOverlay} />
       <Moveable ref={moveableRef} target={target} className="editor-moveable" zoom={coarse ? 1.7 : 1}
-        draggable resizable rotatable pinchable={['resizable', 'rotatable']} origin={false}
-        renderDirections={['nw', 'ne', 'sw', 'se']} keepRatio={selected?.type === 'sticker' || (selected?.type === 'frame' && ['circle', 'heart'].includes(selected.frameStyle))} rotationPosition="top"
+        draggable={!pinned} resizable={!pinned} rotatable={!pinned} pinchable={pinned ? false : ['resizable', 'rotatable']} origin={false}
+        renderDirections={pinned ? [] : ['nw', 'ne', 'sw', 'se']} keepRatio={selected?.type === 'sticker' || (selected?.type === 'frame' && ['circle', 'heart'].includes(selected.frameStyle))} rotationPosition="top"
         onDragStart={begin}
         onDrag={(e) => { if (released(e)) return; const { W, H } = size(); preview({ x: e.left / W, y: e.top / H }); }}
         onDragEnd={end}
@@ -179,6 +180,8 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
 // Crop mode: drag pans (the photo follows the finger), wheel / pinch zooms. Pointer deltas are rotated into the
 // frame's own axes. With cover-fit and scale about the crop point (BlurImage), the image's left edge sits at
 // -crop.x * (renderedWidth - windowWidth), so a pan of dx px is Δcrop.x = -dx / (renderedWidth - windowWidth).
+const MIN_SCALE = 0.25;
+
 function CropOverlay({ el, media, onChange, onDone, onRemove }: {
   el: FrameEl; media: MediaDTO | undefined; onChange(c: Crop): void; onDone(): void; onRemove(): void;
 }) {
@@ -200,6 +203,22 @@ function CropOverlay({ el, media, onChange, onDone, onRemove }: {
     const rx = iw * k - w, ry = ih * k - h;
     return { ...c, x: rx > 0.5 ? clamp(c.x - dx / rx, 0, 1) : c.x, y: ry > 0.5 ? clamp(c.y - dy / ry, 0, 1) : c.y };
   };
+  // Controls sit under the frame; a frame near the bottom of the visible stage gets them above it instead.
+  const actionsRef = useRef<HTMLDivElement>(null);
+  const [above, setAbove] = useState(false);
+  useLayoutEffect(() => {
+    const bar = actionsRef.current, stage = bar?.closest('.edit-stage');
+    if (!bar || !stage || above) return;
+    const b = bar.getBoundingClientRect(), st = stage.getBoundingClientRect(), frame = ref.current!.getBoundingClientRect();
+    if (b.bottom > st.bottom && frame.top - st.top > b.height + 16) setAbove(true);
+  }, [above]);
+  // Scale at which the whole photo fits inside the frame window (cover is 1).
+  const fitScale = () => {
+    const win = ref.current?.parentElement?.querySelector<HTMLElement>('.frame-window');
+    if (!win || !media?.width || !media.height) return 1;
+    const rw = win.offsetWidth / media.width, rh = win.offsetHeight / media.height;
+    return Math.min(rw, rh) / Math.max(rw, rh);
+  };
   // Gesture baseline restarts whenever a finger is added or lifted.
   const rebase = () => {
     const p = [...pts.current.values()];
@@ -213,7 +232,7 @@ function CropOverlay({ el, media, onChange, onDone, onRemove }: {
     const p = [...pts.current.values()];
     const b = base.current;
     const cx = p.reduce((s, q) => s + q.x, 0) / p.length, cy = p.reduce((s, q) => s + q.y, 0) / p.length;
-    const scale = b.d && p.length > 1 ? clamp(b.crop.scale * Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) / b.d, 1, 5) : b.crop.scale;
+    const scale = b.d && p.length > 1 ? clamp(b.crop.scale * Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) / b.d, MIN_SCALE, 5) : b.crop.scale;
     set(pan({ ...b.crop, scale }, cx - b.cx, cy - b.cy));
   };
   const lift = (e: ReactPointerEvent) => { pts.current.delete(e.pointerId); rebase(); };
@@ -223,7 +242,7 @@ function CropOverlay({ el, media, onChange, onDone, onRemove }: {
     // Non-passive so a trackpad pinch (ctrl+wheel) zooms the photo instead of the browser page.
     const wheel = (e: WheelEvent) => {
       e.preventDefault();
-      set({ ...cur.current, scale: clamp(cur.current.scale * Math.exp(-e.deltaY * 0.0015), 1, 5) });
+      set({ ...cur.current, scale: clamp(cur.current.scale * Math.exp(-e.deltaY * 0.0015), MIN_SCALE, 5) });
     };
     n.addEventListener('wheel', wheel, { passive: false });
     return () => n.removeEventListener('wheel', wheel);
@@ -232,13 +251,19 @@ function CropOverlay({ el, media, onChange, onDone, onRemove }: {
   return (
     <div className="crop-overlay" ref={ref}
       onPointerDown={(e) => {
-        if ((e.target as Element).closest('button')) return;
+        if ((e.target as Element).closest('button, label')) return;
         e.currentTarget.setPointerCapture(e.pointerId);
         pts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
         rebase();
       }}
       onPointerMove={onMove} onPointerUp={lift} onPointerCancel={lift}>
-      <div className="crop-actions">
+      <div className={`crop-actions${above ? ' above' : ''}`} ref={actionsRef}>
+        <label className="crop-size">Size
+          <input type="range" aria-label="Photo size" min={MIN_SCALE} max={5} step={0.01} value={el.crop.scale}
+            onChange={(e) => set(pan({ ...cur.current, scale: Number(e.target.value) }, 0, 0))} />
+        </label>
+        <button type="button" onClick={() => set({ x: 0.5, y: 0.5, scale: fitScale() })} title="Show the whole photo">Fit</button>
+        <button type="button" onClick={() => set({ x: 0.5, y: 0.5, scale: 1 })} title="Fill the frame">Fill</button>
         <button type="button" className="crop-remove" onClick={onRemove}>Remove photo</button>
         <button type="button" className="crop-done" onClick={onDone}>Done</button>
       </div>

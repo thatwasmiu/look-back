@@ -3,7 +3,7 @@ import { BACKGROUND_COLORS, BACKGROUND_EFFECTS, FRAME_STYLES, PAGE_EFFECTS, type
 import { EffectView, backgroundEffectLabels, deskColorLabels, pageEffectLabels } from '../render/effects';
 import { Tape, fontFamily, frameStyleLabels, stickers, tapeStyles } from '../render/decor';
 import { FrameView } from '../render/FrameView';
-import { addElement, assignMedia, bringForward, newEffect, newFrame, newSticker, newTape, newText, removeElement, sendBackward, setFrameStyle, updateElement } from './layoutOps';
+import { addElement, assignMedia, bringForward, duplicate, newEffect, newFrame, newSticker, newTape, newText, removeElement, sendBackward, setFrameStyle, updateElement } from './layoutOps';
 import type { SaveStatus } from './useAutosave';
 
 type Props = {
@@ -85,7 +85,9 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
           ))}
           {picker === 'bg' && backgrounds.map((b) => (
             <button key={b} type="button" aria-label={b} aria-pressed={layout.background === b}
-              className={`swatch bg-swatch bg-${b}`} onClick={() => { commit({ ...layout, background: b }); setPicker(null); }} />
+              className="swatch bg-swatch" onClick={() => { commit({ ...layout, background: b }); setPicker(null); }}>
+              <span className={`page-bg bg-${b}`} />
+            </button>
           ))}
         </div>
       )}
@@ -100,6 +102,11 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
         <button type="button" aria-expanded={picker === 'albumFx'} onClick={() => toggle('albumFx')}>Background</button>
         {crop && selected?.type === 'frame' && selected.mediaId && <button type="button" onClick={crop}>Crop</button>}
         {frame?.mediaId && <button type="button" onClick={() => commit(assignMedia(layout, frame.id, null))}>Remove photo</button>}
+        {selected && <button type="button" title="Duplicate (Ctrl+C, Ctrl+V)" onClick={() => add(duplicate(selected))}>⧉ Duplicate</button>}
+        {selected && (
+          <button type="button" aria-pressed={!!selected.pinned} title={selected.pinned ? 'Unpin to move, resize or rotate again' : 'Lock in place'}
+            onClick={() => commit(updateElement(layout, selected.id, { pinned: !selected.pinned }))}>{selected.pinned ? '📌 Unpin' : '📌 Pin'}</button>
+        )}
         <span className="sep" />
         <span className="row">
           <button type="button" disabled={!sel} aria-label="Bring forward" title="Bring forward" onClick={() => sel && commit(bringForward(layout, sel))}>↑</button>
