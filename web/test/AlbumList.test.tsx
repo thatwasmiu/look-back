@@ -131,7 +131,7 @@ test('Manga mode with right-to-left reading is sent on Create; scrapbook templat
   expect(screen.getByRole('radio', { name: 'Trip' })).toBeTruthy();
   await userEvent.click(screen.getByRole('radio', { name: 'Manga' }));
   expect(screen.queryByRole('radio', { name: 'Trip' })).toBeNull();
-  expect(screen.queryByRole('radio', { name: '2 3 con mực' })).toBeNull();
+  expect(screen.queryByRole('radio', { name: 'Birthday' })).toBeNull(); // scrapbook-only
   expect(screen.getByRole('radio', { name: 'Left → right' }).getAttribute('aria-checked')).toBe('true');
   await userEvent.click(screen.getByRole('radio', { name: 'Right → left' }));
   await userEvent.click(screen.getByRole('button', { name: 'Create' }));

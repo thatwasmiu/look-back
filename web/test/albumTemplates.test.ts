@@ -22,3 +22,13 @@ test('manga templates: at least three, all-manga pages of panels on white paper,
   }
   for (const t of albumTemplates.filter((x) => x.mode !== 'manga')) expect(t.design().mode ?? 'scrapbook', t.id).toBe('scrapbook');
 });
+
+test('"2 3 con mực" also comes as a manga template, with its ocean look and template music', () => {
+  const t = albumTemplates.find((x) => x.mode === 'manga' && x.name === '2 3 con mực')!;
+  expect(t).toBeTruthy();
+  const d = t.design();
+  expect(d).toMatchObject({ mode: 'manga', backgroundColor: 'ocean', backgroundEffect: 'bubbles', music: 'squids' });
+  const els = d.pages.flatMap((p) => p.elements);
+  expect(els.some((e) => e.type === 'text' && e.text === '2 3 con mực')).toBe(true);
+  expect(els.some((e) => e.type === 'sticker' && e.stickerId === 'octopus')).toBe(true);
+});

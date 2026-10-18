@@ -57,6 +57,45 @@ const mangaPage = (template: string, extras: PageElement[] = [], title?: string)
 const manga = (backgroundColor: BackgroundColor, backgroundEffect: BackgroundEffect, pages: () => PageLayout[]) =>
   (direction: ReadingDirection = 'ltr'): AlbumDesign => ({ backgroundColor, backgroundEffect, mode: 'manga', readingDirection: direction, pages: pages() });
 
+const sticker = (stickerId: string, [x, y, w, h, rotation = 0]: B): PageElement =>
+  ({ type: 'sticker', id: newId(), x, y, w, h, rotation, z: 8, stickerId });
+
+// "2 3 con mực" as manga: same ocean look, music and short original captions as the scrapbook version.
+const mangaSquids = (direction: ReadingDirection = 'ltr'): AlbumDesign => ({
+  ...manga('ocean', 'bubbles', () => [
+    mangaPage('manga-cover', [
+      sticker('octopus', [0.06, 0.76, 0.18, 0.135, -8]),
+      sticker('octopus-blue', [0.24, 0.8, 0.14, 0.105, 6]),
+      sticker('infinity', [0.78, 0.035, 0.16, 0.12]),
+    ], '2 3 con mực'),
+    mangaPage('manga-slants', [
+      say('speech', 'nắm tay nha', [0.6, 0.07, 0.32, 0.13], { tail: 'br' }),
+      sticker('squid', [0.08, 0.08, 0.12, 0.12, -10]),
+      fx('speed-lines', [0.04, 0.69, 0.92, 0.27]),
+      say('sfx', 'VÚT!', [0.6, 0.74, 0.32, 0.14, -10]),
+    ]),
+    mangaPage('manga-splash', [
+      fx('focus-lines', [0.04, 0.04, 0.92, 0.92]),
+      say('thought', 'thưng vô cực ∞', [0.08, 0.07, 0.4, 0.15]),
+      sticker('infinity', [0.62, 0.86, 0.16, 0.12]),
+    ]),
+    mangaPage('manga-grid', [
+      say('speech', 'đi ăn hông?', [0.62, 0.06, 0.3, 0.12], { tail: 'br' }),
+      sticker('sushi', [0.08, 0.5, 0.14, 0.105, -6]),
+      sticker('onigiri', [0.8, 0.52, 0.13, 0.1, 6]),
+      say('narration', 'uống tăng lực', [0.06, 0.675, 0.3, 0.05]),
+      say('speech', 'nạp năng lượng', [0.6, 0.82, 0.32, 0.11], { tail: 'br' }),
+      sticker('energy-can', [0.42, 0.84, 0.1, 0.11, 8]),
+    ]),
+    mangaPage('manga-strips', [
+      say('shout', 'căng cực?', [0.08, 0.06, 0.32, 0.16, -4]),
+      sticker('ring', [0.8, 0.39, 0.12, 0.12, 6]),
+      sticker('squid', [0.82, 0.86, 0.1, 0.1, 10]),
+    ]),
+  ])(direction),
+  music: 'squids',
+});
+
 const mangaJourney = manga('slate', 'none', () => [
   mangaPage('manga-cover', [], 'Hành trình'),
   mangaPage('manga-slants', [
@@ -120,6 +159,7 @@ const mangaRomance = manga('rose', 'petals', () => [
 ]);
 
 export const albumTemplates: AlbumTemplate[] = [
+  { id: 'manga-squids', name: '2 3 con mực', icon: 'octopus', mode: 'manga', design: mangaSquids },
   { id: 'manga-journey', name: 'Hành trình', icon: 'plane', mode: 'manga', design: mangaJourney },
   { id: 'manga-daily', name: 'Thường ngày', icon: 'coffee', mode: 'manga', design: mangaDaily },
   { id: 'manga-action', name: 'Hành động', icon: 'sparkle', mode: 'manga', design: mangaAction },
