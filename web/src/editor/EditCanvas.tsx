@@ -167,7 +167,7 @@ function TextEditor({ el, onDone }: { el: TextEl; onDone(text: string): void }) 
   return (
     <div className="text text-editing" contentEditable suppressContentEditableWarning spellCheck={false}
       ref={(n) => { if (n && document.activeElement !== n) { n.focus(); document.getSelection()?.selectAllChildren(n); } }}
-      style={{ fontFamily: fontFamily[el.font], color: el.color, fontSize: `${el.size * 100}cqh` }}
+      style={{ fontFamily: fontFamily[el.font], color: el.color, fontSize: `calc(${el.size * 100} * var(--cqh))` }}
       onBlur={(e) => onDone(e.currentTarget.innerText.replace(/\n$/, ''))}
       onKeyDown={(e) => { if (e.key === 'Escape') e.currentTarget.blur(); }}>
       {el.text}

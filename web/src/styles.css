@@ -1,4 +1,7 @@
 :root {
+  /* Container-relative units; see vite.config.ts (cq-vars) and src/cqPolyfill.ts for browsers without cqw/cqh. */
+  --cqw: 1cqw;
+  --cqh: 1cqh;
   --paper: #efe6d4;
   --paper-dark: #e2d6bd;
   --ink: #3b3226;

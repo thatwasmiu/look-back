@@ -1,6 +1,6 @@
 /* ---- Effects: CSS-only particles (transform/opacity) driven by per-particle vars --x --y --s --d --t --h ∈ [0,1] ---- */
 .fx, .bgfx { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-.fx { --u: 1cqh; } /* particle size unit: page height; preview tiles set their own */
+.fx { --u: var(--cqh); } /* particle size unit: page height; preview tiles set their own */
 .fx > i, .bgfx > i { position: absolute; display: block; left: calc(var(--x) * 100%); top: calc(var(--y) * 100%); will-change: transform, opacity; }
 
 /* Page effects (sizes in cqh: they scale with the page). */

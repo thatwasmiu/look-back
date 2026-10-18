@@ -6,5 +6,6 @@ import '@fontsource/dancing-script/vietnamese.css';
 import '@fontsource/patrick-hand/latin.css';
 import '@fontsource/patrick-hand/vietnamese.css';
 import './styles.css';
+import './cqPolyfill';
 
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);

@@ -38,7 +38,7 @@ function element(el: PageElement, media: Map<string, MediaDTO>, mode: 'view' | '
       return S ? <S /> : null;
     }
     case 'text':
-      return <div className="text" style={{ fontFamily: fontFamily[el.font], color: el.color, fontSize: `${el.size * 100}cqh` }}>{el.text}</div>;
+      return <div className="text" style={{ fontFamily: fontFamily[el.font], color: el.color, fontSize: `calc(${el.size * 100} * var(--cqh))` }}>{el.text}</div>;
     case 'effect': return <EffectView effect={el.effect} />;
   }
 }
