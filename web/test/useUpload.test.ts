@@ -109,6 +109,18 @@ test("upload-error: the server's HEIC 400 message is shown on the item", () => {
   expect(result.current.items[0]).toMatchObject({ state: 'error', error: msg, retryable: false });
 });
 
+test('a 4xx (e.g. 413 too large) drops the file from Uppy so the same file can be chosen again; a network error keeps it for Retry', async () => {
+  const { result } = renderHook((a: string) => useUpload(a, vi.fn()), { initialProps: album() });
+  act(() => result.current.add([file('big.mp4'), file('flaky.mp4')]));
+  const [big, flaky] = result.current.items.map((x) => x.localId);
+  act(() => h.uppy!.emit('upload-error', { id: big }, new Error('413'), { status: 413 }));
+  act(() => h.uppy!.emit('upload-error', { id: flaky }, new Error('network'), undefined));
+  await new Promise((r) => setTimeout(r));
+  expect(result.current.items.find((x) => x.localId === big)).toMatchObject({ state: 'error', error: 'File quá lớn', retryable: false });
+  expect(h.removed).toContain(big);
+  expect(h.removed).not.toContain(flaky);
+});
+
 test('the uploader outlives the editor: unmount never destroys/cancels, remount reuses it and shows its items', () => {
   const albumId = album();
   const first = renderHook(() => useUpload(albumId, vi.fn()));

@@ -89,7 +89,11 @@ function getUppy(): Uppy {
     const r = res as Resp;
     const error = r?.status === 413 ? 'File quá lớn' : r?.status === 400 && r.body?.xhr?.responseText || err.message;
     const status = r?.status ?? 0;
-    patch(f?.id, { state: 'error', error, retryable: !(status >= 400 && status < 500) });
+    const retryable = !(status >= 400 && status < 500);
+    patch(f?.id, { state: 'error', error, retryable });
+    // A 4xx can't succeed on retry: drop the file from Uppy, or choosing the same file again is refused as a
+    // duplicate. (Deferred like on success, so @uppy/tus has released the upload first.)
+    if (!retryable && f) setTimeout(() => { if (u.getFile(f.id)) u.removeFile(f.id); });
   });
   window.addEventListener('beforeunload', (e) => {
     if (!uploadsInProgress()) return;
@@ -121,8 +125,8 @@ export function useUpload(albumId: string, onCreated: OnCreated): Uploader {
           meta: { albumId, filename: file.name, filetype: file.type, targetFrameId },
         });
         set([...items, { albumId, localId, name: file.name, progress: 0, mediaId: null, state: 'uploading' }]);
-      } catch (e) { // e.g. the same file is already uploading
-        set([...items, { albumId, localId: `x${Date.now()}${items.length}`, name: file.name, progress: 0, mediaId: null, state: 'error', error: (e as Error).message, retryable: false }]);
+      } catch { // Uppy refuses a file that is still in its queue: the same file is already uploading
+        set([...items, { albumId, localId: `x${Date.now()}${items.length}`, name: file.name, progress: 0, mediaId: null, state: 'error', error: 'File này đang được tải lên', retryable: false }]);
       }
     }
   };
