@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { pageLayoutSchema, templates, type AlbumBundle, type BackgroundEffect, type MediaDTO, type PageDTO, type PageLayout } from '@scrapbook/shared';
+import { pageLayoutSchema, templates, type AlbumBundle, type BackgroundColor, type BackgroundEffect, type MediaDTO, type PageDTO, type PageLayout } from '@scrapbook/shared';
 import { api as realApi, ApiError } from '../api';
 import { PageRenderer } from '../render/PageRenderer';
 import { EditCanvas } from '../editor/EditCanvas';
@@ -75,6 +75,12 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   const [panelsHidden, setPanelsHidden] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [bgEffect, setBgEffectState] = useState(bundle.album.backgroundEffect);
+  const [bgColor, setBgColorState] = useState(bundle.album.backgroundColor);
+  const setBgColor = (c: BackgroundColor) => {
+    const prev = bgColor;
+    setBgColorState(c);
+    api.updateAlbum(albumId, { backgroundColor: c }).catch(() => { setBgColorState(prev); setOpError("Couldn't save the desk color."); });
+  };
   // Album-level setting: optimistic, rolled back if the save fails.
   const setBgEffect = (e: BackgroundEffect) => {
     const prev = bgEffect;
@@ -314,7 +320,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
 
   const shownPages = withCurrent();
   return (
-    <main className={`editor${busy ? ' busy' : ''}${panelsHidden ? ' panels-hidden' : ''}`} aria-busy={busy}>
+    <main className={`editor desk-${bgColor}${busy ? ' busy' : ''}${panelsHidden ? ' panels-hidden' : ''}`} aria-busy={busy}>
       <header className="editor-bar">
         <Link to={`/albums/${albumId}`} onClick={leave}>← Done</Link>
         <h1>{bundle.album.title}</h1>
@@ -326,7 +332,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
         <Toolbar layout={layout} selected={selected} commit={commit}
           undo={() => setHist(undo)} redo={() => setHist(redo)} canUndo={hist.past.length > 0} canRedo={hist.future.length > 0}
           status={status} save={() => void flush().then((ok) => ok && setOpError(null))}
-          crop={() => setCropId(selectedId)} zoom={zoom} setZoom={setZoom} bgEffect={bgEffect} setBgEffect={setBgEffect} />
+          crop={() => setCropId(selectedId)} zoom={zoom} setZoom={setZoom} bgEffect={bgEffect} setBgEffect={setBgEffect} bgColor={bgColor} setBgColor={setBgColor} />
       )}
       <div className="edit-main">
         <BackgroundEffectView kind={bgEffect} />

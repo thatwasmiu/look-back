@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import type { BackgroundEffect, EffectEl } from '@scrapbook/shared';
+import type { BackgroundColor, BackgroundEffect, EffectEl } from '@scrapbook/shared';
 import './effects.css';
 
 // Particles are plain <i> elements animated with CSS (transform/opacity only). Positions, sizes, delays come from
@@ -38,6 +38,9 @@ export function BackgroundEffectView({ kind }: { kind: BackgroundEffect }) {
 
 export const pageEffectLabels: Record<EffectEl['effect'], string> = {
   sparkles: 'Sparkles', hearts: 'Floating hearts', petals: 'Falling petals', confetti: 'Confetti', bokeh: 'Bokeh lights', 'light-leak': 'Light leak',
+};
+export const deskColorLabels: Record<BackgroundColor, string> = {
+  walnut: 'Walnut', espresso: 'Espresso', sage: 'Sage', rose: 'Dusty rose', ocean: 'Ocean', plum: 'Plum', slate: 'Slate', night: 'Night', terracotta: 'Terracotta',
 };
 export const backgroundEffectLabels: Record<BackgroundEffect, string> = {
   none: 'No effect', snow: 'Snow', petals: 'Petals', fireflies: 'Fireflies', stars: 'Starry night', rain: 'Rain',

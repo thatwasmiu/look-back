@@ -35,6 +35,9 @@ const frameSchema = z.object({
 export const PAGE_EFFECTS = ['sparkles', 'hearts', 'petals', 'confetti', 'bokeh', 'light-leak'] as const
 export const BACKGROUND_EFFECTS = ['none', 'snow', 'petals', 'fireflies', 'stars', 'rain'] as const
 export type BackgroundEffect = (typeof BACKGROUND_EFFECTS)[number]
+// Desk color behind the album (viewer and editor). 'walnut' is the original brown.
+export const BACKGROUND_COLORS = ['walnut', 'espresso', 'sage', 'rose', 'ocean', 'plum', 'slate', 'night', 'terracotta'] as const
+export type BackgroundColor = (typeof BACKGROUND_COLORS)[number]
 
 const effectSchema = z.object({ ...baseShape, type: z.literal('effect'), effect: z.enum(PAGE_EFFECTS) })
 const tapeSchema = z.object({

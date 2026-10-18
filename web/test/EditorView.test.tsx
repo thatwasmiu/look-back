@@ -13,7 +13,7 @@ const mediaApi = { getMedia: vi.fn(), deleteMedia: vi.fn(), updateAlbum: vi.fn()
 const okApi = (): EditorApi => ({ savePage: vi.fn().mockResolvedValue({}), addPage: vi.fn(), deletePage: vi.fn(), reorderPages: vi.fn(), ...mediaApi });
 
 const bundle: AlbumBundle = {
-  album: { id: 'a1', title: 'Trip', coverMediaId: null, backgroundEffect: 'none' },
+  album: { id: 'a1', title: 'Trip', coverMediaId: null, backgroundEffect: 'none', backgroundColor: 'walnut' },
   pages: [0, 1].map((i) => ({ id: `p${i}`, albumId: 'a1', position: i, layout: { background: 'paper-cream', elements: [] } })),
   media: [],
 };
@@ -201,8 +201,19 @@ test('Effect adds a page effect; Album background saves the album effect and sho
   await user.click(screen.getByRole('button', { name: 'Effect' }));
   await user.click(screen.getByRole('button', { name: 'Sparkles effect' }));
   expect(container.querySelector('.edit-page .el-effect .fx-sparkles')).not.toBeNull();
-  await user.click(screen.getByRole('button', { name: 'Album background' }));
+  await user.click(screen.getByRole('button', { name: 'Background' }));
   await user.click(screen.getByRole('button', { name: 'Snow background' }));
   expect(api.updateAlbum).toHaveBeenCalledWith('a1', { backgroundEffect: 'snow' });
   expect(container.querySelector('.edit-main .bgfx-snow')).not.toBeNull();
+});
+
+test('Album background also picks the desk color: saved for the album and applied behind the page', async () => {
+  const user = userEvent.setup();
+  const api = { ...okApi(), updateAlbum: vi.fn().mockResolvedValue({}) };
+  const { container } = setup(api);
+  expect(container.querySelector('main.editor')!.classList.contains('desk-walnut')).toBe(true);
+  await user.click(screen.getByRole('button', { name: 'Background' }));
+  await user.click(screen.getByRole('button', { name: 'Ocean desk color' }));
+  expect(api.updateAlbum).toHaveBeenCalledWith('a1', { backgroundColor: 'ocean' });
+  expect(container.querySelector('main.editor')!.classList.contains('desk-ocean')).toBe(true);
 });

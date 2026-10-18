@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { BACKGROUND_EFFECTS, FRAME_STYLES, PAGE_EFFECTS, type BackgroundEffect, type FrameEl, type PageElement, type PageLayout, type TextEl } from '@scrapbook/shared';
-import { EffectView, backgroundEffectLabels, pageEffectLabels } from '../render/effects';
+import { BACKGROUND_COLORS, BACKGROUND_EFFECTS, FRAME_STYLES, PAGE_EFFECTS, type BackgroundColor, type BackgroundEffect, type FrameEl, type PageElement, type PageLayout, type TextEl } from '@scrapbook/shared';
+import { EffectView, backgroundEffectLabels, deskColorLabels, pageEffectLabels } from '../render/effects';
 import { Tape, fontFamily, frameStyleLabels, stickers, tapeStyles } from '../render/decor';
 import { FrameView } from '../render/FrameView';
 import { addElement, bringForward, newEffect, newFrame, newSticker, newTape, newText, removeElement, sendBackward, setFrameStyle, updateElement } from './layoutOps';
@@ -14,6 +14,7 @@ type Props = {
   crop?(): void; // selected filled frame → crop mode (double-tap alone is unreliable on phones)
   zoom: number; setZoom(z: number): void;
   bgEffect: BackgroundEffect; setBgEffect(e: BackgroundEffect): void;
+  bgColor: BackgroundColor; setBgColor(c: BackgroundColor): void;
 };
 
 const backgrounds: PageLayout['background'][] = ['paper-cream', 'paper-kraft', 'paper-grid', 'paper-dots'];
@@ -28,7 +29,7 @@ const statusLabel: Record<SaveStatus, string> = { saved: 'Saved', saving: 'Savin
 
 // Laptop: a bar above the page. Phone (coarse pointer or < 700px, see CSS): a sheet pinned to the bottom,
 // pickers open above it.
-export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo, status, save, crop, zoom, setZoom, bgEffect, setBgEffect }: Props) {
+export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo, status, save, crop, zoom, setZoom, bgEffect, setBgEffect, bgColor, setBgColor }: Props) {
   const [picker, setPicker] = useState<'frame' | 'frameStyle' | 'sticker' | 'tape' | 'bg' | 'effect' | 'albumFx' | null>(null);
   const toggle = (p: typeof picker) => setPicker((cur) => (cur === p ? null : p));
   const ref = useRef<HTMLDivElement>(null);
@@ -64,6 +65,14 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
             <button key={e} type="button" className="swatch effect-swatch" aria-label={`${pageEffectLabels[e]} effect`} title={pageEffectLabels[e]}
               onClick={() => add(newEffect(e))}><EffectView effect={e} /></button>
           ))}
+          {picker === 'albumFx' && (
+            <div className="desk-colors" role="group" aria-label="Desk color">
+              {BACKGROUND_COLORS.map((c) => (
+                <button key={c} type="button" className={`desk-swatch desk-${c}`} aria-label={`${deskColorLabels[c]} desk color`} title={deskColorLabels[c]}
+                  aria-pressed={bgColor === c} onClick={() => setBgColor(c)} />
+              ))}
+            </div>
+          )}
           {picker === 'albumFx' && BACKGROUND_EFFECTS.map((e) => (
             <button key={e} type="button" className="album-fx-option" aria-label={`${backgroundEffectLabels[e]} background`} aria-pressed={bgEffect === e}
               onClick={() => { setBgEffect(e); setPicker(null); }}>{backgroundEffectLabels[e]}</button>
@@ -88,7 +97,7 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
         <button type="button" onClick={() => add(newText())}>Text</button>
         <button type="button" aria-expanded={picker === 'bg'} onClick={() => toggle('bg')}>Paper</button>
         <button type="button" aria-expanded={picker === 'effect'} onClick={() => toggle('effect')}>Effect</button>
-        <button type="button" aria-expanded={picker === 'albumFx'} onClick={() => toggle('albumFx')}>Album background</button>
+        <button type="button" aria-expanded={picker === 'albumFx'} onClick={() => toggle('albumFx')}>Background</button>
         {crop && selected?.type === 'frame' && selected.mediaId && <button type="button" onClick={crop}>Crop</button>}
         <span className="sep" />
         <button type="button" disabled={!sel} aria-label="Bring forward" title="Bring forward" onClick={() => sel && commit(bringForward(layout, sel))}>↑</button>

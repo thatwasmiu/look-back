@@ -1,4 +1,4 @@
-import type { BackgroundEffect, PageLayout } from './layout'
+import type { BackgroundColor, BackgroundEffect, PageLayout } from './layout'
 
 export type MediaKind = 'image' | 'video'
 export type MediaStatus = 'uploading' | 'processing' | 'ready' | 'failed'
@@ -9,6 +9,6 @@ export type MediaDTO = {
   blurDataUrl: string | null; variants: Variants | null; error: string | null
 }
 export type PageDTO = { id: string; albumId: string; position: number; layout: PageLayout }
-export type AlbumDTO = { id: string; title: string; coverMediaId: string | null; backgroundEffect: BackgroundEffect }
+export type AlbumDTO = { id: string; title: string; coverMediaId: string | null; backgroundEffect: BackgroundEffect; backgroundColor: BackgroundColor }
 export type AlbumSummary = AlbumDTO & { coverThumb: string | null; pageCount: number }
 export type AlbumBundle = { album: AlbumDTO; pages: PageDTO[]; media: MediaDTO[] }

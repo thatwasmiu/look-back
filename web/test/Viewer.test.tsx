@@ -18,7 +18,7 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 const bundle: AlbumBundle = {
-  album: { id: 'a1', title: 'Trip', coverMediaId: null, backgroundEffect: 'none' },
+  album: { id: 'a1', title: 'Trip', coverMediaId: null, backgroundEffect: 'none', backgroundColor: 'walnut' },
   pages: Array.from({ length: 5 }, (_, i) => ({ id: `p${i}`, albumId: 'a1', position: i, layout: { background: 'paper-cream', elements: [] } })),
   media: [],
 };
@@ -78,4 +78,11 @@ test("the album's background effect plays behind the book", async () => {
   const { container } = setup(vi.fn().mockResolvedValue(json(200, withFx)));
   await screen.findByText('1 / 5');
   expect(container.querySelector('main.viewer > .bgfx-stars')).not.toBeNull();
+});
+
+test("the viewer's desk uses the album's color", async () => {
+  const withColor = { ...bundle, album: { ...bundle.album, backgroundColor: 'plum' as const } };
+  const { container } = setup(vi.fn().mockResolvedValue(json(200, withColor)));
+  await screen.findByText('1 / 5');
+  expect(container.querySelector('main.viewer.desk-plum')).not.toBeNull();
 });

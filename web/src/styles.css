@@ -52,7 +52,7 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 /* ---- Viewer: the book on a desk ---- */
 .viewer {
   height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
-  background: radial-gradient(ellipse 90% 80% at 50% 45%, #8a6a4c, #5b412e);
+  background: radial-gradient(ellipse 90% 80% at 50% 45%, var(--desk-a, #8a6a4c), var(--desk-b, #5b412e));
   color: #f6efe0;
 }
 .viewer .empty { color: inherit; }
@@ -102,13 +102,27 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 /* ---- Editor: desk with the page in the middle; tools on top (laptop) or a bottom sheet (phone) ---- */
 .editor {
   height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
-  background: radial-gradient(ellipse 90% 80% at 50% 45%, #8a6a4c, #5b412e); color: #f6efe0;
+  background: radial-gradient(ellipse 90% 80% at 50% 45%, var(--desk-a, #8a6a4c), var(--desk-b, #5b412e)); color: #f6efe0;
 }
+/* Desk colors behind the album (per album). All deep enough for the light text and to make the pages pop. */
+.desk-walnut { --desk-a: #8a6a4c; --desk-b: #5b412e; }
+.desk-espresso { --desk-a: #5a4234; --desk-b: #2e211a; }
+.desk-sage { --desk-a: #7d8f74; --desk-b: #4a5a45; }
+.desk-rose { --desk-a: #a9787a; --desk-b: #6e4a4f; }
+.desk-ocean { --desk-a: #5f8597; --desk-b: #34525f; }
+.desk-plum { --desk-a: #7d5d7f; --desk-b: #4a344d; }
+.desk-slate { --desk-a: #6f747a; --desk-b: #41454a; }
+.desk-night { --desk-a: #34405e; --desk-b: #161c2c; }
+.desk-terracotta { --desk-a: #b06e4f; --desk-b: #73432e; }
+.desk-colors { display: flex; flex-wrap: wrap; gap: .4rem; width: 100%; padding-bottom: .4rem; border-bottom: 1px solid #0001; }
+.desk-swatch { width: 2.2rem; height: 2.2rem; padding: 0; border-radius: 50%; border: 2px solid #fffaf0;
+  background: radial-gradient(circle at 40% 35%, var(--desk-a), var(--desk-b)); box-shadow: 0 1px 4px #0004; }
+.desk-swatch[aria-pressed='true'] { outline: 3px solid var(--accent); outline-offset: 1px; }
 .editor .empty { color: inherit; }
 .editor-bar { display: flex; align-items: center; gap: .75rem; padding: .4rem 1rem; }
 .editor-bar a { color: inherit; text-decoration: none; white-space: nowrap; }
 .editor-bar h1 { flex: 1; min-width: 0; margin: 0; font-size: 1.4rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.toolbar { position: relative; z-index: 20; padding: .35rem .75rem; background: #3d2c1f; box-shadow: 0 2px 8px #0004; }
+.toolbar { position: relative; z-index: 20; padding: .35rem .75rem; background: color-mix(in srgb, var(--desk-b, #5b412e) 70%, #000); box-shadow: 0 2px 8px #0004; }
 .tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .35rem; }
 .tools button { padding: .35rem .7rem; background: #fffaf0; color: var(--ink); min-width: 2.4rem; }
 .tools button:disabled { opacity: .4; cursor: default; }
@@ -228,29 +242,14 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 @media (pointer: fine) and (min-width: 700px) {
   .editor { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
   .editor > * { grid-column: 2; }
-  /* Title + Done sit as a paper tag at the left end of the page strip (album title next to its pages):
-     same grid cell as the strip, which leaves room for it — no row of its own, never over the page. */
+  /* Title + Done: one line floating at the top-left of the desk, styled like the phone header (no row of its own). */
+  .editor { position: relative; }
   .editor > .editor-bar {
-    grid-row: 3; grid-column: 2; z-index: 1; align-self: center; justify-self: start;
-    flex-direction: row; align-items: center; gap: .8rem; padding: 0 0 0 1rem;
+    position: absolute; z-index: 15; top: .55rem; left: calc(8.5rem + .8rem); max-width: min(22rem, calc(100% - 24rem));
+    padding: .2rem .9rem; border-radius: 999px; background: color-mix(in srgb, var(--desk-b, #5b412e) 88%, transparent);
+    box-shadow: 0 2px 8px #0003;
   }
-  .editor > .page-strip { grid-row: 3; padding-left: 20rem; }
-  .editor-bar a {
-    padding: .2rem .8rem; border-radius: 999px; background: #fffaf0; color: var(--ink);
-    font-family: var(--hand-plain); font-size: 1rem; box-shadow: 0 2px 6px #0003;
-  }
-  .editor-bar a:hover { background: #fff; }
-  .editor-bar h1 {
-    position: relative; width: 13rem; padding: .7rem 1rem .55rem; rotate: -2.5deg;
-    font-size: 1.45rem; line-height: 1.15; color: #5a3e28; white-space: normal;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: visible;
-    background: url(./assets/paper-grain.webp), #fbf5e6; box-shadow: 0 3px 10px #0004;
-  }
-  .editor-bar h1::before {
-    content: ''; position: absolute; left: 50%; top: -.55rem; width: 3.8rem; height: 1.05rem; translate: -50% 0; rotate: 4deg;
-    background: linear-gradient(90deg, rgba(255, 255, 255, .25) 50%, transparent 50%) 0 0 / .7rem 100%, rgba(140, 207, 182, .78);
-    clip-path: polygon(3% 0, 97% 0, 100% 25%, 96% 50%, 100% 75%, 97% 100%, 3% 100%, 0 75%, 4% 50%, 0 25%);
-  }
+  .editor > .editor-bar h1 { font-size: 1.3rem; }
   .editor > .toolbar { grid-column: 1; grid-row: 1 / span 10; width: 8.5rem; padding: .6rem .5rem; box-shadow: 2px 0 8px #0004; }
   .editor > .edit-main { min-height: 0; grid-row: 1 / span 2; }
   .toolbar .tools { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }

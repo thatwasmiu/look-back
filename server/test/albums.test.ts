@@ -97,4 +97,13 @@ describe('albums', () => {
     expect((await call('GET', `/api/albums/${a.id}`)).json().album.backgroundEffect).toBe('snow');
     expect((await call('PATCH', `/api/albums/${a.id}`, { backgroundEffect: 'lava' })).statusCode).toBe(400);
   });
+
+  it('desk color: defaults to walnut, PATCH sets it, unknown → 400', async () => {
+    const a = (await call('POST', '/api/albums', { title: 'Color' })).json();
+    expect(a.backgroundColor).toBe('walnut');
+    const p = await call('PATCH', `/api/albums/${a.id}`, { backgroundColor: 'ocean' });
+    expect(p.json()).toMatchObject({ backgroundColor: 'ocean', backgroundEffect: 'none' });
+    expect((await call('GET', `/api/albums/${a.id}`)).json().album.backgroundColor).toBe('ocean');
+    expect((await call('PATCH', `/api/albums/${a.id}`, { backgroundColor: 'neon' })).statusCode).toBe(400);
+  });
 });

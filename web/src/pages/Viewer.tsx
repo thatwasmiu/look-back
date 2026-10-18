@@ -55,7 +55,7 @@ export function Book({ bundle }: { bundle: AlbumBundle }) {
   const lead = turn && (turn.dir > 0 ? 'right' : 'left');
 
   return (
-    <main className="viewer">
+    <main className={`viewer desk-${album.backgroundColor}`}>
       <BackgroundEffectView kind={album.backgroundEffect} />
       <header className="viewer-bar">
         <Link to="/">← Albums</Link>
