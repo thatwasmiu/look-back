@@ -4,7 +4,7 @@ import { EffectView, backgroundEffectLabels, deskColorLabels, pageEffectLabels }
 import { Tape, fontFamily, frameStyleLabels, stickers, tapeStyles } from '../render/decor';
 import { FrameView } from '../render/FrameView';
 import { mediaUrl } from '../mediaUrl';
-import { MangaButtons, MangaPanelTools, MangaPickerContent, type MangaPicker } from '../manga/MangaTools';
+import { MangaButtons, MangaPanelTools, MangaPickerContent, MangaTextTools, type MangaPicker } from '../manga/MangaTools';
 import { addElement, assignMedia, bringForward, duplicate, newEffect, newFrame, newSticker, newTape, newText, removeElement, sendBackward, setFrameStyle, updateElement } from './layoutOps';
 import type { SaveStatus } from './useAutosave';
 
@@ -92,7 +92,7 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
             <button key={e} type="button" className="album-fx-option" aria-label={`${backgroundEffectLabels[e]} background`} aria-pressed={bgEffect === e}
               onClick={() => { setBgEffect(e); setPicker(null); }}>{backgroundEffectLabels[e]}</button>
           ))}
-          {manga && <MangaPickerContent picker={picker} add={add} />}
+          {manga && <MangaPickerContent picker={picker} add={add} selected={selected} />}
           {picker === 'albumFx' && manga && setReadingDirection && (
             <div className="music-row" role="group" aria-label="Reading direction">
               <span>Reading direction</span>
@@ -142,7 +142,7 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
         </div>
       )}
       <div className="tools">
-        {manga ? <MangaButtons picker={picker} toggle={toggle} add={add} /> : <>
+        {manga ? <MangaButtons picker={picker} toggle={toggle} add={add} selected={selected} /> : <>
           <button type="button" aria-expanded={picker === 'frame'} onClick={() => toggle('frame')}>Frame</button>
           {frame && <button type="button" aria-expanded={picker === 'frameStyle'} onClick={() => toggle('frameStyle')}>Frame style</button>}
           <button type="button" aria-expanded={picker === 'sticker'} onClick={() => toggle('sticker')}>Sticker</button>
@@ -162,6 +162,7 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
         {crop && selected?.type === 'frame' && selected.mediaId && <button type="button" onClick={crop}>Crop</button>}
         {frame?.mediaId && <button type="button" onClick={() => commit(assignMedia(layout, frame.id, null))}>Remove photo</button>}
         {frame?.frameStyle === 'panel' && <MangaPanelTools panel={frame} layout={layout} commit={commit} />}
+        {manga && text && <MangaTextTools text={text} layout={layout} commit={commit} />}
         {selected && <button type="button" title="Duplicate (Ctrl+C, Ctrl+V)" onClick={() => add(duplicate(selected))}>⧉ Duplicate</button>}
         {selected && (
           <button type="button" aria-pressed={!!selected.pinned} title={selected.pinned ? 'Unpin to move, resize or rotate again' : 'Lock in place'}

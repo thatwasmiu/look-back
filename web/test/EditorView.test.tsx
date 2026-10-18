@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { afterEach, expect, test, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -419,7 +420,8 @@ const renderEditor = (b: AlbumBundle, api: EditorApi = { ...okApi(), updateAlbum
 
 test('manga album: the toolbar has manga tools and no Tape / Sticker / Paper; a scrapbook album keeps its tools', () => {
   renderEditor(mangaBundle());
-  for (const name of ['Panel', 'Bubble', 'Narration', 'Sound effect', 'Lines', 'Tone']) expect(screen.getByRole('button', { name })).toBeTruthy();
+  for (const name of ['Panel', 'Bubble', 'Narration', 'Sound effect', 'Lines', 'Screentone']) expect(screen.getByRole('button', { name })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Tone' })).toBeNull(); // the panel Tone toggle only shows with a panel selected
   for (const name of ['Tape', 'Sticker', 'Paper']) expect(screen.queryByRole('button', { name })).toBeNull();
   cleanup();
   setup(okApi());
@@ -466,4 +468,36 @@ test('manga: Background → Right → left saves the reading direction', async (
   await user.click(screen.getByRole('button', { name: 'Right → left' }));
   expect(api.updateAlbum).toHaveBeenCalledWith('a1', { readingDirection: 'rtl' });
   expect(screen.getByRole('button', { name: 'Right → left' }).getAttribute('aria-pressed')).toBe('true');
+});
+
+const mangaText = (id: string, textStyle: 'speech' | 'sfx', color: string): PageElement =>
+  ({ type: 'text', id, x: 0.2, y: 0.5, w: 0.36, h: 0.2, rotation: 0, z: 3, text: 'BÙM!', font: textStyle === 'sfx' ? 'bangers' : 'patrick-hand', color, size: 0.06, textStyle, tail: 'bl' });
+
+test('manga: editing a bubble hides its drawn words, and sound-effect text is readable while typing', () => {
+  const { container } = renderEditor(mangaBundle([mangaText('s1', 'sfx', '#ffffff')]));
+  fireEvent.doubleClick(container.querySelector('[data-el="s1"]')!);
+  const editor = container.querySelector<HTMLElement>('[data-el="s1"] .text-editing')!;
+  expect(editor).not.toBeNull();
+  expect(editor.style.color).toBe('rgb(17, 17, 17)'); // white SFX would be invisible on white paper while typing
+  expect(container.querySelector('.edit-page')!.classList.contains('editing')).toBe(true);
+  expect(readFileSync('src/styles.css', 'utf8')).toContain('.edit-page.editing .el-text .manga-text');
+});
+
+test('manga: a selected speech bubble can point its tail at any corner', async () => {
+  const user = userEvent.setup();
+  const { container } = renderEditor(mangaBundle([mangaText('b1', 'speech', '#111111')]));
+  fireEvent.pointerDown(container.querySelector('[data-el="b1"]')!);
+  await user.click(screen.getByRole('button', { name: 'Tail bottom-right' }));
+  expect(container.querySelector('[data-el="b1"] .manga-speech.tail-br')).not.toBeNull();
+  expect(screen.getByRole('button', { name: 'Tail bottom-right' }).getAttribute('aria-pressed')).toBe('true');
+});
+
+test('manga: with a panel selected, new speed lines start over that panel instead of covering the page', async () => {
+  const user = userEvent.setup();
+  const { container } = renderEditor(mangaBundle([mangaPanel]));
+  fireEvent.pointerDown(container.querySelector('[data-el="p1"]')!);
+  await user.click(screen.getByRole('button', { name: 'Lines' }));
+  await user.click(screen.getByRole('button', { name: 'Speed lines' }));
+  const fx = container.querySelector<HTMLElement>('.edit-page .el-effect')!;
+  expect([fx.style.left, fx.style.top, fx.style.width, fx.style.height]).toEqual(['10%', '10%', '50%', '40%']);
 });
