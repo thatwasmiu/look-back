@@ -171,3 +171,15 @@ test('Manga mode offers manga templates (not scrapbook ones); a picked one is se
   expect(body.design).toMatchObject({ mode: 'manga', readingDirection: 'rtl' });
   expect(body.design.pages.length).toBeGreaterThanOrEqual(3);
 });
+
+test('Copy puts the share link on the clipboard, closes the dialog and says so', async () => {
+  const token = 'T'.repeat(43);
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+  setup(vi.fn().mockResolvedValueOnce(json(200, [{ ...albumOf('a1', 'Trip', 'scrapbook'), shareToken: token }])));
+  await userEvent.click(await screen.findByRole('button', { name: 'Share Trip' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Copy' }));
+  expect(writeText).toHaveBeenCalledWith(`${location.origin}/s/${token}`);
+  expect(screen.queryByRole('dialog', { name: 'Share album' })).toBeNull();
+  expect((await screen.findByRole('status')).textContent).toBe('Đã chép link');
+});

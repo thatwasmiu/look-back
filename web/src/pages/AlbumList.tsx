@@ -37,6 +37,18 @@ export default function AlbumList() {
   const [sharing, setSharing] = useState<AlbumSummary | null>(null);
   const [shareBusy, setShareBusy] = useState(false);
   const shareUrl = (t: string) => `${location.origin}/s/${t}`;
+  // Copy closes the dialog; a short notice confirms it (clipboard may be blocked, e.g. over plain http).
+  const [notice, setNotice] = useState('');
+  const copyLink = async (t: string) => {
+    try {
+      await navigator.clipboard.writeText(shareUrl(t));
+      setSharing(null);
+      setNotice('Đã chép link');
+    } catch {
+      setNotice('Không chép được — hãy chọn link và chép bằng tay');
+    }
+    setTimeout(() => setNotice(''), 2500);
+  };
   const setToken = (id: string, shareToken: string | null) => {
     setAlbums((cur) => cur?.map((x) => (x.id === id ? { ...x, shareToken } : x)) ?? cur);
     setSharing((s) => (s && s.id === id ? { ...s, shareToken } : s));
@@ -193,7 +205,7 @@ export default function AlbumList() {
             <>
               <span>Ai có link này đều xem được “{sharing.title}” (không sửa được):</span>
               <input readOnly aria-label="Share link" value={shareUrl(sharing.shareToken)} onFocus={(e) => e.currentTarget.select()} />
-              <button type="button" onClick={() => void navigator.clipboard?.writeText(shareUrl(sharing.shareToken!))}>Copy</button>
+              <button type="button" onClick={() => void copyLink(sharing.shareToken!)}>Copy</button>
               <button type="button" className="danger" disabled={shareBusy} onClick={() => void toggleShare(sharing, false)}>Stop sharing</button>
             </>
           ) : (
@@ -212,6 +224,7 @@ export default function AlbumList() {
           <button type="button" className="secondary" disabled={deleting} onClick={() => setConfirming(null)}>Cancel</button>
         </div>
       )}
+      {notice && <p role="status" className="toast">{notice}</p>}
     </main>
   );
 }

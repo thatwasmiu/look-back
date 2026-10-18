@@ -374,3 +374,7 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .music-row button, .music-upload { padding: .35rem .8rem; border-radius: 6px; background: #f3ead7; color: var(--ink); font-size: .9rem; cursor: pointer; }
 .music-state { opacity: .7; font-size: .9rem; }
 .music-name { max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+
+/* Short confirmation (e.g. link copied), bottom centre. */
+.toast { position: fixed; left: 50%; bottom: 2rem; translate: -50% 0; z-index: 50; margin: 0; padding: .55rem 1rem; border-radius: 999px;
+  background: #3b2a1a; color: #fffaf0; font-size: .95rem; box-shadow: 0 4px 14px #0005; }
