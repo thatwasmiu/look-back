@@ -59,6 +59,19 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
     liveRef.current = next;
     flushSync(() => setLive(next));
   };
+  // An item only moves while the mouse button is held. A move that arrives with no button down (a release the
+  // drag never saw: double-clicks, file dialogs, letting go outside the window) ends the drag right there, keeping
+  // where it was while the button was held — nothing sticks to the mouse. Touch events carry no `buttons`.
+  const released = (e: { inputEvent?: { buttons?: number }; stopDrag?: () => void }) => {
+    if (e.inputEvent?.buttons !== 0) return false;
+    const held = liveRef.current;
+    liveRef.current = null;
+    start.current = null;
+    setLive(null);
+    if (held) onCommit(held);
+    e.stopDrag?.();
+    return true;
+  };
   const end = () => {
     if (liveRef.current) onCommit(liveRef.current);
     liveRef.current = null;
@@ -113,10 +126,11 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
         draggable resizable rotatable pinchable={['resizable', 'rotatable']} origin={false}
         renderDirections={['nw', 'ne', 'sw', 'se']} keepRatio={selected?.type === 'sticker' || (selected?.type === 'frame' && ['circle', 'heart'].includes(selected.frameStyle))} rotationPosition="top"
         onDragStart={begin}
-        onDrag={(e) => { const { W, H } = size(); preview({ x: e.left / W, y: e.top / H }); }}
+        onDrag={(e) => { if (released(e)) return; const { W, H } = size(); preview({ x: e.left / W, y: e.top / H }); }}
         onDragEnd={end}
         onResizeStart={begin}
         onResize={(e) => {
+          if (released(e)) return;
           const s = start.current!;
           const { W, H } = size();
           const [dx, dy] = e.drag.beforeTranslate;
@@ -128,7 +142,7 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
         }}
         onResizeEnd={end}
         onRotateStart={(e) => { begin(); e.set(selected?.rotation ?? 0); }}
-        onRotate={(e) => preview({ rotation: Math.round(e.rotation * 10) / 10 })}
+        onRotate={(e) => { if (!released(e)) preview({ rotation: Math.round(e.rotation * 10) / 10 }); }}
         onRotateEnd={end}
         onClick={(e) => {
           if (!selected) return;

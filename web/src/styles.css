@@ -129,6 +129,7 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .tools button[aria-pressed='true'], .tools button[aria-expanded='true'] { outline: 2px solid var(--accent); }
 .tools .sep { width: 1px; align-self: stretch; background: #fff3; margin: 0 .25rem; }
 .tools .zoom { display: flex; gap: .25rem; }
+.tools .row { display: flex; gap: .25rem; } /* related buttons side by side: layer up / down / delete */
 .tools .zoom button { min-width: 2rem; padding-inline: .45rem; }
 .tools .status { font-family: var(--hand-plain); font-size: 1rem; min-width: 5.5rem; text-align: center; opacity: .9; }
 .status-error { color: #ffb4a3; }
@@ -255,6 +256,7 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
   .toolbar .tools { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
   .toolbar .tools .sep { width: auto; height: 1px; margin: .2rem 0; }
   .toolbar .tools .status { min-width: 0; }
+  .toolbar .tools .row > button { flex: 1; min-width: 0; padding-inline: 0; }
   .toolbar .tools .zoom > button { flex: none; width: 1.9rem; min-width: 0; padding-inline: 0; }
   .toolbar .tools .zoom > button:nth-child(2) { flex: 1; width: auto; font-size: .85rem; white-space: nowrap; }
   .toolbar .text-tools { flex-direction: row; flex-wrap: wrap; justify-content: flex-start; margin-top: .6rem; }

@@ -4,10 +4,11 @@ import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import type { PageLayout } from '@scrapbook/shared';
 
 // Moveable stand-in: the target change resolves only when the test says so, like the real async re-measure.
-const m = vi.hoisted(() => ({ resolve: () => {}, dragStart: vi.fn(), props: {} as { onClick?(e: { isDouble: boolean }): void } }));
+type Ev = Record<string, unknown>;
+const m = vi.hoisted(() => ({ resolve: () => {}, dragStart: vi.fn(), props: {} as Record<string, (e: Ev) => void> }));
 vi.mock('react-moveable', () => ({
   default: forwardRef((p: object, ref) => {
-    m.props = p;
+    m.props = p as Record<string, (e: Ev) => void>;
     useImperativeHandle(ref, () => ({
       waitToChangeTarget: () => new Promise<void>((r) => { m.resolve = r; }),
       dragStart: m.dragStart,
@@ -50,7 +51,7 @@ test('tapping an empty frame deselects it, then opens the photo picker after the
     const onSelect = vi.fn();
     const onFrameAddMedia = vi.fn();
     render(<EditCanvas layout={frame} media={new Map()} selectedId="f1" onSelect={onSelect} onCommit={() => {}} onFrameAddMedia={onFrameAddMedia} />);
-    act(() => m.props.onClick!({ isDouble: false }));
+    act(() => m.props.onClick({ isDouble: false }));
     expect(onSelect).toHaveBeenCalledWith(null); // nothing left for a stray drag to grab while the dialog is open
     expect(onFrameAddMedia).not.toHaveBeenCalled(); // not from inside the gesture
     act(() => { vi.runAllTimers(); });
@@ -58,4 +59,48 @@ test('tapping an empty frame deselects it, then opens the photo picker after the
   } finally {
     vi.useRealTimers();
   }
+});
+
+test('an item only moves while the mouse button is held: a move with no button down ends the drag and changes nothing', () => {
+  const onCommit = vi.fn();
+  render(<EditCanvas layout={layout} media={new Map()} selectedId="s1" onSelect={() => {}} onCommit={onCommit} />);
+  const stopDrag = vi.fn();
+  act(() => {
+    m.props.onDragStart({ inputEvent: { buttons: 1 } });
+    m.props.onDrag({ left: 50, top: 60, inputEvent: { buttons: 0 }, stopDrag }); // button already released
+    m.props.onDragEnd({});
+  });
+  expect(stopDrag).toHaveBeenCalled();
+  expect(onCommit).not.toHaveBeenCalled();
+});
+
+test('the same rule holds for resize and rotate', () => {
+  const onCommit = vi.fn();
+  render(<EditCanvas layout={layout} media={new Map()} selectedId="s1" onSelect={() => {}} onCommit={onCommit} />);
+  const stopDrag = vi.fn();
+  act(() => {
+    m.props.onResizeStart({ inputEvent: { buttons: 1 } });
+    m.props.onResize({ width: 10, height: 10, drag: { beforeTranslate: [0, 0] }, inputEvent: { buttons: 0 }, stopDrag });
+    m.props.onResizeEnd({});
+    m.props.onRotateStart({ inputEvent: { buttons: 1 }, set: () => {} });
+    m.props.onRotate({ rotation: 30, inputEvent: { buttons: 0 }, stopDrag });
+    m.props.onRotateEnd({});
+  });
+  expect(stopDrag).toHaveBeenCalledTimes(2);
+  expect(onCommit).not.toHaveBeenCalled();
+});
+
+test('a drag whose release was missed keeps the position from while the button was held, then stops', () => {
+  const onCommit = vi.fn();
+  const box = document.createElement('div');
+  render(<EditCanvas layout={layout} media={new Map()} selectedId="s1" onSelect={() => {}} onCommit={onCommit} />, { container: document.body.appendChild(box) });
+  const stopDrag = vi.fn();
+  act(() => {
+    m.props.onDragStart({ inputEvent: { buttons: 1 } });
+    m.props.onDrag({ left: 0, top: 0, inputEvent: { buttons: 1 } }); // held: preview moves
+    m.props.onDrag({ left: 0, top: 0, inputEvent: { buttons: 0 }, stopDrag }); // release was missed
+    m.props.onDragEnd({});
+  });
+  expect(stopDrag).toHaveBeenCalled();
+  expect(onCommit).toHaveBeenCalledTimes(1); // the held position, once — not again on drag end
 });
