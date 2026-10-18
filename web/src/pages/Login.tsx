@@ -21,7 +21,7 @@ export default function Login() {
   return (
     <main className="login">
       <form className="paper-card" onSubmit={submit}>
-        <h1>Our Scrapbook</h1>
+        <h1>Look Back</h1>
         <label>
           Password
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoFocus />

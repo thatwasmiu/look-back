@@ -1,4 +1,4 @@
-# Scrapbook album
+# Look Back
 
 Private photo/video scrapbook. npm workspaces: `shared`, `server` (API + worker), `web`.
 Production runs as Docker Compose: `db` (Postgres 16), `api`, `worker` (ffmpeg/sharp), `nginx` (TLS, SPA, auth-gated `/media`).

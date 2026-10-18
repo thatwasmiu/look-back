@@ -36,7 +36,7 @@ export default function AlbumList() {
   return (
     <main className="albums">
       <header>
-        <h1>Our Scrapbook</h1>
+        <h1>Look Back</h1>
         {creating ? (
           <form onSubmit={create} className="new-album">
             <input aria-label="Album title" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
