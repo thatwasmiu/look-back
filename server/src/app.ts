@@ -13,7 +13,7 @@ export async function buildApp(config: Config, pool: pg.Pool, boss: PgBoss): Pro
   const app = Fastify({ trustProxy: config.trustProxy });
   registerAuth(app, config, pool);
   app.get('/api/health', async () => ({ ok: true }));
-  registerAlbums(app, pool, config);
+  registerAlbums(app, pool, config, boss);
   registerShare(app, pool, config);
   registerPages(app, pool);
   registerMedia(app, pool, config);

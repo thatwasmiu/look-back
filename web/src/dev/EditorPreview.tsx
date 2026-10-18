@@ -66,7 +66,7 @@ const fakeApi: EditorApi = {
   },
   async updateAlbum(id, patch) {
     await wait(); cover = patch.coverMediaId ?? cover; bg = patch.backgroundEffect ?? bg; desk = patch.backgroundColor ?? desk;
-    return { id, title: 'dev', coverMediaId: cover, backgroundEffect: bg, backgroundColor: desk, shareToken: null };
+    return { id, title: 'dev', coverMediaId: cover, backgroundEffect: bg, backgroundColor: desk, shareToken: null, musicMediaId: null };
   },
 };
 
@@ -114,6 +114,6 @@ function useFakeUpload(albumId: string, onCreated: (mediaId: string, targetFrame
 }
 
 export default function EditorPreview() {
-  const bundle: AlbumBundle = { album: { id: 'dev', title: 'Đà Lạt (dev editor)', coverMediaId: cover, backgroundEffect: bg, backgroundColor: desk, shareToken: null }, pages: structuredClone(pages), media: structuredClone([...media.values()]) };
+  const bundle: AlbumBundle = { album: { id: 'dev', title: 'Đà Lạt (dev editor)', coverMediaId: cover, backgroundEffect: bg, backgroundColor: desk, shareToken: null, musicMediaId: null }, pages: structuredClone(pages), media: structuredClone([...media.values()]) };
   return <EditorView bundle={bundle} api={fakeApi} uploader={useFakeUpload} />;
 }

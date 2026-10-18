@@ -14,7 +14,7 @@ export default function SharedAlbum() {
     api.getShared(token).then(setBundle, (e) => setError(e instanceof ApiError && e.status === 404 ? 'gone' : 'down'));
   }, [token]);
   if (bundle) return <Book bundle={bundle} shared />;
-  if (error === 'gone') return <main className="viewer"><p className="empty">This album is no longer shared, or the link is wrong.</p></main>;
-  if (error === 'down') return <main className="viewer"><p className="empty">Can't reach the server. Try again later.</p></main>;
+  if (error === 'gone') return <main className="viewer"><p className="empty">Album này không còn được chia sẻ, hoặc link không đúng.</p></main>;
+  if (error === 'down') return <main className="viewer"><p className="empty">Không kết nối được server. Hãy thử lại sau.</p></main>;
   return <main className="viewer" />;
 }

@@ -68,6 +68,13 @@ itself. Put certs in `deploy/certs/fullchain.pem` + `privkey.pem` (git-ignored):
 
 Stop: `docker compose -f deploy/compose.yml down` (volumes `pgdata`, `media`, `uploads` are kept; add `-v` only to wipe everything).
 
+## Template music (optional)
+
+A built-in album template can start with background music. Put the track on the server as
+`deploy/template-music/<template>.mp3` (or `.m4a`) — for "2 3 con mực" that is `deploy/template-music/squids.mp3`.
+The folder is mounted read-only into the api and is ignored by git and the Docker build, so your music never ends up
+in the repo or the public images. Without the file the template still works, just without music.
+
 ## Backups
 
 - Database: `docker compose -f deploy/compose.yml exec -T db pg_dump -U scrapbook scrapbook | gzip > scrapbook-$(date +%F).sql.gz`

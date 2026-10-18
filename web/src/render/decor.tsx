@@ -263,9 +263,9 @@ export const stickers: Record<string, { label: string; Svg: ComponentType }> = {
     <path d="M50 24 V84 M34 38 H66 M18 60 C 20 78 34 86 50 86 C 66 86 80 78 82 60" stroke="#7fa7c8" strokeWidth={2.5} />
   </>) },
   infinity: { label: 'Infinity heart', Svg: svg(<>
-    <path d="M50 50 C 40 30 12 30 12 50 C 12 70 40 70 50 50 C 60 30 88 30 88 50 C 88 70 60 70 50 50 Z" fill="#f4a6b8" strokeWidth={4} />
-    <path d="M50 46 C 46 40 40 40 40 46 C 40 51 46 55 50 58 C 54 55 60 51 60 46 C 60 40 54 40 50 46 Z" fill="#e8737a" strokeWidth={2.5} />
-    {hi('M20 44 q4-7 12-7')}
+    <path d="M50 50 C 38 22 4 22 4 50 C 4 78 38 78 50 50 C 62 22 96 22 96 50 C 96 78 62 78 50 50 Z" fill="#f4a6b8" strokeWidth={4} />
+    <path d="M50 43 C 45 34 35 34 35 44 C 35 52 44 58 50 63 C 56 58 65 52 65 44 C 65 34 55 34 50 43 Z" fill="#e8737a" strokeWidth={2.5} />
+    {hi('M12 40 q5-9 15-9')}
   </>) },
   'energy-can': { label: 'Energy drink', Svg: svg(<>
     <path d="M32 18 H68 L70 26 V84 Q70 90 64 90 H36 Q30 90 30 84 V26 Z" fill="#9fd3c7" />

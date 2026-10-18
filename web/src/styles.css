@@ -356,3 +356,13 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .brand { display: flex; align-items: center; gap: .5rem; }
 .brand-logo { width: 2.2rem; height: 2.2rem; flex: none; }
 .brand-logo-lg { display: block; width: 4.5rem; height: 4.5rem; margin: 0 auto .4rem; }
+
+/* Background music: ♪ in the viewer bar (spins gently while playing); upload row in the Background picker. */
+.music-btn { width: 2rem; height: 2rem; padding: 0; border-radius: 50%; background: #fffaf0; color: var(--ink); font-size: 1.1rem; line-height: 1; }
+.music-btn.on { background: var(--accent); color: #fff; animation: music-spin 4s linear infinite; }
+@keyframes music-spin { to { rotate: 360deg; } }
+@media (prefers-reduced-motion: reduce) { .music-btn.on { animation: none; } }
+.music-row { flex-basis: 100%; display: flex; align-items: center; justify-content: center; gap: .6rem; padding-top: .4rem; border-top: 1px solid var(--paper-dark); color: var(--ink); }
+.music-row button, .music-upload { padding: .35rem .8rem; border-radius: 6px; background: #f3ead7; color: var(--ink); font-size: .9rem; cursor: pointer; }
+.music-state { opacity: .7; font-size: .9rem; }
+.music-name { max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }

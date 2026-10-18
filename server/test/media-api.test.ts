@@ -29,7 +29,7 @@ describe('media api', () => {
     const r = await call('GET', `/api/media/${rows[0].id}`);
     expect(r.json()).toEqual({
       id: rows[0].id, albumId: a.id, kind: 'image', status: 'ready', width: 10, height: 20,
-      durationSec: null, blurDataUrl: 'data:b', variants: { original: 'o' }, error: null,
+      durationSec: null, blurDataUrl: 'data:b', variants: { original: 'o' }, error: null, name: null,
     });
     expect((await call('GET', '/api/media/00000000-0000-4000-8000-000000000000')).statusCode).toBe(404);
     expect((await call('GET', '/api/media/zzz')).statusCode).toBe(400);

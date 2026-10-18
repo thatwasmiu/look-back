@@ -16,7 +16,7 @@ function setup(fetchMock: ReturnType<typeof vi.fn>) {
 
 test('500 on load shows an error, not the empty state', async () => {
   setup(vi.fn().mockResolvedValue(json(500, { error: 'boom' })));
-  expect(await screen.findByText(/Couldn't load albums/)).toBeTruthy();
+  expect(await screen.findByText(/Không tải được danh sách album/)).toBeTruthy();
   expect(screen.queryByText('No albums yet.')).toBeNull();
 });
 
@@ -25,7 +25,7 @@ test('create failure shows an inline error', async () => {
   await userEvent.click(await screen.findByRole('button', { name: 'New album' }));
   await userEvent.type(screen.getByLabelText('Album title'), 'Trip');
   await userEvent.click(screen.getByRole('button', { name: 'Create' }));
-  expect(await screen.findByText("Couldn't create album")).toBeTruthy();
+  expect(await screen.findByText("Không tạo được album")).toBeTruthy();
 });
 
 test('New album opens a modal; Escape and × close it', async () => {
@@ -53,7 +53,7 @@ test('Delete asks first; Cancel keeps the album, Delete removes it via the API',
   const fetchMock = vi.fn().mockResolvedValueOnce(json(200, [album])).mockResolvedValueOnce(new Response(null, { status: 204 }));
   setup(fetchMock);
   await userEvent.click(await screen.findByRole('button', { name: 'Delete Trip' }));
-  expect(screen.getByRole('alertdialog').textContent).toContain("can't be undone");
+  expect(screen.getByRole('alertdialog').textContent).toContain("Không thể hoàn tác");
   await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   expect(screen.queryByRole('alertdialog')).toBeNull();
   expect(fetchMock).toHaveBeenCalledTimes(1);

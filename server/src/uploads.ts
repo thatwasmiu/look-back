@@ -9,8 +9,9 @@ import type PgBoss from 'pg-boss';
 import type { Config } from './config.js';
 import { JOB_PROCESS_MEDIA, type ProcessMediaJob } from './queue.js';
 
-const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime', 'video/webm'];
-const HEIC = "HEIC not supported — choose 'Most Compatible' or let the browser convert to JPEG";
+const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime', 'video/webm',
+  'audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/aac', 'audio/ogg'];
+const HEIC = "Không hỗ trợ ảnh HEIC — chọn 'Most Compatible' trong cài đặt camera hoặc để trình duyệt đổi sang JPEG";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const bad = (body: string) => ({ status_code: 400, body });
 // An unfinished upload older than this is refused by tus (410) and cleaned up by the worker.
@@ -40,13 +41,13 @@ export function registerUploads(app: FastifyInstance, config: Config, pool: pg.P
       const { albumId, filename, filetype } = upload.metadata ?? {};
       if (!albumId || !filename || !filetype) return Promise.reject(bad('albumId, filename and filetype are required'));
       if (/heic|heif/i.test(filetype)) return Promise.reject(bad(HEIC));
-      if (!ALLOWED.includes(filetype)) return Promise.reject(bad(`Unsupported file type: ${filetype}`));
+      if (!ALLOWED.includes(filetype)) return Promise.reject(bad(`Không hỗ trợ loại file: ${filetype}`));
       if (!UUID.test(albumId) || !(await pool.query('select 1 from albums where id=$1', [albumId])).rowCount) {
         return Promise.reject(bad('Unknown album'));
       }
       await pool.query(
         `insert into media (id, album_id, kind, status, original_name, mime) values ($1,$2,$3,'uploading',$4,$5)`,
-        [upload.id, albumId, filetype.startsWith('video/') ? 'video' : 'image', filename, filetype],
+        [upload.id, albumId, filetype.startsWith('video/') ? 'video' : filetype.startsWith('audio/') ? 'audio' : 'image', filename, filetype],
       );
       return {};
     },

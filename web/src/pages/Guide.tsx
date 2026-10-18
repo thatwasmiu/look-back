@@ -7,7 +7,7 @@ type Section = { id: string; title: string; features: Feature[] };
 const sections: Section[] = [
   {
     id: 'albums', title: '1. Danh sách album', features: [
-      { h: 'Tạo album mới', img: 'new-album', p: ['Bấm **New album**, nhập tên rồi **Create**. Có thể đóng bằng **Cancel**, ×, phím Esc hoặc bấm ra ngoài.', '**Template**: bấm một thẻ để chọn cách bắt đầu. **Empty album** chỉ có trang bìa.', 'Mẫu có sẵn: **2 3 con mực** (nền biển, bong bóng, sticker bạch tuộc, mực), **Trip**, **Birthday**, **Love story**, **Year in review**, **Look Back**. Mỗi mẫu có sẵn nhiều trang, giấy, sticker, chữ, màu bàn và hiệu ứng nền.', '**Chép thiết kế của album (không kèm ảnh)**: tạo album mới giống hệt một album đã có, nhưng mọi khung để trống, không chép ảnh/video.'] },
+      { h: 'Tạo album mới', img: 'new-album', p: ['Bấm **New album**, nhập tên rồi **Create**. Có thể đóng bằng **Cancel**, ×, phím Esc hoặc bấm ra ngoài.', '**Template**: bấm một thẻ để chọn cách bắt đầu. **Empty album** chỉ có trang bìa.', 'Mẫu có sẵn: **2 3 con mực** (nền biển, bong bóng, sticker bạch tuộc, mực; có sẵn nhạc nền nếu server có file nhạc của mẫu), **Trip**, **Birthday**, **Love story**, **Year in review**, **Look Back**. Mỗi mẫu có sẵn nhiều trang, giấy, sticker, chữ, màu bàn và hiệu ứng nền.', '**Chép thiết kế của album (không kèm ảnh)**: tạo album mới giống hệt một album đã có, nhưng mọi khung để trống, không chép ảnh/video.'] },
       { h: 'Mở, sửa, xóa album', img: 'albums', p: ['Bấm vào ảnh bìa để xem album. **Edit** để trang trí.', 'Ảnh bìa là ảnh được đặt bằng nút ★ trong **Photos**. Nếu chưa đặt, thẻ album hiện thu nhỏ trang đầu tiên.', '**Delete** xóa vĩnh viễn album cùng toàn bộ ảnh và video (luôn hỏi xác nhận trước).'] },
       { h: 'Album mẫu', p: ['“Look Back — a tribute” là album mẫu chỉ xem, luôn nằm cuối danh sách để tham khảo cách trang trí.'] },
     ],
@@ -28,7 +28,7 @@ const sections: Section[] = [
   },
   {
     id: 'media', title: '4. Ảnh và video', features: [
-      { h: 'Tải lên', img: 'editor', p: ['Bấm **Upload** trong khu **Photos**. Hỗ trợ ảnh và video lớn; tải lên tiếp tục được nếu mạng chập chờn.', 'Ảnh được nén và tạo bản xem nhanh (mờ → nét); video được chuyển sang dạng phát mượt (HLS). Trong lúc xử lý sẽ hiện “processing…”.'] },
+      { h: 'Tải lên', img: 'editor', p: ['Bấm **Upload** trong khu **Photos**. Hỗ trợ ảnh và video lớn; tải lên tiếp tục được nếu mạng chập chờn.', 'Ảnh được nén và tạo bản xem nhanh (mờ → nét); video được chuyển sang dạng phát mượt (HLS). Trong lúc tải và xử lý, ảnh hiện nhãn “đang tải…” / “đang xử lý…”; lỗi sẽ hiện “tải lên lỗi”.'] },
       { h: 'Dán ảnh từ clipboard', p: ['Chụp màn hình hoặc “Copy image” rồi nhấn **Ctrl+V** trong màn trang trí. Nếu đang chọn một khung trống, ảnh vào thẳng khung đó; nếu không, ảnh vào khu **Photos**.'] },
       { h: 'Đưa ảnh vào khung', img: 'frame-menu', p: ['Bấm **+ add** trên khung trống → chọn **Upload** (tải ảnh mới) hoặc chọn một ảnh đã tải.', 'Hoặc kéo ảnh từ **Photos** thả vào khung, hoặc chọn khung rồi bấm ảnh trong **Photos**.'] },
       { h: 'Ảnh bìa và xóa ảnh', p: ['Trong **Photos**: nút ★ đặt làm ảnh bìa album; nút xóa xóa ảnh khỏi album (các khung đang dùng ảnh đó sẽ trống lại).'] },
@@ -43,7 +43,7 @@ const sections: Section[] = [
       { h: 'Chữ (Text)', img: 'text', p: ['**Text** thêm chữ. Nhấp đúp vào chữ để sửa nội dung.', 'Khi chọn chữ: **Font** đổi kiểu chữ, **Color** đổi màu (có bảng màu sẵn và ô chọn màu tùy ý).'] },
       { h: 'Giấy nền trang (Paper)', img: 'paper', p: ['**Paper** đổi giấy của trang: kem, kraft, kẻ ô, chấm bi.'] },
       { h: 'Hiệu ứng trang (Effect)', img: 'effects', p: ['**Effect** thêm hiệu ứng động trên trang: lấp lánh, tim, cánh hoa, confetti, bokeh, light leak, bong bóng. Hiệu ứng là một vật trên trang, di chuyển / chỉnh cỡ như các vật khác.'] },
-      { h: 'Nền album (Background)', img: 'background', p: ['**Background** chọn màu bàn phía sau album và hiệu ứng nền cho cả album (tuyết, cánh hoa, đom đóm, sao, mưa, bong bóng).'] },
+      { h: 'Nền album (Background)', img: 'background', p: ['**Background** chọn màu bàn phía sau album và hiệu ứng nền cho cả album (tuyết, cánh hoa, đom đóm, sao, mưa, bong bóng).', 'Nhạc nền: ở cuối bảng **Background**, **Upload music** để chọn một file nhạc (mp3, m4a…). Sau khi xử lý xong, dòng nhạc hiện tên file và độ dài bài.', '**▶ Play** / **⏸ Pause** để nghe thử ngay trong lúc trang trí; đóng bảng thì nhạc vẫn phát, bấm nút ♪ trên thanh công cụ để tạm dừng.', '**Remove music** để bỏ nhạc; muốn đổi bài thì **Remove music** rồi **Upload music** bài mới.'] },
     ],
   },
   {
@@ -54,13 +54,14 @@ const sections: Section[] = [
       { h: 'Nhân bản và sao chép', p: ['**⧉ Duplicate** tạo bản sao ngay cạnh. Hoặc **Ctrl+C** rồi **Ctrl+V**, kể cả dán sang trang khác.'] },
       { h: 'Hoàn tác', p: ['↶ / ↷ hoặc **Ctrl+Z** / **Ctrl+Shift+Z** (hoặc **Ctrl+Y**).'] },
       { h: 'Phóng to trang', p: ['− / + phóng từ 100% đến 300%, bấm số % để về vừa màn hình. **Ctrl + cuộn chuột** cũng phóng to.'] },
-      { h: 'Tự động lưu', p: ['Mọi thay đổi tự lưu (“Saved”). Nếu lưu lỗi, nút **Retry save** hiện ra để thử lại.'] },
+      { h: 'Tự động lưu', p: ['Mọi thay đổi tự lưu (trạng thái “Saved”). Nếu lưu lỗi, trạng thái chuyển thành “Lưu lỗi” và nút **Retry save** hiện ra để thử lại.'] },
     ],
   },
   {
     id: 'view', title: '7. Xem album', features: [
       { h: 'Lật trang như sách', img: 'viewer', p: ['Vuốt, bấm hai bên, hoặc phím ← / →. Màn hình rộng hiện hai trang cùng lúc.', 'Ảnh và video của các trang kế tiếp được tải trước nên lật trang không phải chờ.'] },
       { h: 'Video', p: ['Bấm ▶ trên khung video để phát.'] },
+      { h: 'Nhạc nền', p: ['Album có nhạc nền thì nhạc bắt đầu từ lần chạm hoặc lật trang đầu tiên (trình duyệt không cho tự phát) và phát lặp lại. Nút ♪ trên thanh trên cùng để tạm dừng / phát tiếp.'] },
     ],
   },
   {

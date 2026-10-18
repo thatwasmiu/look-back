@@ -31,8 +31,8 @@ describe('processImage', () => {
     const t = await sharp(absPath(dir, 'm1/thumb.webp')).metadata();
     expect(Math.max(t.width!, t.height!)).toBe(400);
     expect((await sharp(absPath(dir, 'm1/display.avif')).metadata()).exif).toBeUndefined();
-    expect(r.blurDataUrl.startsWith('data:image/webp;base64,')).toBe(true);
-    expect(r.blurDataUrl.length).toBeLessThan(2048);
+    expect(r.blurDataUrl!.startsWith('data:image/webp;base64,')).toBe(true);
+    expect(r.blurDataUrl!.length).toBeLessThan(2048);
     for (const k of Object.values(r.variants)) expect(k.startsWith('m1/')).toBe(true);
     expect(r.variants.original).toBe('m1/original.jpg');
   });

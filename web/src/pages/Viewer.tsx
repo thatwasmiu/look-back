@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { AlbumBundle } from '@scrapbook/shared';
 import { api, ApiError } from '../api';
+import { mediaUrl } from '../mediaUrl';
 import { EXAMPLE_ALBUM_ID, exampleAlbum } from '../example/lookBack';
 import { BackgroundEffectView } from '../render/effects';
 import { PageRenderer } from '../render/PageRenderer';
@@ -26,7 +27,7 @@ export default function Viewer() {
   return (
     <main className="viewer">
       <header className="viewer-bar"><Link to="/">← Albums</Link></header>
-      {loadError && <p role="alert" className="empty">Couldn't load album <button onClick={load}>Retry</button></p>}
+      {loadError && <p role="alert" className="empty">Không tải được album <button onClick={load}>Retry</button></p>}
     </main>
   );
 }
@@ -40,6 +41,8 @@ export function Book({ bundle, shared = false }: { bundle: AlbumBundle; shared?:
   const media = useMemo(() => new Map(bundle.media.map((m) => [m.id, m])), [bundle.media]);
   const spread = useSpread();
   const { index, visible, turn, go, swipe } = useFlip(total, spread);
+  const music = album.musicMediaId ? media.get(album.musicMediaId) : undefined;
+  const musicSrc = music?.status === 'ready' && music.variants?.audio ? mediaUrl(music.variants.audio) : null;
 
   const visibleKey = visible.join();
   useEffect(() => {
@@ -63,10 +66,11 @@ export function Book({ bundle, shared = false }: { bundle: AlbumBundle; shared?:
       <header className="viewer-bar">
         {!shared && <Link to="/">← Albums</Link>}
         <h1>{album.title}</h1>
+        {musicSrc && <Music src={musicSrc} />}
         {total > 0 && <span className="counter">{visible.map((i) => i + 1).join('–')} / {total}</span>}
         {!shared && album.id !== EXAMPLE_ALBUM_ID && <Link className="btn" to={`/albums/${album.id}/edit`}>Edit</Link>}
       </header>
-      {total === 0 ? <p className="empty">No pages yet.</p> : (
+      {total === 0 ? <p className="empty">Chưa có trang nào.</p> : (
         <div className="stage">
           <div className={`book${spread ? ' spread' : ''}${visible.some((i) => i % 2) ? ' has-left' : ''}${turn ? (turn.dir > 0 ? ' fwd' : ' back') : ''}`} {...swipe}>
             {pages.map((p, i) => {
@@ -88,5 +92,32 @@ export function Book({ bundle, shared = false }: { bundle: AlbumBundle; shared?:
         </div>
       )}
     </main>
+  );
+}
+
+// Background music, looped. Browsers only allow sound after the viewer interacts, so it starts on the first tap
+// or key press anywhere (a flip, usually); the ♪ button pauses and resumes it.
+function Music({ src }: { src: string }) {
+  const ref = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const play = () => { void ref.current?.play()?.catch(() => {}); };
+  useEffect(() => {
+    const first = (e: Event) => {
+      if ((e.target as Element | null)?.closest?.('.music-btn')) return; // the button handles its own click
+      play();
+      off();
+    };
+    const off = () => { window.removeEventListener('pointerdown', first); window.removeEventListener('keydown', first); };
+    window.addEventListener('pointerdown', first);
+    window.addEventListener('keydown', first);
+    return off;
+  }, [src]);
+  return (
+    <>
+      <audio ref={ref} src={src} loop preload="auto" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} />
+      <button type="button" className={`music-btn${playing ? ' on' : ''}`} aria-pressed={playing}
+        aria-label={playing ? 'Pause music' : 'Play music'} title={playing ? 'Pause music' : 'Play music'}
+        onClick={() => (ref.current?.paused ? play() : ref.current?.pause())}>♪</button>
+    </>
   );
 }

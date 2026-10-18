@@ -257,7 +257,8 @@ function CropOverlay({ el, media, onChange, onDone, onRemove }: {
         rebase();
       }}
       onPointerMove={onMove} onPointerUp={lift} onPointerCancel={lift}>
-      <div className={`crop-actions${above ? ' above' : ''}`} ref={actionsRef}>
+      {/* Counter-rotated so the controls stay level under a tilted frame. */}
+      <div className={`crop-actions${above ? ' above' : ''}`} ref={actionsRef} style={{ rotate: `${-el.rotation}deg` }}>
         <label className="crop-size">Size
           <input type="range" aria-label="Photo size" min={MIN_SCALE} max={5} step={0.01} value={el.crop.scale}
             onChange={(e) => set(pan({ ...cur.current, scale: Number(e.target.value) }, 0, 0))} />

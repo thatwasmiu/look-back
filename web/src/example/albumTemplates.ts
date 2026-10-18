@@ -28,8 +28,9 @@ const sea = (template: string, o: { stickers?: string[]; texts?: (string | undef
 };
 // "2 3 con mực": ocean desk, rising bubbles, octopus / squid stickers; the themes of the song (love to infinity,
 // energy drinks, sushi & rice balls, holding hands, a wedding) as stickers and original captions — no lyrics.
-const squidDesign = (): AlbumDesign => ({ backgroundColor: 'ocean', backgroundEffect: 'bubbles', pages: [
-  sea('cover', { texts: ['2 3 con mực'], stickers: ['octopus'], add: [[[0.06, 0.78, 0.16, 0.13, -8], 'octopus-blue'], [[0.78, 0.05, 0.15, 0.09, 0], 'infinity']] }),
+// music: deploy/template-music/squids.mp3 on the server, if present (never in the repo or images).
+const squidDesign = (): AlbumDesign => ({ backgroundColor: 'ocean', backgroundEffect: 'bubbles', music: 'squids', pages: [
+  sea('cover', { texts: ['2 3 con mực'], stickers: ['octopus'], add: [[[0.06, 0.78, 0.16, 0.13, -8], 'octopus-blue'], [[0.76, 0.04, 0.17, 0.1275, 0], 'infinity']] }),
   sea('two-tilted', { texts: ['nắm tay nha'], stickers: ['squid'], add: [[[0.06, 0.86, 0.14, 0.1, -6], 'shell']] }),
   sea('sweet-heart', { texts: ['thưng vô cực ∞'], stickers: ['octopus', 'infinity'], bubbles: [0.1, 0.1, 0.8, 0.8, 0] }),
   sea('three-collage', { texts: ['đi ăn hông?'], stickers: ['sushi'], add: [[[0.8, 0.86, 0.14, 0.11, 4], 'onigiri']] }),

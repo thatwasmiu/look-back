@@ -18,6 +18,7 @@ export async function testApp(overrides: Partial<Config> = {}) {
     sessionSecret: 'test-secret',
     mediaDir: mkdtempSync(join(tmpdir(), 'media-')),
     uploadDir: mkdtempSync(join(tmpdir(), 'upload-')),
+    templateMusicDir: '',
     maxUploadBytes: 1024 * 1024,
     videoRenditions: [720],
     ffmpegPreset: 'veryfast',

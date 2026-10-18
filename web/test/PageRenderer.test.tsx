@@ -33,7 +33,7 @@ test('element geometry maps to percentages and rotation', () => {
 
 test('processing media shows chip and no display image', () => {
   const { container } = setup([frame('m1')], [media('m1', { status: 'processing', variants: null })]);
-  expect(screen.getByText('processing…')).toBeTruthy();
+  expect(screen.getByText('đang xử lý…')).toBeTruthy();
   expect(container.querySelector('img[src$="/display.webp"]')).toBeNull();
 });
 
@@ -44,7 +44,7 @@ test('processing media never loads display even if variants are present', () => 
 
 test('failed media shows upload failed', () => {
   const { container } = setup([frame('m1')], [media('m1', { status: 'failed', variants: null })]);
-  expect(screen.getByText('upload failed')).toBeTruthy();
+  expect(screen.getByText('tải lên lỗi')).toBeTruthy();
   expect(container.querySelector('img')).toBeNull();
 });
 

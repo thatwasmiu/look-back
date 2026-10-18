@@ -8,7 +8,7 @@ import { makeBlur, writeWebp, type ProcessResult } from './image';
 export type ProbeInfo = { width: number; height: number; rotation: number; durationSec: number; hasAudio: boolean };
 
 /** Run a command (no shell). Resolves stdout; rejects with the last ~20 stderr lines on non-zero exit. */
-function run(cmd: string, args: string[]): Promise<Buffer> {
+export function run(cmd: string, args: string[]): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const p = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
     const out: Buffer[] = [];

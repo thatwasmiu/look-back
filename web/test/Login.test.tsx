@@ -38,5 +38,5 @@ test('204 posts the password and navigates to /', async () => {
 test('401 shows Wrong password', async () => {
   setup(401);
   await submit();
-  expect(await screen.findByText('Wrong password')).toBeTruthy();
+  expect(await screen.findByText('Sai mật khẩu')).toBeTruthy();
 });

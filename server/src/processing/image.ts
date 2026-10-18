@@ -4,7 +4,7 @@ import type { Variants } from '@scrapbook/shared';
 import { absPath, keyFor } from '../storage';
 
 export type ProcessResult = {
-  width: number; height: number; durationSec: number | null; blurDataUrl: string; variants: Variants;
+  width: number | null; height: number | null; durationSec: number | null; blurDataUrl: string | null; variants: Variants;
 };
 
 /** Tiny 20px-wide webp as a data URL. Input is auto-rotated; no metadata is written. */

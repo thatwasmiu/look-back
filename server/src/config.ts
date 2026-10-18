@@ -5,6 +5,7 @@ export type Config = {
   sessionSecret: string;
   mediaDir: string;
   uploadDir: string;
+  templateMusicDir: string; // optional: <template>.mp3 / .m4a files a built-in album template starts with
   maxUploadBytes: number;
   videoRenditions: number[];
   ffmpegPreset: string;
@@ -23,6 +24,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     sessionSecret: env.SESSION_SECRET!,
     mediaDir: env.MEDIA_DIR!,
     uploadDir: env.UPLOAD_DIR!,
+    templateMusicDir: env.TEMPLATE_MUSIC_DIR ?? '',
     maxUploadBytes: Number(env.MAX_UPLOAD_BYTES ?? 4294967296),
     videoRenditions: (env.VIDEO_RENDITIONS ?? '720').split(',').map(Number),
     ffmpegPreset: env.FFMPEG_PRESET ?? 'veryfast',

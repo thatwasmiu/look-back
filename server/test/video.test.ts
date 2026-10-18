@@ -61,7 +61,7 @@ describe('processVideo', () => {
     const p = await probe(src);
     expect(Math.abs(p.rotation)).toBe(90);
     const r = await processVideo(src, 'v2', dir, 'mp4', [720], 'ultrafast');
-    expect(r.width).toBeLessThan(r.height);
+    expect(r.width).toBeLessThan(r.height!);
     const seg = (await readdir(absPath(dir, 'v2/hls'))).find((f) => f.endsWith('.ts'))!;
     const s = await probe(absPath(dir, `v2/hls/${seg}`));
     expect(s.width).toBeLessThan(s.height);

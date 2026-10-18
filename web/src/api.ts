@@ -34,7 +34,7 @@ export const api = {
     ),
   listAlbums: () => req<AlbumSummary[]>('GET', '/albums'),
   createAlbum: (title: string, from?: { fromAlbumId: string } | { design: AlbumDesign }) => req<AlbumDTO>('POST', '/albums', { title, ...from }),
-  updateAlbum: (id: string, patch: { title?: string; coverMediaId?: string | null; backgroundEffect?: BackgroundEffect; backgroundColor?: BackgroundColor }) =>
+  updateAlbum: (id: string, patch: { title?: string; coverMediaId?: string | null; musicMediaId?: string | null; backgroundEffect?: BackgroundEffect; backgroundColor?: BackgroundColor }) =>
     req<AlbumDTO>('PATCH', `/albums/${id}`, patch),
   deleteAlbum: (id: string) => req<void>('DELETE', `/albums/${id}`),
   getAlbum: (id: string) => req<AlbumBundle>('GET', `/albums/${id}`),

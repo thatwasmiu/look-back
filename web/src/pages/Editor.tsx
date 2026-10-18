@@ -32,7 +32,7 @@ export default function Editor() {
   return (
     <main className="editor">
       <header className="editor-bar"><Link to="/">← Albums</Link></header>
-      {loadError && <p role="alert" className="empty">Couldn't load album <button onClick={load}>Retry</button></p>}
+      {loadError && <p role="alert" className="empty">Không tải được album <button onClick={load}>Retry</button></p>}
     </main>
   );
 }
@@ -45,6 +45,8 @@ const UPLOADING_POLL_MS = 15_000;
 const placeholder = (id: string, albumId: string): MediaDTO => ({
   id, albumId, kind: 'image', status: 'uploading', width: null, height: null, durationSec: null, blurDataUrl: null, variants: null, error: null,
 });
+
+const MUSIC = '#music'; // upload target: the album's background music instead of a frame
 
 // `uploader` is swappable so /dev/editor can fake uploads without a server.
 export function EditorView({ bundle, api, uploader = useUpload }: { bundle: AlbumBundle; api: EditorApi; uploader?: typeof useUpload }) {
@@ -89,20 +91,28 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
     if (!t || t === title) return;
     const prev = title;
     setTitle(t);
-    api.updateAlbum(albumId, { title: t }).catch(() => { setTitle(prev); setOpError("Couldn't rename the album."); });
+    api.updateAlbum(albumId, { title: t }).catch(() => { setTitle(prev); setOpError("Không đổi tên được album."); });
   };
   const [bgEffect, setBgEffectState] = useState(bundle.album.backgroundEffect);
   const [bgColor, setBgColorState] = useState(bundle.album.backgroundColor);
   const setBgColor = (c: BackgroundColor) => {
     const prev = bgColor;
     setBgColorState(c);
-    api.updateAlbum(albumId, { backgroundColor: c }).catch(() => { setBgColorState(prev); setOpError("Couldn't save the desk color."); });
+    api.updateAlbum(albumId, { backgroundColor: c }).catch(() => { setBgColorState(prev); setOpError("Không lưu được màu bàn."); });
   };
   // Album-level setting: optimistic, rolled back if the save fails.
   const setBgEffect = (e: BackgroundEffect) => {
     const prev = bgEffect;
     setBgEffectState(e);
-    api.updateAlbum(albumId, { backgroundEffect: e }).catch(() => { setBgEffectState(prev); setOpError("Couldn't save the album background."); });
+    api.updateAlbum(albumId, { backgroundEffect: e }).catch(() => { setBgEffectState(prev); setOpError("Không lưu được nền album."); });
+  };
+  // Background music: uploaded from the Background picker; the album points at it as soon as tus created the row.
+  const [musicId, setMusicId] = useState(bundle.album.musicMediaId);
+  const removeMusic = () => {
+    if (!musicId) return;
+    const prev = musicId;
+    setMusicId(null);
+    api.deleteMedia(prev).catch(() => { setMusicId(prev); setOpError("Không gỡ được nhạc."); }); // the server clears the album's pointer
   };
   const stageRef = useRef<HTMLDivElement>(null);
   // Ctrl + wheel (and trackpad pinch, which arrives as ctrl+wheel) zooms the page, not the browser.
@@ -207,6 +217,11 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   // autosaved) right away. Returns false when the target frame isn't on the current page (or editing is frozen).
   const upload = uploader(albumId, (mediaId, frameId) => {
     setMedia((cur) => (cur.has(mediaId) ? cur : new Map(cur).set(mediaId, placeholder(mediaId, albumId))));
+    if (frameId === MUSIC) {
+      setMusicId(mediaId);
+      api.updateAlbum(albumId, { musicMediaId: mediaId }).catch(() => setOpError("Không lưu được nhạc."));
+      return true;
+    }
     if (!frameId) return true;
     const { layout: l, busy: b } = latest.current;
     if (b || !l.elements.some((e) => e.id === frameId && e.type === 'frame')) return false;
@@ -244,7 +259,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   const putInFrame = (mediaId: string, frameId: string) => commit((l) => assignMedia(l, frameId, mediaId), frameId);
   // The server empties frames on delete; mirror that everywhere here (pages, undo history) so no later save
   // sends a mediaId the server no longer knows.
-  const deleteMedia = (mediaId: string) => run('delete media', async () => {
+  const deleteMedia = (mediaId: string) => run('xóa ảnh/video', async () => {
     if (!(await saved())) return;
     await api.deleteMedia(mediaId);
     const strip = (l: PageLayout) => clearMedia(l, mediaId);
@@ -254,7 +269,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
     setCoverId((c) => (c === mediaId ? null : c));
   });
   const setCover = (mediaId: string) => api.updateAlbum(albumId, { coverMediaId: mediaId })
-    .then(() => setCoverId(mediaId), () => setOpError("Couldn't set the album cover"));
+    .then(() => setCoverId(mediaId), () => setOpError("Không đặt được ảnh bìa."));
 
   // Pages list keeps the current page's latest layout too (thumbnails, and switching back).
   const withCurrent = ({ pages: ps, cur: c, layout: l } = latest.current) => ps.map((p, i) => (i === c ? { ...p, layout: l } : p));
@@ -268,20 +283,20 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   // Leaving the current page (switch, delete, route leave) needs its edits saved; a failed save blocks it.
   const saved = async () => {
     if (await flush()) return true;
-    setOpError("This page didn't save. Press Retry save.");
+    setOpError("Trang này chưa lưu được. Bấm Retry save.");
     return false;
   };
   const run = async (what: string, f: () => Promise<void>) => {
     setOpError(null);
     setBusy(true);
     latest.current.busy = true;
-    try { await f(); } catch { setOpError(`Couldn't ${what}`); } finally { setBusy(false); }
+    try { await f(); } catch { setOpError(`Không thể ${what}.`); } finally { setBusy(false); }
   };
 
-  const switchTo = (i: number) => run('switch page', async () => {
+  const switchTo = (i: number) => run('chuyển trang', async () => {
     if (await saved()) show(withCurrent(), i);
   });
-  const addPage = (templateId: string) => run('add page', async () => {
+  const addPage = (templateId: string) => run('thêm trang', async () => {
     setPicking(false);
     if (!(await saved())) return;
     const at = latest.current.pages.length ? latest.current.cur + 1 : 0;
@@ -290,7 +305,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
     ps.splice(at, 0, p);
     show(ps, at);
   });
-  const deletePage = () => run('delete page', async () => {
+  const deletePage = () => run('xóa trang', async () => {
     const id = page?.id;
     if (!id || !(await saved())) return;
     await api.deletePage(id);
@@ -299,9 +314,9 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   });
   const leave = (e: MouseEvent) => {
     e.preventDefault();
-    void run('leave', async () => { if (await saved()) navigate(`/albums/${albumId}`); });
+    void run('rời màn trang trí', async () => { if (await saved()) navigate(`/albums/${albumId}`); });
   };
-  const move = (from: number, to: number) => run('reorder pages', async () => {
+  const move = (from: number, to: number) => run('sắp xếp trang', async () => {
     if (from === to || to < 0 || to >= pages.length) return;
     const ps = withCurrent();
     const [p] = ps.splice(from, 1);
@@ -315,7 +330,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   nav.current.switchTo = switchTo;
   const selected = layout.elements.find((e) => e.id === selectedId) ?? null;
   useEffect(() => { if (cropId !== selectedId) setCropId(null); }, [cropId, selectedId]);
-  const trayMedia = useMemo(() => [...media.values()].reverse(), [media]); // newest first
+  const trayMedia = useMemo(() => [...media.values()].filter((m) => m.kind !== 'audio' && m.id !== musicId).reverse(), [media, musicId]); // newest first; music lives in Background
   // Ctrl+C keeps a copy of the selected item (in memory, so it also pastes onto another page).
   const clip = useRef<PageElement | null>(null);
   useEffect(() => {
@@ -405,7 +420,8 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
         <Toolbar layout={layout} selected={selected} commit={commit}
           undo={() => setHist(undo)} redo={() => setHist(redo)} canUndo={hist.past.length > 0} canRedo={hist.future.length > 0}
           status={status} save={() => void flush().then((ok) => ok && setOpError(null))}
-          crop={() => setCropId(selectedId)} zoom={zoom} setZoom={setZoom} bgEffect={bgEffect} setBgEffect={setBgEffect} bgColor={bgColor} setBgColor={setBgColor} />
+          crop={() => setCropId(selectedId)} zoom={zoom} setZoom={setZoom} bgEffect={bgEffect} setBgEffect={setBgEffect} bgColor={bgColor} setBgColor={setBgColor}
+          music={musicId ? media.get(musicId) ?? null : null} onMusicFile={(f) => upload.add([f], MUSIC)} onMusicRemove={removeMusic} />
       )}
       <div className="edit-main">
         <BackgroundEffectView kind={bgEffect} />
@@ -414,7 +430,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
           <div className="edit-stage" ref={stageRef}>
             {page ? <EditCanvas layout={layout} media={media} selectedId={selectedId} onSelect={setSelectedId} onCommit={commit}
               onFrameAddMedia={addToFrame} cropId={cropId} onCrop={setCropId} zoom={zoom} />
-              : <p className="empty">No pages yet — add one below.</p>}
+              : <p className="empty">Chưa có trang nào — thêm trang ở dưới.</p>}
           </div>
           {page && cur > 0 && (
             <button type="button" className="page-next page-prev" aria-label="Previous page" title="Previous page" onClick={() => void switchTo(cur - 1)}>←</button>
@@ -489,7 +505,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
       </nav>
       {confirmDelete && (
         <div className="inline-confirm" role="alertdialog" aria-label="Delete page">
-          Delete page {cur + 1}? Photos stay in the album.
+          Xóa trang {cur + 1}? Ảnh vẫn còn trong album.
           <button type="button" onClick={deletePage}>Delete</button>
           <button type="button" className="secondary" onClick={() => setConfirmDelete(false)}>Cancel</button>
         </div>

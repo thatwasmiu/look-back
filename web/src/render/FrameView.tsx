@@ -43,7 +43,7 @@ function content(el: FrameEl, m: MediaDTO | undefined, mode: 'view' | 'edit', ac
     return <>{poster(m, objectPosition, el.crop.scale)}<span className="play-badge" aria-hidden>▶</span></>;
   }
   // Not ready: blur (and a video poster if the worker made one) — never the display image.
-  const chip = m.status === 'failed' ? 'upload failed' : m.status === 'uploading' ? 'uploading…' : 'processing…';
+  const chip = m.status === 'failed' ? 'tải lên lỗi' : m.status === 'uploading' ? 'đang tải…' : 'đang xử lý…';
   return (
     <>
       {poster(m, objectPosition, el.crop.scale)}

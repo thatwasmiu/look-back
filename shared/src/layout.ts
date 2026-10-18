@@ -83,5 +83,6 @@ export const albumDesignSchema = z.object({
   backgroundEffect: z.enum(BACKGROUND_EFFECTS),
   backgroundColor: z.enum(BACKGROUND_COLORS),
   pages: z.array(pageLayoutSchema).min(1).max(100),
+  music: z.string().regex(/^[a-z0-9-]{1,40}$/).optional(), // name of a server-side template track (TEMPLATE_MUSIC_DIR)
 })
 export type AlbumDesign = z.infer<typeof albumDesignSchema>

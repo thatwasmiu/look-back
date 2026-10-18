@@ -13,7 +13,7 @@ const mediaApi = { getMedia: vi.fn(), deleteMedia: vi.fn(), updateAlbum: vi.fn()
 const okApi = (): EditorApi => ({ savePage: vi.fn().mockResolvedValue({}), addPage: vi.fn(), deletePage: vi.fn(), reorderPages: vi.fn(), ...mediaApi });
 
 const bundle: AlbumBundle = {
-  album: { id: 'a1', title: 'Trip', coverMediaId: null, backgroundEffect: 'none', backgroundColor: 'walnut', shareToken: null },
+  album: { id: 'a1', title: 'Trip', coverMediaId: null, backgroundEffect: 'none', backgroundColor: 'walnut', shareToken: null, musicMediaId: null },
   pages: [0, 1].map((i) => ({ id: `p${i}`, albumId: 'a1', position: i, layout: { background: 'paper-cream', elements: [] } })),
   media: [],
 };
@@ -28,9 +28,9 @@ test('a failed save blocks switching page; Save retries, then the switch goes th
   expect(screen.queryByRole('button', { name: 'Retry save' })).toBeNull(); // autosave: no button while saves succeed
   await user.click(screen.getByRole('button', { name: 'Text' }));
   await user.click(screen.getByRole('button', { name: 'Page 2' }));
-  expect((await screen.findByRole('alert')).textContent).toContain("didn't save");
+  expect((await screen.findByRole('alert')).textContent).toContain("chưa lưu được");
   expect(screen.getByRole('button', { name: 'Page 1' }).getAttribute('aria-current')).toBe('true');
-  expect(screen.getByRole('status').textContent).toBe('Save failed');
+  expect(screen.getByRole('status').textContent).toBe('Lưu lỗi');
 
   await user.click(screen.getByRole('button', { name: 'Retry save' }));
   await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Saved'));
@@ -88,7 +88,7 @@ test('an upload id arriving early goes into its frame (uploading… chip); a fra
   let placed: boolean | void = undefined;
   act(() => { placed = onCreated!('u1', 'f1'); });
   expect(placed).toBe(true);
-  expect(container.querySelector('.edit-page [data-frame-id=f1] .chip')?.textContent).toBe('uploading…');
+  expect(container.querySelector('.edit-page [data-frame-id=f1] .chip')?.textContent).toBe('đang tải…');
   act(() => { placed = onCreated!('u2', 'gone'); });
   expect(placed).toBe(false);
 });
@@ -104,7 +104,7 @@ test("after a reload, 'uploading' media from the bundle is polled until it settl
     const b: AlbumBundle = { ...bundle, media: [row('uploading')], pages: [{ ...bundle.pages[0], layout: { background: 'paper-cream', elements: [{ ...frameEmpty, mediaId: 'u1' }] } }] };
     const uploader = (() => ({ items: [], add: vi.fn(), retry: vi.fn() })) as never;
     const { container } = render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={b} api={api} uploader={uploader} /></MemoryRouter>);
-    expect(container.querySelector('[data-frame-id=f1] .chip')?.textContent).toBe('uploading…');
+    expect(container.querySelector('[data-frame-id=f1] .chip')?.textContent).toBe('đang tải…');
     await act(() => vi.advanceTimersByTimeAsync(60_000));
     expect(getMedia).toHaveBeenCalledWith('u1');
     expect(container.querySelector('[data-frame-id=f1] .chip')).toBeNull();
@@ -122,10 +122,10 @@ test('a 4xx after the early frame assign leaves the media shown as failed, not s
   const ui = () => <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={b} api={api} uploader={uploader} /></MemoryRouter>;
   const { container, rerender } = render(ui());
   act(() => { onCreated!('u1', 'f1'); });
-  expect(container.querySelector('[data-frame-id=f1] .chip')?.textContent).toBe('uploading…');
+  expect(container.querySelector('[data-frame-id=f1] .chip')?.textContent).toBe('đang tải…');
   items = [{ localId: 'l1', name: 'a.jpg', progress: 0.5, mediaId: 'u1', state: 'error', error: 'gone', retryable: false }];
   rerender(ui());
-  expect(container.querySelector('[data-frame-id=f1] .chip')?.textContent).toBe('upload failed');
+  expect(container.querySelector('[data-frame-id=f1] .chip')?.textContent).toBe('tải lên lỗi');
 });
 
 test('Frame opens a list of styles; with a frame selected, Frame style switches it', async () => {
@@ -382,4 +382,30 @@ test('with text selected, Font and Color open pickers that restyle it', async ()
   expect(container.querySelector<HTMLElement>('.edit-page .el-text .text')!.style.color).toBe('rgb(163, 58, 42)');
   await user.click(screen.getByRole('button', { name: 'Font' }));
   expect(screen.getAllByRole('button', { name: 'Aa' })).toHaveLength(2);
+});
+
+test('Background → Music shows the track by file name; Play previews it and keeps playing with the picker closed', async () => {
+  const user = userEvent.setup();
+  const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(function (this: HTMLMediaElement) {
+    Object.defineProperty(this, 'paused', { value: false, configurable: true });
+    this.dispatchEvent(new Event('play'));
+    return Promise.resolve();
+  });
+  vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(function (this: HTMLMediaElement) {
+    Object.defineProperty(this, 'paused', { value: true, configurable: true });
+    this.dispatchEvent(new Event('pause'));
+  });
+  const song = { id: 'm9', albumId: 'a1', kind: 'audio' as const, status: 'ready' as const, width: null, height: null, durationSec: 160, blurDataUrl: null, error: null, name: 'Biển xanh.mp3', variants: { audio: 'm9/audio.m4a', original: 'm9/audio.m4a' } };
+  render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <EditorView bundle={{ ...bundle, album: { ...bundle.album, musicMediaId: 'm9' }, media: [song] }} api={okApi()} />
+  </MemoryRouter>);
+  expect(screen.queryByRole('button', { name: /audio/ })).toBeNull(); // music is not in Photos
+  await user.click(screen.getByRole('button', { name: 'Background' }));
+  expect(screen.getByText('♪ Biển xanh')).toBeTruthy();
+  expect(screen.getByText('2:40')).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: '▶ Play' }));
+  expect(play).toHaveBeenCalled();
+  await user.keyboard('{Escape}'); // picker closes, music keeps playing
+  await user.click(screen.getByRole('button', { name: 'Pause music' }));
+  expect(screen.queryByRole('button', { name: 'Pause music' })).toBeNull();
 });

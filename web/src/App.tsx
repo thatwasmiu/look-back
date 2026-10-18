@@ -21,7 +21,7 @@ function Gate() {
     api.check().then((ok) => setState(ok ? 'ok' : 'out'), () => setState('down'));
   }, []);
   if (state === 'wait') return null;
-  if (state === 'down') return <p className="empty">Can't reach server</p>;
+  if (state === 'down') return <p className="empty">Không kết nối được server</p>;
   return state === 'ok' ? <Outlet /> : <Navigate to="/login" replace />;
 }
 

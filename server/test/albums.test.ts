@@ -72,6 +72,18 @@ describe('albums', () => {
     expect((await call('POST', '/api/albums', { title: 'Bad', design: { backgroundColor: 'rose', backgroundEffect: 'none', pages: [] } })).statusCode).toBe(400);
   });
 
+  it('musicMediaId must be an audio file of the album; deleting it clears the album music', async () => {
+    const a = (await call('POST', '/api/albums', { title: 'Music' })).json();
+    expect(a.musicMediaId).toBeNull();
+    const img = await t.pool.query(`insert into media (album_id, kind, status, variants) values ($1,'image','ready','{}') returning id`, [a.id]);
+    const song = await t.pool.query(`insert into media (album_id, kind, status, variants) values ($1,'audio','ready','{}') returning id`, [a.id]);
+    expect((await call('PATCH', `/api/albums/${a.id}`, { musicMediaId: img.rows[0].id })).statusCode).toBe(400);
+    const ok = await call('PATCH', `/api/albums/${a.id}`, { musicMediaId: song.rows[0].id });
+    expect(ok.json().musicMediaId).toBe(song.rows[0].id);
+    expect((await call('DELETE', `/api/media/${song.rows[0].id}`)).statusCode).toBe(204);
+    expect((await call('GET', `/api/albums/${a.id}`)).json().album.musicMediaId).toBeNull();
+  });
+
   it('validates title and ids', async () => {
     expect((await call('POST', '/api/albums', { title: '' })).statusCode).toBe(400);
     expect((await call('GET', '/api/albums/not-a-uuid')).statusCode).toBe(400);

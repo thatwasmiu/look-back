@@ -14,7 +14,7 @@ export default function Login() {
       nav('/');
     } catch (err) {
       const s = err instanceof ApiError ? err.status : 0;
-      setError(s === 401 ? 'Wrong password' : s === 429 ? 'Too many attempts, try again later' : 'Something went wrong');
+      setError(s === 401 ? 'Sai mật khẩu' : s === 429 ? 'Thử sai quá nhiều lần, hãy thử lại sau' : 'Có lỗi xảy ra');
     }
   }
 

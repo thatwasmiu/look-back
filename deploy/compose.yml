@@ -4,9 +4,13 @@ x-app: &app
   env_file: .env
   restart: unless-stopped
   depends_on: { db: { condition: service_healthy } }
+  environment:
+    TEMPLATE_MUSIC_DIR: /data/template-music
   volumes:
     - media:/data/media
     - uploads:/data/uploads
+    # Optional tracks for built-in album templates (e.g. squids.mp3). Your own files: kept out of git and the images.
+    - ./template-music:/data/template-music:ro
 
 services:
   db:

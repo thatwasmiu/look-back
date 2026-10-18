@@ -52,7 +52,7 @@ export function VideoPlayer({ media, active, crop = { x: 0.5, y: 0.5, scale: 1 }
   const cover = poster
     ? <BlurImage blurDataUrl={media.blurDataUrl} src={poster} objectPosition={objectPosition} scale={crop.scale} />
     : <div className="slot-paper" />;
-  if (failed) return <>{cover}<span className="chip chip-error">can't play video</span></>;
+  if (failed) return <>{cover}<span className="chip chip-error">không phát được video</span></>;
   return (
     <button type="button" className="video-poster" aria-label="Play video" onClick={() => setStarted(true)}>
       {cover}

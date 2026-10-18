@@ -11,7 +11,7 @@ type Props = {
   onDelete(mediaId: string): void; onSetCover(mediaId: string): void;
 };
 
-const chip: Partial<Record<MediaDTO['status'], string>> = { uploading: 'uploading…', processing: 'processing…', failed: 'upload failed' };
+const chip: Partial<Record<MediaDTO['status'], string>> = { uploading: 'đang tải…', processing: 'đang xử lý…', failed: 'tải lên lỗi' };
 export const thumbOf = (m: MediaDTO) => (m.status === 'ready' && (m.variants?.thumb ?? m.variants?.poster)) || null;
 
 // Frame under the pointer on the editing page (not the page-strip thumbnails), or null.
@@ -102,7 +102,7 @@ export function MediaTray({ media, items, coverMediaId, onUpload, onRetry, onPic
                 <button type="button" title="Set as album cover" aria-label="Set as album cover" disabled={m.id === coverMediaId}
                   onClick={() => onSetCover(m.id)}>★</button>
                 <button type="button" title="Delete from album" aria-label="Delete from album"
-                  onClick={() => window.confirm('Delete this from the album? It is removed from every page.') && onDelete(m.id)}>🗑</button>
+                  onClick={() => window.confirm('Xóa ảnh/video này khỏi album? Nó sẽ bị gỡ khỏi mọi trang.') && onDelete(m.id)}>🗑</button>
               </div>
             </li>
           );

@@ -89,7 +89,7 @@ export default function AlbumList() {
       setAlbums((cur) => [{ ...a, coverThumb: null, pageCount }, ...(cur ?? [])]); // newest first, like the server's list
       closeCreate();
     } catch (err) {
-      if (!(err instanceof ApiError && err.status === 401)) setCreateError("Couldn't create album");
+      if (!(err instanceof ApiError && err.status === 401)) setCreateError("Không tạo được album");
     }
   }
 
@@ -103,9 +103,9 @@ export default function AlbumList() {
         </span>
       </header>
       {loadError && (
-        <p role="alert" className="empty">Couldn't load albums <button onClick={load}>Retry</button></p>
+        <p role="alert" className="empty">Không tải được danh sách album <button onClick={load}>Retry</button></p>
       )}
-      {albums && albums.length === 0 && <p className="empty">No albums yet.</p>}
+      {albums && albums.length === 0 && <p className="empty">Chưa có album nào.</p>}
       <ul className="grid">
         {albums?.map((a, i) => (
           <li key={a.id} className="polaroid" style={{ '--tilt': `${((i % 5) - 2) * 1.2}deg` } as CSSProperties}>
@@ -172,14 +172,14 @@ export default function AlbumList() {
         <div className="inline-confirm album-confirm share-dialog" role="dialog" aria-label="Share album">
           {sharing.shareToken ? (
             <>
-              <span>Anyone with this link can view "{sharing.title}" (not edit):</span>
+              <span>Ai có link này đều xem được “{sharing.title}” (không sửa được):</span>
               <input readOnly aria-label="Share link" value={shareUrl(sharing.shareToken)} onFocus={(e) => e.currentTarget.select()} />
               <button type="button" onClick={() => void navigator.clipboard?.writeText(shareUrl(sharing.shareToken!))}>Copy</button>
               <button type="button" className="danger" disabled={shareBusy} onClick={() => void toggleShare(sharing, false)}>Stop sharing</button>
             </>
           ) : (
             <>
-              <span>Share "{sharing.title}" as a view-only link — no password needed to open it.</span>
+              <span>Chia sẻ “{sharing.title}” bằng link chỉ xem — người nhận không cần mật khẩu.</span>
               <button type="button" disabled={shareBusy} onClick={() => void toggleShare(sharing, true)}>Create share link</button>
             </>
           )}
@@ -188,7 +188,7 @@ export default function AlbumList() {
       )}
       {confirming && (
         <div className="inline-confirm album-confirm" role="alertdialog" aria-label="Delete album">
-          Delete "{confirming.title}" and all its photos and videos? This can't be undone.
+          Xóa “{confirming.title}” cùng toàn bộ ảnh và video? Không thể hoàn tác.
           <button type="button" className="danger" disabled={deleting} onClick={() => void remove(confirming)}>Delete album</button>
           <button type="button" className="secondary" disabled={deleting} onClick={() => setConfirming(null)}>Cancel</button>
         </div>

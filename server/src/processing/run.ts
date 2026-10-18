@@ -3,6 +3,7 @@ import type pg from 'pg';
 import type { Config } from '../config.js';
 import type { ProcessMediaJob } from '../queue.js';
 import { absPath } from '../storage.js';
+import { processAudio } from './audio.js';
 import { processImage } from './image.js';
 import { processVideo } from './video.js';
 
@@ -10,6 +11,7 @@ import { processVideo } from './video.js';
 const EXT: Record<string, string> = {
   'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
   'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm',
+  'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'audio/x-m4a': 'm4a', 'audio/aac': 'aac', 'audio/ogg': 'ogg',
 };
 
 export async function runProcessMedia(job: ProcessMediaJob, pool: pg.Pool, config: Config): Promise<void> {
@@ -22,8 +24,8 @@ export async function runProcessMedia(job: ProcessMediaJob, pool: pg.Pool, confi
     try {
       const ext = EXT[mime];
       if (!ext) throw new Error('unsupported type');
-      const r = kind === 'video'
-        ? await processVideo(uploadPath, mediaId, config.mediaDir, ext, config.videoRenditions, config.ffmpegPreset)
+      const r = kind === 'video' ? await processVideo(uploadPath, mediaId, config.mediaDir, ext, config.videoRenditions, config.ffmpegPreset)
+        : kind === 'audio' ? await processAudio(uploadPath, mediaId, config.mediaDir)
         : await processImage(uploadPath, mediaId, config.mediaDir, ext);
       const u = await pool.query(
         `update media set status='ready', width=$2, height=$3, duration_sec=$4, blur_data_url=$5, variants=$6, error=null where id=$1 and status='processing'`,

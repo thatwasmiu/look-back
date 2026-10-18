@@ -34,7 +34,7 @@ type Resp = { status?: number; body?: { xhr?: { responseText?: string } } } | un
 //
 // One Uppy for the whole app, created on first use and never destroyed: destroy()/cancelAll() would send a tus
 // DELETE for every unfinished upload. Uploads keep going while the user browses; the editor only subscribes.
-const PAGE_CHANGED = 'added to tray — page changed';
+const PAGE_CHANGED = 'đã vào Photos — trang đã đổi';
 const idOf = (url: string | null | undefined) => url?.split('/').pop() || null;
 
 type Item = UploadItem & { albumId: string };
@@ -87,7 +87,7 @@ function getUppy(): Uppy {
   });
   u.on('upload-error', (f, err, res) => {
     const r = res as Resp;
-    const error = r?.status === 413 ? 'File too large' : r?.status === 400 && r.body?.xhr?.responseText || err.message;
+    const error = r?.status === 413 ? 'File quá lớn' : r?.status === 400 && r.body?.xhr?.responseText || err.message;
     const status = r?.status ?? 0;
     patch(f?.id, { state: 'error', error, retryable: !(status >= 400 && status < 500) });
   });

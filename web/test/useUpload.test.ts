@@ -96,7 +96,7 @@ test('onCreated returning false (target frame no longer on the page) leaves a no
   act(() => result.current.add([file('a.jpg')], 'frame1'));
   const id = result.current.items[0].localId;
   act(() => h.uppy!.emit('upload-progress', { id, tus: { uploadUrl: '/api/uploads/u1' } }, { bytesUploaded: 1, bytesTotal: 2 }));
-  expect(result.current.items[0].notice).toBe('added to tray — page changed');
+  expect(result.current.items[0].notice).toBe('đã vào Photos — trang đã đổi');
 });
 
 test("upload-error: the server's HEIC 400 message is shown on the item", () => {

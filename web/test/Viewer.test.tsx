@@ -18,7 +18,7 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 const bundle: AlbumBundle = {
-  album: { id: 'a1', title: 'Trip', coverMediaId: null, backgroundEffect: 'none', backgroundColor: 'walnut', shareToken: null },
+  album: { id: 'a1', title: 'Trip', coverMediaId: null, backgroundEffect: 'none', backgroundColor: 'walnut', shareToken: null, musicMediaId: null },
   pages: Array.from({ length: 5 }, (_, i) => ({ id: `p${i}`, albumId: 'a1', position: i, layout: { background: 'paper-cream', elements: [] } })),
   media: [],
 };
@@ -99,4 +99,25 @@ test('the built-in example album opens without the server and has no Edit button
   expect(await screen.findByText('Look Back — a tribute')).toBeTruthy();
   expect(screen.queryByRole('link', { name: 'Edit' })).toBeNull();
   expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining('/api/albums/'), expect.anything());
+});
+
+test('album music: ♪ appears when the track is ready; the first tap starts it, the button pauses it', async () => {
+  const song = { id: 'm9', albumId: 'a1', kind: 'audio', status: 'ready', width: null, height: null, durationSec: 120, blurDataUrl: null, error: null, variants: { audio: 'm9/audio.m4a', original: 'm9/audio.m4a' } };
+  const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(function (this: HTMLMediaElement) {
+    Object.defineProperty(this, 'paused', { value: false, configurable: true });
+    this.dispatchEvent(new Event('play'));
+    return Promise.resolve();
+  });
+  const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(function (this: HTMLMediaElement) {
+    Object.defineProperty(this, 'paused', { value: true, configurable: true });
+    this.dispatchEvent(new Event('pause'));
+  });
+  setup(vi.fn().mockResolvedValue(json(200, { ...bundle, album: { ...bundle.album, musicMediaId: 'm9' }, media: [song] })));
+  const btn = await screen.findByRole('button', { name: 'Play music' });
+  expect(document.querySelector('audio')!.getAttribute('src')).toBe('/media/m9/audio.m4a');
+  fireEvent.pointerDown(document.body);
+  expect(play).toHaveBeenCalledTimes(1);
+  await userEvent.click(await screen.findByRole('button', { name: 'Pause music' }));
+  expect(pause).toHaveBeenCalled();
+  expect(btn.getAttribute('aria-pressed')).toBe('false');
 });

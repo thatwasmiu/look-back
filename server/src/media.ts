@@ -9,7 +9,7 @@ import { absPath } from './storage.js';
 export const toMediaDTO = (r: any): MediaDTO => ({
   id: r.id, albumId: r.album_id, kind: r.kind, status: r.status,
   width: r.width, height: r.height, durationSec: r.duration_sec,
-  blurDataUrl: r.blur_data_url, variants: r.variants, error: r.error,
+  blurDataUrl: r.blur_data_url, variants: r.variants, error: r.error, name: r.original_name ?? null,
 });
 
 // File removal must never fail the request; the DB rows are already gone.
@@ -49,7 +49,9 @@ export function registerMedia(app: FastifyInstance, pool: pg.Pool, config: Confi
         };
         await c.query('update pages set layout = $2, updated_at = now() where id = $1', [p.id, JSON.stringify(layout)]);
       }
-      await c.query('update albums set cover_media_id = null, updated_at = now() where id = $1 and cover_media_id = $2', [albumId, id]);
+      await c.query(
+        `update albums set cover_media_id = nullif(cover_media_id, $2), music_media_id = nullif(music_media_id, $2), updated_at = now() where id = $1`,
+        [albumId, id]);
       await c.query('delete from media where id = $1', [id]);
       await c.query('commit');
     } catch (err) {
