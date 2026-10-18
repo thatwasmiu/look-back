@@ -2,7 +2,9 @@ import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import rateLimit from '@fastify/rate-limit';
 import secureSession from '@fastify/secure-session';
 import type { FastifyInstance } from 'fastify';
+import type pg from 'pg';
 import type { Config } from './config.js';
+import { SHARE_COOKIE, shareAllowsMedia } from './share.js';
 
 const KEYLEN = 64;
 const scryptAsync = (pw: string, salt: Buffer) =>
@@ -25,7 +27,7 @@ declare module '@fastify/secure-session' {
   interface SessionData { owner: true }
 }
 
-export function registerAuth(app: FastifyInstance, config: Config): void {
+export function registerAuth(app: FastifyInstance, config: Config, pool: pg.Pool): void {
   app.register(secureSession, {
     cookieName: 'sid',
     key: createHash('sha256').update(config.sessionSecret).digest(), // 32 bytes
@@ -41,7 +43,8 @@ export function registerAuth(app: FastifyInstance, config: Config): void {
       const route = req.routeOptions.url;
       if (route === undefined || !route.startsWith('/api/')) return;
       const key = `${req.method} ${route}`;
-      if (key === 'POST /api/auth/login' || key === 'GET /api/health') return;
+      // Public: login, health, a share link's album, and the media check (it decides itself, below).
+      if (key === 'POST /api/auth/login' || key === 'GET /api/health' || key === 'GET /api/share/:token' || key === 'GET /api/auth/check') return;
       if (!req.session.get('owner')) return reply.code(401).send({ error: 'unauthorized' });
     });
 
@@ -62,7 +65,12 @@ export function registerAuth(app: FastifyInstance, config: Config): void {
       req.session.delete();
       return reply.code(204).send();
     });
-    a.get('/api/auth/check', async (_req, reply) => reply.code(204).send());
+    // nginx auth_request for /media/*: the owner's session, or a share-link cookie for that media's album.
+    a.get('/api/auth/check', async (req, reply) => {
+      if (req.session.get('owner')) return reply.code(204).send();
+      const ok = await shareAllowsMedia(pool, req.cookies[SHARE_COOKIE], req.headers['x-original-uri']);
+      return reply.code(ok ? 204 : 401).send();
+    });
   };
   (plugin as any)[Symbol.for('skip-override')] = true;
   app.register(plugin);

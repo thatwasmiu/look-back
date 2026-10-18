@@ -13,7 +13,7 @@ export const uuidParams = {
   params: { type: 'object', properties: { id: { type: 'string', format: 'uuid' } } },
 } as const;
 
-const toAlbumDTO = (r: any): AlbumDTO => ({ id: r.id, title: r.title, coverMediaId: r.cover_media_id, backgroundEffect: r.background_effect, backgroundColor: r.background_color });
+const toAlbumDTO = (r: any): AlbumDTO => ({ id: r.id, title: r.title, coverMediaId: r.cover_media_id, backgroundEffect: r.background_effect, backgroundColor: r.background_color, shareToken: r.share_token ?? null });
 const title = { type: 'string', minLength: 1, maxLength: 200 } as const;
 
 export function registerAlbums(app: FastifyInstance, pool: pg.Pool, config: Config): void {
@@ -100,11 +100,14 @@ export function registerAlbums(app: FastifyInstance, pool: pg.Pool, config: Conf
   app.get<{ Params: { id: string } }>('/api/albums/:id', { schema: uuidParams }, async (req, reply) => {
     const a = await pool.query('select * from albums where id = $1', [req.params.id]);
     if (!a.rows[0]) return reply.code(404).send({ error: 'not found' });
-    const [pages, media] = await Promise.all([
-      pool.query('select * from pages where album_id = $1 order by position', [req.params.id]),
-      pool.query('select * from media where album_id = $1 order by created_at, id', [req.params.id]),
-    ]);
-    const bundle: AlbumBundle = { album: toAlbumDTO(a.rows[0]), pages: pages.rows.map(toPageDTO), media: media.rows.map(toMediaDTO) };
-    return bundle;
+    return loadBundle(pool, a.rows[0]);
   });
+}
+
+export async function loadBundle(pool: pg.Pool, albumRow: any): Promise<AlbumBundle> {
+  const [pages, media] = await Promise.all([
+    pool.query('select * from pages where album_id = $1 order by position', [albumRow.id]),
+    pool.query('select * from media where album_id = $1 order by created_at, id', [albumRow.id]),
+  ]);
+  return { album: toAlbumDTO(albumRow), pages: pages.rows.map(toPageDTO), media: media.rows.map(toMediaDTO) };
 }

@@ -28,6 +28,18 @@ test('create failure shows an inline error', async () => {
   expect(await screen.findByText("Couldn't create album")).toBeTruthy();
 });
 
+test('New album opens a modal; Escape and × close it', async () => {
+  setup(vi.fn().mockResolvedValue(json(200, [])));
+  await userEvent.click(await screen.findByRole('button', { name: 'New album' }));
+  expect(screen.getByRole('dialog', { name: 'New album' })).toBeTruthy();
+  expect((screen.getByRole('button', { name: 'Create' }) as HTMLButtonElement).disabled).toBe(true);
+  await userEvent.keyboard('{Escape}');
+  expect(screen.queryByRole('dialog')).toBeNull();
+  await userEvent.click(screen.getByRole('button', { name: 'New album' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Close' }));
+  expect(screen.queryByRole('dialog')).toBeNull();
+});
+
 test('the built-in example album is listed (view only) after your albums', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } })));
   render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><AlbumList /></MemoryRouter>);
@@ -50,4 +62,22 @@ test('Delete asks first; Cancel keeps the album, Delete removes it via the API',
   await userEvent.click(screen.getByRole('button', { name: 'Delete album' }));
   expect(fetchMock).toHaveBeenLastCalledWith('/api/albums/a1', expect.objectContaining({ method: 'DELETE' }));
   await waitFor(() => expect(screen.queryByRole('link', { name: /^Trip/ })).toBeNull());
+});
+
+test('Share creates a link the owner can copy, and Stop sharing revokes it', async () => {
+  const album = { id: 'a1', title: 'Trip', coverMediaId: null, backgroundEffect: 'none', backgroundColor: 'walnut', shareToken: null, coverThumb: null, pageCount: 2 };
+  const token = 'T'.repeat(43);
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce(json(200, [album]))
+    .mockResolvedValueOnce(json(200, { shareToken: token }))
+    .mockResolvedValueOnce(new Response(null, { status: 204 }));
+  setup(fetchMock);
+  await userEvent.click(await screen.findByRole('button', { name: 'Share Trip' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Create share link' }));
+  const link = await screen.findByRole('textbox', { name: 'Share link' }) as HTMLInputElement;
+  expect(link.value).toBe(`${location.origin}/s/${token}`);
+  expect(fetchMock).toHaveBeenCalledWith('/api/albums/a1/share', expect.objectContaining({ method: 'POST' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Stop sharing' }));
+  expect(fetchMock).toHaveBeenLastCalledWith('/api/albums/a1/share', expect.objectContaining({ method: 'DELETE' }));
+  expect(await screen.findByRole('button', { name: 'Create share link' })).toBeTruthy();
 });

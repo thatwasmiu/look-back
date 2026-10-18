@@ -33,7 +33,8 @@ export default function Viewer() {
 
 const slotOf = (i: number, spread: boolean) => (!spread ? 'single' : i % 2 ? 'left' : 'right');
 
-export function Book({ bundle }: { bundle: AlbumBundle }) {
+// `shared`: opened from a public share link — read-only, no way into the owner's app.
+export function Book({ bundle, shared = false }: { bundle: AlbumBundle; shared?: boolean }) {
   const { album, pages } = bundle;
   const total = pages.length;
   const media = useMemo(() => new Map(bundle.media.map((m) => [m.id, m])), [bundle.media]);
@@ -60,10 +61,10 @@ export function Book({ bundle }: { bundle: AlbumBundle }) {
     <main className={`viewer desk-${album.backgroundColor}`}>
       <BackgroundEffectView kind={album.backgroundEffect} />
       <header className="viewer-bar">
-        <Link to="/">← Albums</Link>
+        {!shared && <Link to="/">← Albums</Link>}
         <h1>{album.title}</h1>
         {total > 0 && <span className="counter">{visible.map((i) => i + 1).join('–')} / {total}</span>}
-        {album.id !== EXAMPLE_ALBUM_ID && <Link className="btn" to={`/albums/${album.id}/edit`}>Edit</Link>}
+        {!shared && album.id !== EXAMPLE_ALBUM_ID && <Link className="btn" to={`/albums/${album.id}/edit`}>Edit</Link>}
       </header>
       {total === 0 ? <p className="empty">No pages yet.</p> : (
         <div className="stage">

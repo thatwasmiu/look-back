@@ -9,6 +9,7 @@ export type MediaDTO = {
   blurDataUrl: string | null; variants: Variants | null; error: string | null
 }
 export type PageDTO = { id: string; albumId: string; position: number; layout: PageLayout }
-export type AlbumDTO = { id: string; title: string; coverMediaId: string | null; backgroundEffect: BackgroundEffect; backgroundColor: BackgroundColor }
+export type AlbumDTO = { id: string; title: string; coverMediaId: string | null; backgroundEffect: BackgroundEffect; backgroundColor: BackgroundColor
+  shareToken: string | null } // secret share-link code; only ever sent to the owner
 export type AlbumSummary = AlbumDTO & { coverThumb: string | null; pageCount: number }
 export type AlbumBundle = { album: AlbumDTO; pages: PageDTO[]; media: MediaDTO[] }

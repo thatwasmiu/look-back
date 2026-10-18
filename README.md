@@ -1,7 +1,7 @@
 # Look Back
 
 Private photo/video scrapbook. npm workspaces: `shared`, `server` (API + worker), `web`.
-Production runs as Docker Compose: `db` (Postgres 16), `api`, `worker` (ffmpeg/sharp), `nginx` (TLS, SPA, auth-gated `/media`).
+Production runs as Docker Compose: `db` (Postgres 16), `api`, `worker` (ffmpeg/sharp), `nginx` (SPA, auth-gated `/media`).
 
 ## Setup
 
@@ -11,20 +11,60 @@ Production runs as Docker Compose: `db` (Postgres 16), `api`, `worker` (ffmpeg/s
      `docker compose -f deploy/compose.dev.yml run --rm dev npm run hash-password -w server -- 'your password'`).
      Keep the single quotes around the value in `.env`.
    - `POSTGRES_PASSWORD`, and the same password inside `DATABASE_URL`.
-2. TLS certs in `deploy/certs/fullchain.pem` + `privkey.pem` (git-ignored):
-   - Local/testing: `bash deploy/make-dev-cert.sh` (self-signed, needs Docker only).
-   - Real domain, either:
-     - certbot standalone (port 80 free): `certbot certonly --standalone -d your.domain`, then copy/symlink
-       `fullchain.pem` and `privkey.pem` from `/etc/letsencrypt/live/your.domain/`; or
-     - Cloudflare Origin Certificate: save the cert as `fullchain.pem` and the key as `privkey.pem`, SSL mode "Full (strict)".
-3. `docker compose -f deploy/compose.yml up -d --build`
+2. `docker compose -f deploy/compose.yml up -d --build`
    - Or, on a VPS, skip building and use the published images (`dastewasmiu/scrapbook-{api,worker,nginx}` on Docker Hub):
-     copy `deploy/compose.yml`, `deploy/.env` and `deploy/certs/` there, then
+     copy `deploy/compose.yml` and `deploy/.env` there, then
      `docker compose -f compose.yml pull && docker compose -f compose.yml up -d`.
      Pin a version with `IMAGE_TAG=<commit>` in `.env`; use another registry/user with `IMAGE_PREFIX=<user>/scrapbook`.
    - Publish new images: `docker compose -f deploy/compose.yml build && docker compose -f deploy/compose.yml push`.
-4. `SMOKE_PASSWORD='your password' bash deploy/smoke.sh` (add `BASE=https://your.domain` for a remote host). All lines should say PASS.
+3. Point your HTTPS nginx at it (below).
+4. `SMOKE_PASSWORD='your password' bash deploy/smoke.sh` (add `BASE=https://your.domain` to test through the outer nginx). All lines should say PASS.
 
+### Default: behind your own HTTPS nginx
+
+The app's nginx serves **plain HTTP on `127.0.0.1:8080` only** (unreachable from outside the host) and takes the
+visitor's IP from the outer proxy's `X-Forwarded-For` — needed for the login rate limit. Your nginx on the host
+terminates HTTPS (certbot, Cloudflare origin cert, …) and proxies everything:
+
+```nginx
+server {
+  listen 443 ssl;
+  http2 on;
+  server_name album.example.com;
+  ssl_certificate     /etc/letsencrypt/live/album.example.com/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/album.example.com/privkey.pem;
+
+  client_max_body_size 60m;        # tus uploads send 50 MiB chunks
+  proxy_request_buffering off;     # stream uploads instead of buffering them to disk first
+  proxy_buffering off;             # stream video segments
+  proxy_read_timeout 300s;
+  proxy_send_timeout 300s;
+
+  location / {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $remote_addr;   # overwrite, don't append: clients can't spoof their IP
+    proxy_set_header X-Forwarded-Proto https;
+  }
+}
+server {
+  listen 80;
+  server_name album.example.com;
+  return 301 https://$host$request_uri;
+}
+```
+
+Locally (no outer nginx) just open http://localhost:8080.
+
+### Alternative: HTTPS directly from the app (no outer nginx)
+
+`docker compose -f deploy/compose.yml -f deploy/compose.standalone.yml up -d` — the app's nginx listens on 80/443
+itself. Put certs in `deploy/certs/fullchain.pem` + `privkey.pem` (git-ignored):
+- Local/testing: `bash deploy/make-dev-cert.sh` (self-signed, needs Docker only).
+- Real domain: certbot standalone (`certbot certonly --standalone -d your.domain`, then copy `fullchain.pem` and
+  `privkey.pem` from `/etc/letsencrypt/live/your.domain/`), or a Cloudflare Origin Certificate (SSL mode "Full (strict)").
+- Smoke test with `BASE=https://localhost`.
 
 Stop: `docker compose -f deploy/compose.yml down` (volumes `pgdata`, `media`, `uploads` are kept; add `-v` only to wipe everything).
 

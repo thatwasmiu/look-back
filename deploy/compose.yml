@@ -37,9 +37,12 @@ services:
     build: { context: .., dockerfile: deploy/Dockerfile, target: nginx }
     restart: unless-stopped
     depends_on: [api]
-    ports: ["80:80", "443:443"]
+    # Default: behind your own HTTPS nginx on the host (see README). Plain HTTP, reachable from this host only.
+    # For HTTPS directly on 80/443 instead: add -f compose.standalone.yml.
+    environment:
+      LOOKBACK_MODE: behind-proxy
+    ports: ["127.0.0.1:8080:80"]
     volumes:
-      - ./certs:/etc/nginx/certs:ro
       - media:/data/media:ro
 
 volumes:

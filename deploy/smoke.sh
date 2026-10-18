@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Usage: SMOKE_PASSWORD=<owner password> [BASE=https://localhost] bash deploy/smoke.sh
-BASE="${BASE:-https://localhost}"
+# Usage: SMOKE_PASSWORD=<owner password> [BASE=http://localhost:8080] bash deploy/smoke.sh   (standalone: BASE=https://localhost)
+BASE="${BASE:-http://localhost:8080}"
 PW="${SMOKE_PASSWORD:?set SMOKE_PASSWORD to the owner password}"
 JAR="$(mktemp)"; trap 'rm -f "$JAR"' EXIT
 fail=0

@@ -38,6 +38,10 @@ export const api = {
     req<AlbumDTO>('PATCH', `/albums/${id}`, patch),
   deleteAlbum: (id: string) => req<void>('DELETE', `/albums/${id}`),
   getAlbum: (id: string) => req<AlbumBundle>('GET', `/albums/${id}`),
+  shareAlbum: (id: string) => req<{ shareToken: string }>('POST', `/albums/${id}/share`),
+  unshareAlbum: (id: string) => req<void>('DELETE', `/albums/${id}/share`),
+  // Public share link: quiet — a dead link must not bounce visitors to the owner's login page.
+  getShared: (token: string) => req<AlbumBundle>('GET', `/share/${encodeURIComponent(token)}`, undefined, true),
   addPage: (albumId: string, templateId: string, position?: number) =>
     req<PageDTO>('POST', `/albums/${albumId}/pages`, { templateId, position }),
   savePage: (id: string, layout: PageLayout, opts?: { keepalive?: boolean }) =>

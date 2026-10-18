@@ -35,5 +35,8 @@ FROM runtime AS worker
 CMD ["node", "server/dist/worker.js"]
 
 FROM nginx:1.27-alpine AS nginx
-COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
+# Both modes ship in the image; 15-lookback-mode.sh copies the one LOOKBACK_MODE picks into conf.d at start.
+COPY deploy/nginx/*.conf deploy/nginx/*.inc /etc/nginx/lookback/
+COPY deploy/nginx/behind-proxy.conf /etc/nginx/conf.d/default.conf
+COPY --chmod=755 deploy/nginx/15-lookback-mode.sh /docker-entrypoint.d/15-lookback-mode.sh
 COPY --from=build /app/web/dist /usr/share/nginx/html

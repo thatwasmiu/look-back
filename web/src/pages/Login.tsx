@@ -21,6 +21,7 @@ export default function Login() {
   return (
     <main className="login">
       <form className="paper-card" onSubmit={submit}>
+        <img className="brand-logo brand-logo-lg" src="/brand/logo.svg" alt="" />
         <h1>Look Back</h1>
         <label>
           Password

@@ -13,7 +13,7 @@ const mediaApi = { getMedia: vi.fn(), deleteMedia: vi.fn(), updateAlbum: vi.fn()
 const okApi = (): EditorApi => ({ savePage: vi.fn().mockResolvedValue({}), addPage: vi.fn(), deletePage: vi.fn(), reorderPages: vi.fn(), ...mediaApi });
 
 const bundle: AlbumBundle = {
-  album: { id: 'a1', title: 'Trip', coverMediaId: null, backgroundEffect: 'none', backgroundColor: 'walnut' },
+  album: { id: 'a1', title: 'Trip', coverMediaId: null, backgroundEffect: 'none', backgroundColor: 'walnut', shareToken: null },
   pages: [0, 1].map((i) => ({ id: `p${i}`, albumId: 'a1', position: i, layout: { background: 'paper-cream', elements: [] } })),
   media: [],
 };
@@ -170,7 +170,7 @@ test('the add-page template list has Cancel and also closes on an outside click 
   const open = () => user.click(screen.getByRole('button', { name: 'Add page' }));
   const list = () => screen.queryByRole('dialog', { name: 'Pick a template' });
   await open();
-  await user.click(screen.getByRole('button', { name: 'Cancel' }));
+  await user.click(screen.getByRole('button', { name: 'Close' }));
   expect(list()).toBeNull();
   await open();
   await user.click(container.querySelector('.edit-stage')!);
@@ -256,4 +256,61 @@ test('click the album title to rename it: Enter saves, Escape cancels, empty nam
   await user.keyboard('{Enter}');
   expect(api.updateAlbum).toHaveBeenCalledTimes(1);
   expect(screen.getByRole('button', { name: /Rename album/ }).textContent).toContain('Summer 2026');
+});
+
+test('Next page moves to the next page; on the last page it becomes New page and opens the template picker', async () => {
+  const user = userEvent.setup();
+  setup(okApi()); // 2 pages
+  await user.click(screen.getByRole('button', { name: 'Next page' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Page 2' }).getAttribute('aria-current')).toBe('true'));
+  expect(screen.queryByRole('button', { name: 'Next page' })).toBeNull();
+  await user.click(screen.getByRole('button', { name: 'New page' }));
+  expect(screen.getByRole('dialog', { name: 'Pick a template' })).toBeTruthy();
+});
+
+test('arrow keys flip pages when nothing is selected (→ on the last page offers a new page)', async () => {
+  const user = userEvent.setup();
+  setup(okApi()); // 2 pages
+  const current = (n: number) => screen.getByRole('button', { name: `Page ${n}` }).getAttribute('aria-current');
+  await user.keyboard('{ArrowRight}');
+  await waitFor(() => expect(current(2)).toBe('true'));
+  await user.keyboard('{ArrowLeft}');
+  await waitFor(() => expect(current(1)).toBe('true'));
+  await user.keyboard('{ArrowRight}');
+  await waitFor(() => expect(current(2)).toBe('true'));
+  await user.keyboard('{ArrowRight}');
+  expect(screen.getByRole('dialog', { name: 'Pick a template' })).toBeTruthy();
+});
+
+test('the Pages tab folds the page thumbnails away and opens them again', async () => {
+  const user = userEvent.setup();
+  setup(okApi()); // 2 pages
+  const tab = screen.getByRole('button', { name: /^Pages \(2\)/ });
+  expect(tab.getAttribute('aria-expanded')).toBe('true');
+  await user.click(tab);
+  expect(screen.queryByRole('button', { name: 'Page 1' })).toBeNull();
+  expect(tab.getAttribute('aria-expanded')).toBe('false');
+  await user.click(tab);
+  expect(screen.getByRole('button', { name: 'Page 1' })).toBeTruthy();
+});
+
+test('the ← button goes back a page and is hidden on the first page', async () => {
+  const user = userEvent.setup();
+  setup(okApi()); // 2 pages
+  expect(screen.queryByRole('button', { name: 'Previous page' })).toBeNull();
+  await user.click(screen.getByRole('button', { name: 'Next page' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Page 2' }).getAttribute('aria-current')).toBe('true'));
+  await user.click(screen.getByRole('button', { name: 'Previous page' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Page 1' }).getAttribute('aria-current')).toBe('true'));
+});
+
+test('on phones the Pages strip starts folded', async () => {
+  vi.stubGlobal('matchMedia', (q: string) => ({ matches: q.includes('max-width: 699px'), addEventListener() {}, removeEventListener() {} }));
+  try {
+    setup(okApi());
+    expect(screen.getByRole('button', { name: /^Pages \(2\)/ }).getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByRole('button', { name: 'Page 1' })).toBeNull();
+  } finally {
+    vi.unstubAllGlobals();
+  }
 });

@@ -73,6 +73,8 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   }, [picking]);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [panelsHidden, setPanelsHidden] = useState(false);
+  // The page strip folds away like the Photos tray; on phones it starts folded (same breakpoint as the CSS).
+  const [pagesOpen, setPagesOpen] = useState(() => !(typeof matchMedia === 'function' && matchMedia('(pointer: coarse), (max-width: 699px)').matches));
   const [zoom, setZoom] = useState(1);
   const [title, setTitle] = useState(bundle.album.title);
   const [renaming, setRenaming] = useState(false);
@@ -120,6 +122,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   // Async page ops read the state as it is after their awaits, not as it was when they started.
   const latest = useRef({ pages, cur, layout, busy });
   latest.current = { pages, cur, layout, busy };
+  const nav = useRef({ switchTo: (_i: number): Promise<void> => Promise.resolve() }); // filled below; read by the key handler
 
   // Never send a layout the server would reject: a validation failure shows as the "Save failed" status.
   const save = useCallback((id: string, l: PageLayout, opts?: { keepalive?: boolean }) => {
@@ -300,6 +303,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
     await api.reorderPages(albumId, ps.map((x) => x.id));
   });
 
+  nav.current.switchTo = switchTo;
   const selected = layout.elements.find((e) => e.id === selectedId) ?? null;
   useEffect(() => { if (cropId !== selectedId) setCropId(null); }, [cropId, selectedId]);
   const trayMedia = useMemo(() => [...media.values()].reverse(), [media]); // newest first
@@ -310,7 +314,14 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
       const mod = e.ctrlKey || e.metaKey;
       if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); setHist(e.shiftKey ? redo : undo); return; }
       if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); setHist(redo); return; }
-      if (!selectedId) return;
+      if (!selectedId) {
+        // Nothing selected: ← / → flip pages (→ on the last page offers a new one, like the round button).
+        // With an item selected the arrows nudge it instead (below).
+        const { cur: c, pages: ps } = latest.current;
+        if (e.key === 'ArrowRight') { e.preventDefault(); if (c < ps.length - 1) void nav.current.switchTo(c + 1); else setPicking(true); }
+        if (e.key === 'ArrowLeft' && c > 0) { e.preventDefault(); void nav.current.switchTo(c - 1); }
+        return;
+      }
       // commit(fn) derives from h.present, not this render's layout: key repeats can arrive before a re-render.
       // Focus often stays on the last-clicked toolbar button; buttons have no use for these keys.
       if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -345,8 +356,8 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
               }}
               onBlur={(e) => rename(e.currentTarget.value)} />
           ) : (
-            <button type="button" className="title-btn" aria-label={`Rename album: ${title}`} title="Rename album" onClick={() => setRenaming(true)}>
-              {title} <span className="title-pen" aria-hidden>✎</span>
+            <button type="button" className="title-btn" aria-label={`Rename album: ${title}`} title={`${title} — click to rename`} onClick={() => setRenaming(true)}>
+              <span className="title-text">{title}</span><span className="title-pen" aria-hidden>✎</span>
             </button>
           )}
         </h1>
@@ -362,10 +373,19 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
       )}
       <div className="edit-main">
         <BackgroundEffectView kind={bgEffect} />
-        <div className="edit-stage" ref={stageRef}>
-          {page ? <EditCanvas layout={layout} media={media} selectedId={selectedId} onSelect={setSelectedId} onCommit={commit}
-            onFrameAddMedia={addToFrame} cropId={cropId} onCrop={setCropId} zoom={zoom} />
-            : <p className="empty">No pages yet — add one below.</p>}
+        <div className="stage-wrap">
+          <div className="edit-stage" ref={stageRef}>
+            {page ? <EditCanvas layout={layout} media={media} selectedId={selectedId} onSelect={setSelectedId} onCommit={commit}
+              onFrameAddMedia={addToFrame} cropId={cropId} onCrop={setCropId} zoom={zoom} />
+              : <p className="empty">No pages yet — add one below.</p>}
+          </div>
+          {page && cur > 0 && (
+            <button type="button" className="page-next page-prev" aria-label="Previous page" title="Previous page" onClick={() => void switchTo(cur - 1)}>←</button>
+          )}
+          {/* Next page; on the last page it offers a new one (same template picker as the strip's "+"). */}
+          {page && (cur < pages.length - 1
+            ? <button type="button" className="page-next" aria-label="Next page" title="Next page" onClick={() => void switchTo(cur + 1)}>→</button>
+            : <button type="button" className="page-next" aria-label="New page" title="New page" onClick={() => setPicking(true)}>+</button>)}
         </div>
         <MediaTray media={trayMedia} items={upload.items} coverMediaId={coverId}
           onUpload={(files) => upload.add(files)} onRetry={upload.retry}
@@ -375,29 +395,36 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
           onChange={(e) => { upload.add([...e.target.files ?? []], framePick.current.frameId); e.target.value = ''; }} />
       </div>
       {opError && <p role="alert" className="error op-error">{opError}</p>}
-      <nav className="page-strip" aria-label="Pages">
-        {shownPages.map((p, i) => (
-          <div key={p.id} className={`thumb${i === cur ? ' current' : ''}`} draggable
-            onDragStart={(e) => e.dataTransfer.setData(PAGE_DRAG, String(i))}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              const from = e.dataTransfer.getData(PAGE_DRAG); // '' for drops that aren't a page thumbnail
-              if (from) { e.preventDefault(); move(Number(from), i); }
-            }}>
-            <button type="button" className="thumb-page" aria-label={`Page ${i + 1}`} aria-current={i === cur}
-              onClick={() => i !== cur && void switchTo(i)}>
-              <PageRenderer layout={p.layout} media={media} mode="edit" active={false} />
-            </button>
-            {i === cur && (
-              <div className="thumb-actions">
-                <button type="button" aria-label="Move page left" disabled={i === 0} onClick={() => move(i, i - 1)}>◀</button>
-                <button type="button" aria-label="Delete page" onClick={() => setConfirmDelete(true)}>✕</button>
-                <button type="button" aria-label="Move page right" disabled={i === pages.length - 1} onClick={() => move(i, i + 1)}>▶</button>
-              </div>
-            )}
-          </div>
-        ))}
-        <button type="button" className="thumb-add" aria-label="Add page" aria-expanded={picking} onClick={() => setPicking((v) => !v)}>+</button>
+      <nav className={`page-strip${pagesOpen ? ' open' : ''}`} aria-label="Pages">
+        <button type="button" className="strip-tab" aria-expanded={pagesOpen} onClick={() => setPagesOpen((v) => !v)}>
+          Pages ({pages.length}) <span aria-hidden>{pagesOpen ? '▾' : '▸'}</span>
+        </button>
+        {pagesOpen && (
+        <div className="strip-list">
+          {shownPages.map((p, i) => (
+            <div key={p.id} className={`thumb${i === cur ? ' current' : ''}`} draggable
+              onDragStart={(e) => e.dataTransfer.setData(PAGE_DRAG, String(i))}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                const from = e.dataTransfer.getData(PAGE_DRAG); // '' for drops that aren't a page thumbnail
+                if (from) { e.preventDefault(); move(Number(from), i); }
+              }}>
+              <button type="button" className="thumb-page" aria-label={`Page ${i + 1}`} aria-current={i === cur}
+                onClick={() => i !== cur && void switchTo(i)}>
+                <PageRenderer layout={p.layout} media={media} mode="edit" active={false} />
+              </button>
+              {i === cur && (
+                <div className="thumb-actions">
+                  <button type="button" aria-label="Move page left" disabled={i === 0} onClick={() => move(i, i - 1)}>◀</button>
+                  <button type="button" aria-label="Delete page" onClick={() => setConfirmDelete(true)}>✕</button>
+                  <button type="button" aria-label="Move page right" disabled={i === pages.length - 1} onClick={() => move(i, i + 1)}>▶</button>
+                </div>
+              )}
+            </div>
+          ))}
+          <button type="button" className="thumb-add" aria-label="Add page" aria-expanded={picking} onClick={() => setPicking((v) => !v)}>+</button>
+        </div>
+        )}
       </nav>
       {confirmDelete && (
         <div className="inline-confirm" role="alertdialog" aria-label="Delete page">
@@ -408,13 +435,13 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
       )}
       {picking && (
         <div className="template-picker" role="dialog" aria-label="Pick a template" ref={pickRef}>
+          <button type="button" className="template-close" aria-label="Close" title="Close" onClick={() => setPicking(false)}>×</button>
           {templates.map((t) => (
             <button key={t.id} type="button" className="template" onClick={() => addPage(t.id)}>
               <PageRenderer layout={t.layout} media={noMedia} mode="edit" active={false} />
               <span>{t.name}</span>
             </button>
           ))}
-          <button type="button" className="secondary template-cancel" onClick={() => setPicking(false)}>Cancel</button>
         </div>
       )}
     </main>

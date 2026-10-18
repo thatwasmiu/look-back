@@ -1,0 +1,13 @@
+# No outer nginx on the host? This nginx terminates HTTPS itself on 80/443:
+#   docker compose -f compose.yml -f compose.standalone.yml up -d
+# Needs certs/fullchain.pem + certs/privkey.pem next to compose.yml (see README).
+services:
+  nginx:
+    environment:
+      LOOKBACK_MODE: standalone
+    ports: !override
+      - "80:80"
+      - "443:443"
+    volumes: !override
+      - ./certs:/etc/nginx/certs:ro
+      - media:/data/media:ro

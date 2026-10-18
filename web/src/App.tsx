@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import AlbumList from './pages/AlbumList';
 import Viewer from './pages/Viewer';
 import Editor from './pages/Editor';
+import SharedAlbum from './pages/SharedAlbum';
 
 // Dev-only renderer/viewer showcases; import.meta.env.DEV is false in builds, so they're tree-shaken out.
 const Preview = import.meta.env.DEV ? lazy(() => import('./dev/Preview')) : null;
@@ -28,6 +29,7 @@ export default function App() {
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/s/:token" element={<SharedAlbum />} /> {/* public share link: outside the login gate */}
         {Preview && <Route path="/dev/preview" element={<Suspense><Preview /></Suspense>} />}
         {ViewerPreview && <Route path="/dev/viewer" element={<Suspense><ViewerPreview /></Suspense>} />}
         {TemplatesPreview && <Route path="/dev/templates" element={<Suspense><TemplatesPreview /></Suspense>} />}
