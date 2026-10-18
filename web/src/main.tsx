@@ -5,6 +5,8 @@ import '@fontsource/dancing-script/latin.css';
 import '@fontsource/dancing-script/vietnamese.css';
 import '@fontsource/patrick-hand/latin.css';
 import '@fontsource/patrick-hand/vietnamese.css';
+import '@fontsource/bangers/latin.css';
+import '@fontsource/bangers/vietnamese.css';
 import './styles.css';
 import './cqPolyfill';
 

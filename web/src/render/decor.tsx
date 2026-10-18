@@ -4,12 +4,13 @@ import type { FrameEl, TapeEl, TextEl } from '@scrapbook/shared';
 export const fontFamily: Record<TextEl['font'], string> = {
   'dancing-script': "'Dancing Script', cursive",
   'patrick-hand': "'Patrick Hand', cursive",
+  bangers: "'Bangers', Impact, sans-serif",
 };
 
 export const frameStyleLabels: Record<FrameEl['frameStyle'], string> = {
   polaroid: 'Polaroid', 'instant-mini': 'Instant mini', plain: 'Thin white', rounded: 'Rounded', corners: 'Photo corners',
   stamp: 'Stamp', film: 'Film strip', scallop: 'Scalloped', 'kraft-mat': 'Kraft mat', 'double-line': 'Double line',
-  doodle: 'Hand-drawn', torn: 'Torn paper', circle: 'Circle', heart: 'Heart',
+  doodle: 'Hand-drawn', torn: 'Torn paper', circle: 'Circle', heart: 'Heart', panel: 'Manga panel',
 };
 export const tapeStyles: TapeEl['tapeStyle'][] = ['yellow', 'pink', 'mint', 'kraft'];
 

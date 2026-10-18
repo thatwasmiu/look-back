@@ -13,7 +13,7 @@ function particles(seed: number, n: number): P[] {
 const vars = (p: P): CSSProperties =>
   ({ '--x': p.x.toFixed(3), '--y': p.y.toFixed(3), '--s': p.s.toFixed(3), '--d': p.d.toFixed(3), '--t': p.t.toFixed(3), '--h': p.h.toFixed(3) }) as CSSProperties;
 
-const PAGE_COUNT: Record<EffectEl['effect'], number> = { sparkles: 16, hearts: 10, petals: 12, confetti: 22, bokeh: 10, 'light-leak': 0, bubbles: 12 };
+const PAGE_COUNT: Record<EffectEl['effect'], number> = { sparkles: 16, hearts: 10, petals: 12, confetti: 22, bokeh: 10, 'light-leak': 0, bubbles: 12, 'speed-lines': 0, 'focus-lines': 0, screentone: 0 };
 
 // On the page: plays inside the element's own box.
 export function EffectView({ effect }: { effect: EffectEl['effect'] }) {
@@ -38,6 +38,7 @@ export function BackgroundEffectView({ kind }: { kind: BackgroundEffect }) {
 
 export const pageEffectLabels: Record<EffectEl['effect'], string> = {
   sparkles: 'Sparkles', hearts: 'Floating hearts', petals: 'Falling petals', confetti: 'Confetti', bokeh: 'Bokeh lights', 'light-leak': 'Light leak', bubbles: 'Bubbles',
+  'speed-lines': 'Speed lines', 'focus-lines': 'Focus lines', screentone: 'Screentone',
 };
 export const deskColorLabels: Record<BackgroundColor, string> = {
   walnut: 'Walnut', espresso: 'Espresso', sage: 'Sage', rose: 'Dusty rose', ocean: 'Ocean', plum: 'Plum', slate: 'Slate', night: 'Night', terracotta: 'Terracotta',

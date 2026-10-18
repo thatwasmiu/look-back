@@ -21,6 +21,8 @@ type Props = {
 
 const backgrounds: PageLayout['background'][] = ['paper-cream', 'paper-kraft', 'paper-grid', 'paper-dots'];
 const duration = (s: number | null) => (s ? `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}` : '');
+// Bangers (sound effects) belongs to manga albums; the scrapbook Font picker keeps its two fonts.
+const SCRAPBOOK_FONTS: TextEl['font'][] = ['dancing-script', 'patrick-hand'];
 const inks = ['#4a3b2c', '#3b2a1a', '#7a4a2e', '#a33a2a', '#2f5d7c', '#3f6b3a'];
 // Swatch preview: an empty frame (paper inside), drawn by the real renderer so the list matches the page.
 const SAMPLE: FrameEl = { type: 'frame', id: 'sample', x: 0, y: 0, w: 1, h: 1, rotation: 0, z: 0, frameStyle: 'polaroid', mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } };
@@ -107,7 +109,7 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
             <button key={t} type="button" className="swatch tape-swatch" aria-label={`${t} tape`} onClick={() => add(newTape(t))}><Tape tapeStyle={t} /></button>
           ))}
           {picker === 'font' && text && <>
-            {(Object.keys(fontFamily) as TextEl['font'][]).map((f) => (
+            {SCRAPBOOK_FONTS.map((f) => (
               <button key={f} type="button" className="font-option" aria-pressed={text.font === f} style={{ fontFamily: fontFamily[f] }} onClick={() => setText({ font: f })}>Aa</button>
             ))}
             <small className="picker-hint">double-tap text to edit</small>

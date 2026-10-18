@@ -3,6 +3,7 @@ import type { FrameEl, MediaDTO } from '@scrapbook/shared';
 import { mediaUrl } from '../mediaUrl';
 import { BlurImage } from './BlurImage';
 import { VideoPlayer } from './VideoPlayer';
+import { PanelFrame } from '../manga/render';
 
 // Deckle edge for 'torn' frames: deterministic jitter so every render (and every frame) matches.
 const TORN_CLIP = (() => {
@@ -21,6 +22,7 @@ const TORN_CLIP = (() => {
 type Props = { el: FrameEl; media: MediaDTO | undefined; mode: 'view' | 'edit'; active: boolean };
 
 export function FrameView({ el, media, mode, active }: Props) {
+  if (el.frameStyle === 'panel') return <PanelFrame el={el}>{content(el, media, mode, active)}</PanelFrame>;
   return (
     <div className={`frame frame-${el.frameStyle}`} data-frame-id={el.id} style={el.frameStyle === 'torn' ? { clipPath: TORN_CLIP } : undefined}>
       <div className="frame-window">{content(el, media, mode, active)}</div>

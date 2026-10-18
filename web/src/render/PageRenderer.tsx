@@ -4,6 +4,7 @@ import { FrameView } from './FrameView';
 import { Tape, fontFamily, stickers } from './decor';
 import { EffectView } from './effects';
 import './render.css';
+import { MangaText, isMangaText } from '../manga/render';
 
 type RenderProps = {
   layout: PageLayout; media: Map<string, MediaDTO>; mode: 'view' | 'edit';
@@ -38,6 +39,7 @@ function element(el: PageElement, media: Map<string, MediaDTO>, mode: 'view' | '
       return S ? <S /> : null;
     }
     case 'text':
+      if (isMangaText(el)) return <MangaText el={el} />;
       return <div className="text" style={{ fontFamily: fontFamily[el.font], color: el.color, fontSize: `calc(${el.size * 100} * var(--cqh))` }}>{el.text}</div>;
     case 'effect': return <EffectView effect={el.effect} />;
   }

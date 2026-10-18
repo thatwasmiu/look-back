@@ -21,6 +21,9 @@
     url(../assets/paper-fibers.webp), url(../assets/paper-grain.webp), url(../assets/paper-mottle.webp) 0 0 / 600px 600px,
     #c79f6e;
 }
+.bg-paper-white { /* manga pages: clean, faintly toothy paper */
+  background: url(../assets/paper-grain.webp), #fbfaf6;
+}
 .bg-paper-grid {
   background:
     radial-gradient(ellipse 85% 75% at 50% 45%, transparent 60%, rgba(120, 100, 60, .14)),
