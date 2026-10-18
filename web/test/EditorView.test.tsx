@@ -501,3 +501,49 @@ test('manga: with a panel selected, new speed lines start over that panel instea
   const fx = container.querySelector<HTMLElement>('.edit-page .el-effect')!;
   expect([fx.style.left, fx.style.top, fx.style.width, fx.style.height]).toEqual(['10%', '10%', '50%', '40%']);
 });
+
+test('manga: Shape lets each corner of a panel move on its own; Done saves it as one change, Reset squares it', async () => {
+  const user = userEvent.setup();
+  const { api, container } = renderEditor(mangaBundle([mangaPanel]));
+  fireEvent.pointerDown(container.querySelector('[data-el="p1"]')!);
+  await user.click(screen.getByRole('button', { name: 'Shape' }));
+  const corner3 = screen.getByRole('button', { name: 'Corner 3' }); // bottom-right
+  corner3.focus();
+  await user.keyboard('{ArrowLeft}{ArrowLeft}{ArrowUp}');
+  await user.click(screen.getByRole('button', { name: 'Done' }));
+  await waitFor(() => expect(api.savePage).toHaveBeenLastCalledWith('p0', expect.objectContaining({
+    elements: [expect.objectContaining({ id: 'p1', x: 0.1, y: 0.1, shape: [[0, 0], [1, 0], [0.96, 0.98], [0, 1]] })],
+  }), undefined));
+  expect(container.querySelector<HTMLElement>('[data-frame-id="p1"] .frame-window')!.style.clipPath).toBe('polygon(0% 0%, 100% 0%, 96% 98%, 0% 100%)');
+
+  await user.click(screen.getByRole('button', { name: 'Shape' }));
+  await user.click(screen.getByRole('button', { name: 'Reset' }));
+  await user.click(screen.getByRole('button', { name: 'Done' }));
+  await waitFor(() => expect(api.savePage).toHaveBeenLastCalledWith('p0', expect.objectContaining({
+    elements: [expect.objectContaining({ id: 'p1', shape: [[0, 0], [1, 0], [1, 1], [0, 1]] })],
+  }), undefined));
+});
+
+test('manga: dragging a Shape corner moves it, even when the browser refuses pointer capture', async () => {
+  const user = userEvent.setup();
+  const w = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(200);
+  const h = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(200);
+  const cap = vi.fn(() => { throw new DOMException('Invalid pointer id', 'NotFoundError'); });
+  (HTMLElement.prototype as unknown as { setPointerCapture: unknown }).setPointerCapture = cap;
+  try {
+    const { container } = renderEditor(mangaBundle([mangaPanel]));
+    fireEvent.pointerDown(container.querySelector('[data-el="p1"]')!);
+    await user.click(screen.getByRole('button', { name: 'Shape' }));
+    const handle = screen.getByRole('button', { name: 'Corner 3' });
+    const overlay = container.querySelector('.shape-overlay')!;
+    // jsdom has no PointerEvent (clientX would be dropped): pointer-typed MouseEvents carry the coordinates.
+    const ptr = (type: string, x: number, y: number) => new MouseEvent(type, { bubbles: true, clientX: x, clientY: y });
+    fireEvent(handle, ptr('pointerdown', 300, 300));
+    fireEvent(overlay, ptr('pointermove', 260, 280)); // −40px, −20px of a 200px box
+    fireEvent(overlay, ptr('pointerup', 260, 280));
+    expect(container.querySelector('.shape-outline polygon')!.getAttribute('points')).toBe('0,0 100,0 80,90 0,100');
+  } finally {
+    w.mockRestore(); h.mockRestore();
+    delete (HTMLElement.prototype as unknown as { setPointerCapture?: unknown }).setPointerCapture;
+  }
+});

@@ -13,7 +13,8 @@ type Props = {
   commit(next: PageLayout | ((l: PageLayout) => PageLayout), select?: string | null, coalesce?: string): void;
   undo(): void; redo(): void; canUndo: boolean; canRedo: boolean;
   status: SaveStatus; save(): void;
-  crop?(): void; // selected filled frame → crop mode (double-tap alone is unreliable on phones)
+  crop?(): void;
+  editShape?(): void; // manga panel → shape mode (move its corners) // selected filled frame → crop mode (double-tap alone is unreliable on phones)
   zoom: number; setZoom(z: number): void;
   bgEffect: BackgroundEffect; setBgEffect(e: BackgroundEffect): void;
   bgColor: BackgroundColor; setBgColor(c: BackgroundColor): void;
@@ -37,7 +38,7 @@ const statusLabel: Record<SaveStatus, string> = { saved: 'Saved', saving: 'Savin
 
 // Laptop: a bar above the page. Phone (coarse pointer or < 700px, see CSS): a sheet pinned to the bottom,
 // pickers open above it.
-export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo, status, save, crop, zoom, setZoom, bgEffect, setBgEffect, bgColor, setBgColor, music = null, onMusicFile, onMusicRemove, mode = 'scrapbook', readingDirection = 'ltr', setReadingDirection }: Props) {
+export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo, status, save, crop, zoom, setZoom, bgEffect, setBgEffect, bgColor, setBgColor, editShape, music = null, onMusicFile, onMusicRemove, mode = 'scrapbook', readingDirection = 'ltr', setReadingDirection }: Props) {
   const manga = mode === 'manga';
   const [picker, setPicker] = useState<'frame' | 'frameStyle' | 'sticker' | 'tape' | 'bg' | 'effect' | 'albumFx' | 'font' | 'color' | MangaPicker | null>(null);
   const toggle = (p: typeof picker) => setPicker((cur) => (cur === p ? null : p));
@@ -161,6 +162,7 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
         )}
         {crop && selected?.type === 'frame' && selected.mediaId && <button type="button" onClick={crop}>Crop</button>}
         {frame?.mediaId && <button type="button" onClick={() => commit(assignMedia(layout, frame.id, null))}>Remove photo</button>}
+        {frame?.frameStyle === 'panel' && editShape && <button type="button" onClick={editShape}>Shape</button>}
         {frame?.frameStyle === 'panel' && <MangaPanelTools panel={frame} layout={layout} commit={commit} />}
         {manga && text && <MangaTextTools text={text} layout={layout} commit={commit} />}
         {selected && <button type="button" title="Duplicate (Ctrl+C, Ctrl+V)" onClick={() => add(duplicate(selected))}>⧉ Duplicate</button>}

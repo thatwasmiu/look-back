@@ -51,3 +51,12 @@
 .fx-focus-lines { background: repeating-conic-gradient(from 0deg at 50% 50%, #111d 0 1.2deg, transparent 1.2deg 6deg);
   -webkit-mask: radial-gradient(circle at 50% 50%, transparent 34%, #000 62%); mask: radial-gradient(circle at 50% 50%, transparent 34%, #000 62%); }
 .fx-screentone { background: radial-gradient(#1118 .14cqh, transparent .2cqh) 0 0 / .7cqh .7cqh; }
+
+/* Shape mode: corner handles over a panel (sizes in px: they must stay grabbable at any zoom). */
+.el:has(> .shape-overlay) { z-index: 1000 !important; }
+.shape-overlay { position: absolute; inset: 0; z-index: 2; touch-action: none; box-shadow: 0 0 0 100vmax #0004; }
+.shape-outline { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.shape-outline polygon { fill: none; stroke: #fffaf0; stroke-width: .6; stroke-dasharray: 2 1.5; vector-effect: non-scaling-stroke; }
+.shape-handle { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; padding: 0; border-radius: 50%;
+  background: #fff; border: 3px solid var(--accent, #b5402e); box-shadow: 0 1px 4px #0006; cursor: grab; touch-action: none; }
+.shape-handle:focus-visible { outline: 3px solid #4a90d9; }
