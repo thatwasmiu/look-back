@@ -94,7 +94,7 @@ const layouts: PageLayout[] = [
 ];
 
 export const exampleAlbum: AlbumBundle = {
-  album: { id: EXAMPLE_ALBUM_ID, title: 'Look Back — a tribute', coverMediaId: 'lb-cover', backgroundEffect: 'snow', backgroundColor: 'night', shareToken: null, musicMediaId: null },
+  album: { id: EXAMPLE_ALBUM_ID, title: 'Look Back — a tribute', coverMediaId: 'lb-cover', backgroundEffect: 'snow', backgroundColor: 'night', shareToken: null, musicMediaId: null, mode: 'scrapbook', readingDirection: 'ltr' },
   pages: layouts.map((layout, i) => ({ id: `${EXAMPLE_ALBUM_ID}-p${i}`, albumId: EXAMPLE_ALBUM_ID, position: i, layout })),
   media,
 };

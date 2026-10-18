@@ -1,4 +1,4 @@
-import type { BackgroundColor, BackgroundEffect, PageLayout } from './layout'
+import type { AlbumMode, BackgroundColor, BackgroundEffect, PageLayout, ReadingDirection } from './layout'
 
 export type MediaKind = 'image' | 'video' | 'audio'
 export type MediaStatus = 'uploading' | 'processing' | 'ready' | 'failed'
@@ -12,7 +12,8 @@ export type MediaDTO = {
 export type PageDTO = { id: string; albumId: string; position: number; layout: PageLayout }
 export type AlbumDTO = { id: string; title: string; coverMediaId: string | null; backgroundEffect: BackgroundEffect; backgroundColor: BackgroundColor
   shareToken: string | null // secret share-link code; only ever sent to the owner
-  musicMediaId: string | null } // background music (an audio media row of this album), looped while viewing
+  musicMediaId: string | null // background music (an audio media row of this album), looped while viewing
+  mode: AlbumMode; readingDirection: ReadingDirection } // fixed at creation; direction only matters for manga
 // coverPage: the first page and the media in its frames, drawn as the card when no cover photo is set.
 export type AlbumSummary = AlbumDTO & { coverThumb: string | null; pageCount: number; coverPage?: { layout: PageLayout; media: MediaDTO[] } | null }
 export type AlbumBundle = { album: AlbumDTO; pages: PageDTO[]; media: MediaDTO[] }

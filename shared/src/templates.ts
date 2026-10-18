@@ -1,4 +1,5 @@
 import type { FrameEl, PageElement, PageLayout, TapeEl, TextEl } from './layout'
+import { mangaTemplates } from './mangaTemplates'
 
 export type Template = { id: string; name: string; layout: PageLayout }
 
@@ -153,8 +154,11 @@ export const templates: Template[] = [
   ] } },
 ]
 
+// Scrapbook page templates first, then manga page layouts.
+export const findTemplate = (id: string): Template | undefined => templates.find((x) => x.id === id) ?? mangaTemplates.find((x) => x.id === id)
+
 export function instantiateTemplate(id: string, newId: () => string): PageLayout {
-  const t = templates.find((x) => x.id === id)
+  const t = findTemplate(id)
   if (!t) throw new Error(`unknown template: ${id}`)
   const layout = structuredClone(t.layout) // deep: nested crop objects must not be shared with the template
   for (const e of layout.elements) e.id = newId()

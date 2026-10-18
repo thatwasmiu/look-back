@@ -25,22 +25,37 @@ export const FRAME_STYLES = [
   'kraft-mat', 'double-line', 'doodle', 'torn', 'circle', 'heart',
 ] as const
 
+// Album modes: scrapbook (the original) or manga. Manga albums can read right-to-left.
+export const ALBUM_MODES = ['scrapbook', 'manga'] as const
+export type AlbumMode = (typeof ALBUM_MODES)[number]
+export const READING_DIRECTIONS = ['ltr', 'rtl'] as const
+export type ReadingDirection = (typeof READING_DIRECTIONS)[number]
+
+const unit = z.number().min(0).max(1)
 const frameSchema = z.object({
   ...baseShape,
   type: z.literal('frame'),
-  frameStyle: z.enum(FRAME_STYLES),
+  // 'panel' is a manga panel; it isn't in FRAME_STYLES, so the scrapbook frame picker never offers it.
+  frameStyle: z.enum([...FRAME_STYLES, 'panel']),
   mediaId: z.string().nullable(),
   crop: cropSchema,
+  // Manga panels only: polygon within the element box (0..1), border weight, B&W "ink" photo, screentone overlay.
+  shape: z.array(z.tuple([unit, unit])).min(3).max(8).optional(),
+  border: z.enum(['none', 'thin', 'normal']).optional(),
+  ink: z.boolean().optional(),
+  tone: z.boolean().optional(),
 })
 // Page effects play inside their own box; album background effects play behind the whole book.
 export const PAGE_EFFECTS = ['sparkles', 'hearts', 'petals', 'confetti', 'bokeh', 'light-leak', 'bubbles'] as const
+// Manga overlays: static (not animated), offered only in manga albums.
+export const MANGA_EFFECTS = ['speed-lines', 'focus-lines', 'screentone'] as const
 export const BACKGROUND_EFFECTS = ['none', 'snow', 'petals', 'fireflies', 'stars', 'rain', 'bubbles'] as const
 export type BackgroundEffect = (typeof BACKGROUND_EFFECTS)[number]
 // Desk color behind the album (viewer and editor). 'walnut' is the original brown.
 export const BACKGROUND_COLORS = ['walnut', 'espresso', 'sage', 'rose', 'ocean', 'plum', 'slate', 'night', 'terracotta'] as const
 export type BackgroundColor = (typeof BACKGROUND_COLORS)[number]
 
-const effectSchema = z.object({ ...baseShape, type: z.literal('effect'), effect: z.enum(PAGE_EFFECTS) })
+const effectSchema = z.object({ ...baseShape, type: z.literal('effect'), effect: z.enum([...PAGE_EFFECTS, ...MANGA_EFFECTS]) })
 const tapeSchema = z.object({
   ...baseShape,
   type: z.literal('tape'),
@@ -51,15 +66,18 @@ const textSchema = z.object({
   ...baseShape,
   type: z.literal('text'),
   text: z.string().max(500),
-  font: z.enum(['dancing-script', 'patrick-hand']),
+  font: z.enum(['dancing-script', 'patrick-hand', 'bangers']),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   size: z.number().gt(0), // fraction of page height
+  // Manga: speech / shout / thought bubble, narration box, sound-effect lettering ('plain' = ordinary text).
+  textStyle: z.enum(['plain', 'speech', 'shout', 'thought', 'narration', 'sfx']).optional(),
+  tail: z.enum(['bl', 'br', 'tl', 'tr', 'none']).optional(), // bubble tail corner
 })
 
 export const pageElementSchema = z.discriminatedUnion('type', [frameSchema, tapeSchema, stickerSchema, textSchema, effectSchema])
 
 export const pageLayoutSchema = z.object({
-  background: z.enum(['paper-cream', 'paper-kraft', 'paper-grid', 'paper-dots']),
+  background: z.enum(['paper-cream', 'paper-kraft', 'paper-grid', 'paper-dots', 'paper-white']),
   elements: z.array(pageElementSchema).max(200),
 }).superRefine((l, ctx) => {
   const seen = new Set<string>()
@@ -84,5 +102,7 @@ export const albumDesignSchema = z.object({
   backgroundColor: z.enum(BACKGROUND_COLORS),
   pages: z.array(pageLayoutSchema).min(1).max(100),
   music: z.string().regex(/^[a-z0-9-]{1,40}$/).optional(), // name of a server-side template track (TEMPLATE_MUSIC_DIR)
+  mode: z.enum(ALBUM_MODES).optional(),
+  readingDirection: z.enum(READING_DIRECTIONS).optional(),
 })
 export type AlbumDesign = z.infer<typeof albumDesignSchema>
