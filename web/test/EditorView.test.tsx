@@ -371,3 +371,15 @@ test('pasting a clipboard image uploads it into the selected empty frame', () =>
   fireEvent(window, Object.assign(new Event('paste'), { clipboardData: { files: [png] } }));
   expect(add).toHaveBeenLastCalledWith([png], 'f1');
 });
+
+test('with text selected, Font and Color open pickers that restyle it', async () => {
+  const user = userEvent.setup();
+  const { container } = setup(okApi());
+  expect(screen.queryByRole('button', { name: 'Font' })).toBeNull();
+  await user.click(screen.getByRole('button', { name: 'Text' }));
+  await user.click(screen.getByRole('button', { name: 'Color' }));
+  await user.click(screen.getByRole('button', { name: 'ink #a33a2a' }));
+  expect(container.querySelector<HTMLElement>('.edit-page .el-text .text')!.style.color).toBe('rgb(163, 58, 42)');
+  await user.click(screen.getByRole('button', { name: 'Font' }));
+  expect(screen.getAllByRole('button', { name: 'Aa' })).toHaveLength(2);
+});

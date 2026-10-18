@@ -398,6 +398,8 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
         <button type="button" className="panels-toggle" aria-pressed={panelsHidden} onClick={() => setPanelsHidden((v) => !v)}>
           {panelsHidden ? 'Show tools' : 'Hide tools'}
         </button>
+        {/* New tab: the editor keeps its state (and autosave) while the guide is open. */}
+        <a className="guide-help" href="/guide" target="_blank" rel="noopener" aria-label="Hướng dẫn sử dụng" title="Hướng dẫn sử dụng">?</a>
       </header>
       {page && (
         <Toolbar layout={layout} selected={selected} commit={commit}
@@ -494,7 +496,10 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
       )}
       {picking && (
         <div className="template-picker" role="dialog" aria-label="Pick a template" ref={pickRef}>
-          <button type="button" className="template-close" aria-label="Close" title="Close" onClick={() => setPicking(false)}>×</button>
+          <div className="template-head">
+            <span>New page</span>
+            <button type="button" className="template-close" aria-label="Close" title="Close" onClick={() => setPicking(false)}>×</button>
+          </div>
           {templates.map((t) => (
             <button key={t.id} type="button" className="template" onClick={() => addPage(t.id)}>
               <PageRenderer layout={t.layout} media={noMedia} mode="edit" active={false} />

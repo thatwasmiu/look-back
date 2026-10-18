@@ -30,7 +30,7 @@ const statusLabel: Record<SaveStatus, string> = { saved: 'Saved', saving: 'Savin
 // Laptop: a bar above the page. Phone (coarse pointer or < 700px, see CSS): a sheet pinned to the bottom,
 // pickers open above it.
 export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo, status, save, crop, zoom, setZoom, bgEffect, setBgEffect, bgColor, setBgColor }: Props) {
-  const [picker, setPicker] = useState<'frame' | 'frameStyle' | 'sticker' | 'tape' | 'bg' | 'effect' | 'albumFx' | null>(null);
+  const [picker, setPicker] = useState<'frame' | 'frameStyle' | 'sticker' | 'tape' | 'bg' | 'effect' | 'albumFx' | 'font' | 'color' | null>(null);
   const toggle = (p: typeof picker) => setPicker((cur) => (cur === p ? null : p));
   const ref = useRef<HTMLDivElement>(null);
   // An open picker closes on a press anywhere outside the toolbar, or on Escape.
@@ -83,6 +83,18 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
           {picker === 'tape' && tapeStyles.map((t) => (
             <button key={t} type="button" className="swatch tape-swatch" aria-label={`${t} tape`} onClick={() => add(newTape(t))}><Tape tapeStyle={t} /></button>
           ))}
+          {picker === 'font' && text && <>
+            {(Object.keys(fontFamily) as TextEl['font'][]).map((f) => (
+              <button key={f} type="button" className="font-option" aria-pressed={text.font === f} style={{ fontFamily: fontFamily[f] }} onClick={() => setText({ font: f })}>Aa</button>
+            ))}
+            <small className="picker-hint">double-tap text to edit</small>
+          </>}
+          {picker === 'color' && text && <>
+            {inks.map((c) => (
+              <button key={c} type="button" className="ink" aria-label={`ink ${c}`} aria-pressed={text.color === c} style={{ background: c }} onClick={() => setText({ color: c })} />
+            ))}
+            <input type="color" className="ink-custom" aria-label="Text color" value={text.color} onChange={(e) => setText({ color: e.target.value }, `color:${text.id}`)} />
+          </>}
           {picker === 'bg' && backgrounds.map((b) => (
             <button key={b} type="button" aria-label={b} aria-pressed={layout.background === b}
               className="swatch bg-swatch" onClick={() => { commit({ ...layout, background: b }); setPicker(null); }}>
@@ -100,6 +112,12 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
         <button type="button" aria-expanded={picker === 'bg'} onClick={() => toggle('bg')}>Paper</button>
         <button type="button" aria-expanded={picker === 'effect'} onClick={() => toggle('effect')}>Effect</button>
         <button type="button" aria-expanded={picker === 'albumFx'} onClick={() => toggle('albumFx')}>Background</button>
+        {text && <button type="button" aria-expanded={picker === 'font'} onClick={() => toggle('font')}>Font</button>}
+        {text && (
+          <button type="button" aria-expanded={picker === 'color'} onClick={() => toggle('color')}>
+            <span className="color-dot" style={{ background: text.color }} aria-hidden />Color
+          </button>
+        )}
         {crop && selected?.type === 'frame' && selected.mediaId && <button type="button" onClick={crop}>Crop</button>}
         {frame?.mediaId && <button type="button" onClick={() => commit(assignMedia(layout, frame.id, null))}>Remove photo</button>}
         {selected && <button type="button" title="Duplicate (Ctrl+C, Ctrl+V)" onClick={() => add(duplicate(selected))}>⧉ Duplicate</button>}
@@ -128,18 +146,6 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
         </span>
         <span className={`status status-${status}`} role="status">{statusLabel[status]}</span>
       </div>
-      {text && (
-        <div className="tools text-tools">
-          {(Object.keys(fontFamily) as TextEl['font'][]).map((f) => (
-            <button key={f} type="button" aria-pressed={text.font === f} style={{ fontFamily: fontFamily[f] }} onClick={() => setText({ font: f })}>Aa</button>
-          ))}
-          {inks.map((c) => (
-            <button key={c} type="button" className="ink" aria-label={`ink ${c}`} aria-pressed={text.color === c} style={{ background: c }} onClick={() => setText({ color: c })} />
-          ))}
-          <input type="color" aria-label="Text color" value={text.color} onChange={(e) => setText({ color: e.target.value }, `color:${text.id}`)} />
-          <small>double-tap text to edit</small>
-        </div>
-      )}
     </div>
   );
 }

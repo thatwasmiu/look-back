@@ -1,4 +1,4 @@
-import type { AlbumBundle, AlbumDTO, BackgroundColor, BackgroundEffect, AlbumSummary, MediaDTO, PageDTO, PageLayout } from '@scrapbook/shared';
+import type { AlbumBundle, AlbumDesign, AlbumDTO, BackgroundColor, BackgroundEffect, AlbumSummary, MediaDTO, PageDTO, PageLayout } from '@scrapbook/shared';
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -33,7 +33,7 @@ export const api = {
       (e) => { if (e instanceof ApiError && e.status === 401) return false; throw e; },
     ),
   listAlbums: () => req<AlbumSummary[]>('GET', '/albums'),
-  createAlbum: (title: string) => req<AlbumDTO>('POST', '/albums', { title }),
+  createAlbum: (title: string, from?: { fromAlbumId: string } | { design: AlbumDesign }) => req<AlbumDTO>('POST', '/albums', { title, ...from }),
   updateAlbum: (id: string, patch: { title?: string; coverMediaId?: string | null; backgroundEffect?: BackgroundEffect; backgroundColor?: BackgroundColor }) =>
     req<AlbumDTO>('PATCH', `/albums/${id}`, patch),
   deleteAlbum: (id: string) => req<void>('DELETE', `/albums/${id}`),

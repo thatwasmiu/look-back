@@ -83,11 +83,23 @@
 }
 @keyframes bg-rain { to { transform: translate(-3vh, 118vh); } }
 
+/* Bubbles: hollow circles with a glint, rising and wobbling (page: cqh units; album background: vh). */
+.fx-bubbles > i, .bgfx-bubbles > i {
+  border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, .75);
+  background: radial-gradient(circle at 32% 30%, rgba(255, 255, 255, .85) 0 12%, rgba(200, 235, 250, .18) 14% 70%, rgba(255, 255, 255, .3));
+}
+.fx-bubbles > i { top: 100%; width: calc(1 * var(--u) + var(--s) * 2.6 * var(--u)); aspect-ratio: 1;
+  animation: fx-rise calc(4.5s + var(--t) * 3.5s) ease-in calc(var(--d) * -8s) infinite; }
+.bgfx-bubbles > i { top: 104%; width: calc(.8vh + var(--s) * 2.4vh); aspect-ratio: 1;
+  animation: bg-bubble calc(9s + var(--t) * 8s) ease-in calc(var(--d) * -17s) infinite; }
+@keyframes bg-bubble { 0% { opacity: 0; transform: translate(0, 0); } 10% { opacity: .9; }
+  50% { transform: translate(calc((var(--h) - .5) * 5vw), -56vh); } 100% { opacity: .5; transform: translate(calc((var(--h) - .5) * -3vw), -112vh); } }
+
 /* Editor: a faint outline so an invisible-between-particles effect can still be found and selected. */
 .page-edit .el-effect { outline: .2cqh dashed rgba(255, 250, 240, .55); outline-offset: -.2cqh; }
 .page-view .el-effect { pointer-events: none; } /* never blocks taps on photos or videos */
 
 @media (prefers-reduced-motion: reduce) {
   .fx > i, .bgfx > i, .fx-light-leak { animation: none !important; }
-  .fx-sparkles > i, .fx-hearts > i, .fx-petals > i, .fx-confetti > i, .bgfx-petals > i { opacity: .8; top: calc(var(--y) * 100%); }
+  .fx-sparkles > i, .fx-hearts > i, .fx-petals > i, .fx-confetti > i, .bgfx-petals > i, .fx-bubbles > i, .bgfx-bubbles > i { opacity: .8; top: calc(var(--y) * 100%); }
 }

@@ -27,10 +27,49 @@ describe('albums', () => {
     const list = (await call('GET', '/api/albums')).json();
     expect(list.map((x: { title: string }) => x.title)).toEqual(['B', 'A']);
     expect(list[0]).toMatchObject({ pageCount: 1, coverThumb: null });
+    expect(list[0].coverPage).toMatchObject({ layout: { background: 'paper-kraft' }, media: [] }); // first page stands in for the cover
 
     const r = await call('PATCH', `/api/albums/${b.id}`, { title: 'B2' });
     expect(r.statusCode).toBe(200);
     expect(r.json().title).toBe('B2');
+  });
+
+  it('fromAlbumId copies pages, papers and colors but empties every frame; unknown template → 404', async () => {
+    const src = (await call('POST', '/api/albums', { title: 'Src' })).json();
+    await call('PATCH', `/api/albums/${src.id}`, { backgroundEffect: 'snow', backgroundColor: 'sage' });
+    const m = await t.pool.query(`insert into media (album_id, kind, status, variants) values ($1,'image','ready','{}') returning id`, [src.id]);
+    const layout = { background: 'paper-grid', elements: [
+      { type: 'frame', id: 'f1', x: 0.1, y: 0.1, w: 0.5, h: 0.4, rotation: 3, z: 1, frameStyle: 'heart', mediaId: m.rows[0].id, crop: { x: 0.2, y: 0.8, scale: 2 } },
+      { type: 'text', id: 't1', x: 0.1, y: 0.7, w: 0.5, h: 0.1, rotation: 0, z: 2, text: 'Hi', font: 'patrick-hand', color: '#4a3b2c', size: 0.05 },
+    ] };
+    await t.pool.query('update pages set layout = $2 where album_id = $1', [src.id, JSON.stringify(layout)]);
+    await t.pool.query(`insert into pages (album_id, position, layout) values ($1, 1, '{"background":"paper-kraft","elements":[]}')`, [src.id]);
+
+    const res = await call('POST', '/api/albums', { title: 'Copy', fromAlbumId: src.id });
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toMatchObject({ title: 'Copy', backgroundEffect: 'snow', backgroundColor: 'sage', coverMediaId: null });
+    const bundle = (await call('GET', `/api/albums/${res.json().id}`)).json();
+    expect(bundle.media).toEqual([]);
+    expect(bundle.pages.map((p: { layout: { background: string } }) => p.layout.background)).toEqual(['paper-grid', 'paper-kraft']);
+    expect(bundle.pages[0].layout.elements[0]).toMatchObject({ frameStyle: 'heart', rotation: 3, mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } });
+    expect(bundle.pages[0].layout.elements[1]).toMatchObject({ text: 'Hi' });
+
+    const missing = await call('POST', '/api/albums', { title: 'X', fromAlbumId: '00000000-0000-4000-8000-000000000000' });
+    expect(missing.statusCode).toBe(404);
+  });
+
+  it('design creates the pages and look it carries, frames emptied; a bad design is a 400', async () => {
+    const page = { background: 'paper-dots', elements: [
+      { type: 'frame', id: 'f1', x: 0.1, y: 0.1, w: 0.5, h: 0.4, rotation: 0, z: 1, frameStyle: 'polaroid', mediaId: 'lb-cover', crop: { x: 0.1, y: 0.1, scale: 3 } },
+    ] };
+    const res = await call('POST', '/api/albums', { title: 'Tpl', design: { backgroundColor: 'rose', backgroundEffect: 'stars', pages: [page, page] } });
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toMatchObject({ backgroundColor: 'rose', backgroundEffect: 'stars' });
+    const bundle = (await call('GET', `/api/albums/${res.json().id}`)).json();
+    expect(bundle.pages).toHaveLength(2);
+    expect(bundle.pages[1].layout.elements[0]).toMatchObject({ mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } });
+    expect((await call('POST', '/api/albums', { title: 'Bad', design: { backgroundColor: 'neon', backgroundEffect: 'none', pages: [page] } })).statusCode).toBe(400);
+    expect((await call('POST', '/api/albums', { title: 'Bad', design: { backgroundColor: 'rose', backgroundEffect: 'none', pages: [] } })).statusCode).toBe(400);
   });
 
   it('validates title and ids', async () => {

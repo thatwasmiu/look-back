@@ -33,8 +33,8 @@ const frameSchema = z.object({
   crop: cropSchema,
 })
 // Page effects play inside their own box; album background effects play behind the whole book.
-export const PAGE_EFFECTS = ['sparkles', 'hearts', 'petals', 'confetti', 'bokeh', 'light-leak'] as const
-export const BACKGROUND_EFFECTS = ['none', 'snow', 'petals', 'fireflies', 'stars', 'rain'] as const
+export const PAGE_EFFECTS = ['sparkles', 'hearts', 'petals', 'confetti', 'bokeh', 'light-leak', 'bubbles'] as const
+export const BACKGROUND_EFFECTS = ['none', 'snow', 'petals', 'fireflies', 'stars', 'rain', 'bubbles'] as const
 export type BackgroundEffect = (typeof BACKGROUND_EFFECTS)[number]
 // Desk color behind the album (viewer and editor). 'walnut' is the original brown.
 export const BACKGROUND_COLORS = ['walnut', 'espresso', 'sage', 'rose', 'ocean', 'plum', 'slate', 'night', 'terracotta'] as const
@@ -77,3 +77,11 @@ export type TextEl = z.infer<typeof textSchema>
 export type EffectEl = z.infer<typeof effectSchema>
 export type PageElement = z.infer<typeof pageElementSchema>
 export type PageLayout = z.infer<typeof pageLayoutSchema>
+
+// A whole album's look: what "New album → Start from" a built-in template sends (frames are emptied server-side).
+export const albumDesignSchema = z.object({
+  backgroundEffect: z.enum(BACKGROUND_EFFECTS),
+  backgroundColor: z.enum(BACKGROUND_COLORS),
+  pages: z.array(pageLayoutSchema).min(1).max(100),
+})
+export type AlbumDesign = z.infer<typeof albumDesignSchema>

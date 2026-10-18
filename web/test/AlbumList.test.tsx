@@ -81,3 +81,40 @@ test('Share creates a link the owner can copy, and Stop sharing revokes it', asy
   expect(fetchMock).toHaveBeenLastCalledWith('/api/albums/a1/share', expect.objectContaining({ method: 'DELETE' }));
   expect(await screen.findByRole('button', { name: 'Create share link' })).toBeTruthy();
 });
+
+test('New album can start from another album’s design (sent as fromAlbumId) and lands first in the list', async () => {
+  const src = { id: 'a1', title: 'Trip', coverMediaId: null, backgroundEffect: 'snow', backgroundColor: 'sage', shareToken: null, coverThumb: null, pageCount: 5 };
+  const created = { ...src, id: 'a2', title: 'Trip 2', shareToken: null };
+  const fetchMock = vi.fn().mockResolvedValueOnce(json(200, [src])).mockResolvedValueOnce(json(201, created));
+  setup(fetchMock);
+  await userEvent.click(await screen.findByRole('button', { name: 'New album' }));
+  await userEvent.type(screen.getByLabelText('Album title'), 'Trip 2');
+  await userEvent.click(screen.getAllByRole('radio', { name: 'Trip' }).at(-1)!); // the album, after the built-in Trip template
+  await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+  expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ title: 'Trip 2', fromAlbumId: 'a1' });
+  await waitFor(() => expect(screen.getAllByRole('link', { name: /Trip/ })[0].textContent).toContain('Trip 2'));
+  expect(screen.getAllByText(/5 pages/, { selector: 'small' })).toHaveLength(2);
+});
+
+test('New album can start from a built-in template: its whole design is sent', async () => {
+  const created = { id: 'a9', title: 'Sinh nhật', coverMediaId: null, backgroundEffect: 'stars', backgroundColor: 'rose', shareToken: null };
+  const fetchMock = vi.fn().mockResolvedValueOnce(json(200, [])).mockResolvedValueOnce(json(201, created));
+  setup(fetchMock);
+  await userEvent.click(await screen.findByRole('button', { name: 'New album' }));
+  await userEvent.type(screen.getByLabelText('Album title'), 'Sinh nhật');
+  await userEvent.click(screen.getByRole('radio', { name: 'Birthday' }));
+  expect(screen.getByRole('radio', { name: 'Birthday' }).getAttribute('aria-checked')).toBe('true');
+  await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+  const body = JSON.parse(fetchMock.mock.calls[1][1].body);
+  expect(body.design).toMatchObject({ backgroundColor: 'rose', backgroundEffect: 'stars' });
+  expect(body.design.pages.length).toBeGreaterThan(3);
+  expect(await screen.findByText(/6 pages/, { selector: 'small' })).toBeTruthy();
+});
+
+test('an album without a cover photo shows its first page on the card', async () => {
+  const layout = { background: 'paper-kraft', elements: [{ type: 'text', id: 't', x: 0.1, y: 0.1, w: 0.8, h: 0.1, rotation: 0, z: 1, text: 'Biển xanh', font: 'patrick-hand', color: '#4a3b2c', size: 0.05 }] };
+  const album = { id: 'a1', title: 'Trip', coverMediaId: null, backgroundEffect: 'none', backgroundColor: 'walnut', shareToken: null, coverThumb: null, pageCount: 1, coverPage: { layout, media: [] } };
+  setup(vi.fn().mockResolvedValueOnce(json(200, [album])));
+  expect(await screen.findByText('Biển xanh')).toBeTruthy();
+  expect(document.querySelector('.polaroid .cover-page .page.page-view')).not.toBeNull();
+});
