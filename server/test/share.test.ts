@@ -1,3 +1,6 @@
+import { mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import sharp from 'sharp';
 import { afterAll, describe, expect, it } from 'vitest';
 import { testApp } from './helpers.js';
 
@@ -68,5 +71,53 @@ describe('share links', () => {
     expect(s.statusCode).toBe(204);
     await owner('DELETE', `/api/albums/${shared.id}/share`);
     expect((await check(`/media/${shared.mediaId}/display.webp`, cookie)).statusCode).toBe(401);
+  });
+});
+
+describe('share link previews (Facebook, Zalo…)', () => {
+  const shareOf = async (id: string) => (await owner('POST', `/api/albums/${id}/share`)).json().shareToken as string;
+  const anon = (url: string) => t.app.inject({ method: 'GET', url, headers: { host: 'lookback.test' } });
+
+  it('the preview page carries the album title (escaped), page count, absolute image and link — no login needed', async () => {
+    const a = (await owner('POST', '/api/albums', { title: 'Hà Giang <3 & "bạn"' })).json();
+    const token = await shareOf(a.id);
+    const res = await anon(`/api/share/${token}/preview`);
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toMatch(/text\/html/);
+    const html = res.body;
+    expect(html).toContain('<meta property="og:title" content="Hà Giang &lt;3 &amp; &quot;bạn&quot;"');
+    expect(html).toMatch(/<meta property="og:description" content="1 trang · [^"]*Look Back"/);
+    expect(html).toMatch(new RegExp(`<meta property="og:image" content="https?://lookback\.test/api/share/${token}/preview\.jpg"`));
+    expect(html).toMatch(new RegExp(`<meta property="og:url" content="https?://lookback\.test/s/${token}"`));
+    expect(html).not.toContain('Hà Giang <3'); // never raw
+  });
+
+  it('unknown or revoked links give a 404 that reveals nothing', async () => {
+    const a = (await owner('POST', '/api/albums', { title: 'Bí mật' })).json();
+    const token = await shareOf(a.id);
+    await owner('DELETE', `/api/albums/${a.id}/share`);
+    for (const url of [`/api/share/${token}/preview`, `/api/share/${'x'.repeat(43)}/preview`, `/api/share/${token}/preview.jpg`]) {
+      const res = await anon(url);
+      expect(res.statusCode, url).toBe(404);
+      expect(res.body).not.toContain('Bí mật');
+    }
+  });
+
+  it('the preview image is the cover photo cut to 1200×630 JPEG; with no photos it falls back to the app image', async () => {
+    const a = await albumWithMedia('Ảnh');
+    await mkdir(join(t.config.mediaDir, a.mediaId), { recursive: true });
+    await sharp({ create: { width: 800, height: 600, channels: 3, background: '#4a90d9' } }).webp().toFile(join(t.config.mediaDir, a.mediaId, 'display.webp'));
+    await t.pool.query(`update media set variants = $2 where id = $1`, [a.mediaId, JSON.stringify({ display: `${a.mediaId}/display.webp`, original: `${a.mediaId}/display.webp` })]);
+    const token = await shareOf(a.id);
+    const img = await anon(`/api/share/${token}/preview.jpg`);
+    expect(img.statusCode).toBe(200);
+    expect(img.headers['content-type']).toBe('image/jpeg');
+    const meta = await sharp(img.rawPayload).metadata();
+    expect([meta.format, meta.width, meta.height]).toEqual(['jpeg', 1200, 630]);
+
+    const empty = (await owner('POST', '/api/albums', { title: 'Trống' })).json();
+    const res = await anon(`/api/share/${await shareOf(empty.id)}/preview.jpg`);
+    expect(res.statusCode).toBe(302);
+    expect(res.headers.location).toBe('/brand/og.jpg');
   });
 });

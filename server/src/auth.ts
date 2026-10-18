@@ -44,7 +44,8 @@ export function registerAuth(app: FastifyInstance, config: Config, pool: pg.Pool
       if (route === undefined || !route.startsWith('/api/')) return;
       const key = `${req.method} ${route}`;
       // Public: login, health, a share link's album, and the media check (it decides itself, below).
-      if (key === 'POST /api/auth/login' || key === 'GET /api/health' || key === 'GET /api/share/:token' || key === 'GET /api/auth/check') return;
+      if (key === 'POST /api/auth/login' || key === 'GET /api/health' || key === 'GET /api/share/:token' || key === 'GET /api/auth/check'
+        || key === 'GET /api/share/:token/preview' || key === 'GET /api/share/:token/preview.jpg') return;
       if (!req.session.get('owner')) return reply.code(401).send({ error: 'unauthorized' });
     });
 

@@ -1,8 +1,11 @@
 import { randomBytes } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import sharp from 'sharp';
 import type { FastifyInstance } from 'fastify';
 import type pg from 'pg';
 import { loadBundle, uuidParams } from './albums.js';
 import type { Config } from './config.js';
+import { absPath } from './storage.js';
 
 // Read-only share links: a secret per-album code (32 random bytes). Anyone holding it can view that album —
 // nothing else. Revoking clears it; sharing again makes a new code, so old copies stay dead.
@@ -33,7 +36,50 @@ export function registerShare(app: FastifyInstance, pool: pg.Pool, config: Confi
     reply.setCookie(SHARE_COOKIE, token, { path: '/', httpOnly: true, sameSite: 'lax', secure: config.cookieSecure, maxAge: 30 * 24 * 3600 });
     return { ...bundle, album: { ...bundle.album, shareToken: null } };
   });
+
+  // Link previews (Facebook, Zalo, Messenger…): crawlers don't run the app, so nginx sends them here for the
+  // album's own title / cover. Public like the share link itself; a dead or wrong token reveals nothing.
+  const sharedAlbum = async (token: string) => (isShareToken(token)
+    ? (await pool.query('select a.*, (select count(*)::int from pages p where p.album_id = a.id) as page_count from albums a where share_token = $1', [token])).rows[0]
+    : undefined);
+  app.get<{ Params: { token: string } }>('/api/share/:token/preview', async (req, reply) => {
+    const a = await sharedAlbum(req.params.token);
+    if (!a) return reply.code(404).type('text/html; charset=utf-8').send('<!doctype html><title>Look Back</title>');
+    const origin = `${req.protocol}://${req.hostname}`;
+    const link = `${origin}/s/${req.params.token}`;
+    const tags: [string, string][] = [
+      ['og:type', 'website'], ['og:site_name', 'Look Back'], ['og:title', a.title],
+      ['og:description', `${a.page_count} trang · album chia sẻ từ Look Back`], ['og:url', link],
+      ['og:image', `${origin}/api/share/${req.params.token}/preview.jpg`], ['og:image:width', '1200'], ['og:image:height', '630'],
+    ];
+    return reply.type('text/html; charset=utf-8').header('cache-control', 'no-cache').send(`<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><title>${esc(a.title)} · Look Back</title>
+${tags.map(([k, v]) => `<meta property="${k}" content="${esc(v)}">`).join('\n')}
+<meta name="twitter:card" content="summary_large_image">
+<meta http-equiv="refresh" content="0;url=${esc(link)}">
+</head><body><a href="${esc(link)}">${esc(a.title)}</a></body></html>`);
+  });
+
+  // The preview picture: the cover photo, else the album's first ready photo (or video poster), cut to 1200×630.
+  app.get<{ Params: { token: string } }>('/api/share/:token/preview.jpg', async (req, reply) => {
+    const a = await sharedAlbum(req.params.token);
+    if (!a) return reply.code(404).send();
+    const { rows } = await pool.query(
+      `select variants from media where album_id = $1 and status = 'ready' and kind in ('image', 'video')
+        order by (id = $2) desc, created_at limit 1`, [a.id, a.cover_media_id]);
+    const v = rows[0]?.variants as { display?: string; thumb?: string; poster?: string } | undefined;
+    const key = v?.display ?? v?.poster ?? v?.thumb;
+    if (!key) return reply.redirect('/brand/og.jpg');
+    try {
+      const jpg = await sharp(await readFile(absPath(config.mediaDir, key))).resize(1200, 630, { fit: 'cover' }).jpeg({ quality: 82 }).toBuffer();
+      return reply.type('image/jpeg').header('cache-control', 'public, max-age=3600').send(jpg);
+    } catch {
+      return reply.redirect('/brand/og.jpg'); // file missing or unreadable: the app's own picture
+    }
+  });
 }
+
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 // For nginx auth_request on /media/<mediaId>/…: does the visitor's share cookie belong to that media's album?
 // `uri` is the raw $request_uri. Only plain paths pass — no '..', no %-escapes, no '//', plain file names — so

@@ -13,6 +13,7 @@ proxy_set_header X-Forwarded-Proto $fwd_proto;
 
 # SPA: index.html never cached, hashed assets immutable.
 location / {
+  if ($share_preview) { rewrite ^ $share_preview last; }
   try_files $uri /index.html;
   add_header Cache-Control "no-cache" always;
   # index.html's link-preview tags need absolute URLs: fill in this site's own origin.
