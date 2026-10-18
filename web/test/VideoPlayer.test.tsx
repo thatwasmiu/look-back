@@ -65,3 +65,22 @@ test('fatal hls error falls back to poster with a chip', async () => {
   expect(hls.destroy).toHaveBeenCalledTimes(1);
   expect(r.container.querySelector('video')).toBeNull();
 });
+
+test('autoPlay: on the visible page the video starts by itself, muted (browsers only allow silent autoplay)', async () => {
+  const r = render(<VideoPlayer media={video} active autoPlay />);
+  await waitFor(() => expect(hls.loadSource).toHaveBeenCalledWith('/media/v1/hls/master.m3u8'));
+  const v = r.container.querySelector('video')!;
+  expect(v.muted).toBe(true);
+  expect(v.hasAttribute('loop')).toBe(true);
+});
+
+test('autoPlay waits while the page is hidden, and stops when it is hidden again', async () => {
+  const r = render(<VideoPlayer media={video} active={false} autoPlay />);
+  await new Promise((res) => setTimeout(res, 20));
+  expect(hls.loadSource).not.toHaveBeenCalled();
+  expect(r.container.querySelector('video')).toBeNull();
+  r.rerender(<VideoPlayer media={video} active autoPlay />);
+  await waitFor(() => expect(r.container.querySelector('video')).not.toBeNull());
+  r.rerender(<VideoPlayer media={video} active={false} autoPlay />);
+  expect(r.container.querySelector('video')).toBeNull();
+});
