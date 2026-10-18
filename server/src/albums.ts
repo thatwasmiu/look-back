@@ -6,7 +6,8 @@ import type { FastifyInstance } from 'fastify';
 import type PgBoss from 'pg-boss';
 import type pg from 'pg';
 import {
-  BACKGROUND_COLORS, BACKGROUND_EFFECTS, albumDesignSchema, instantiateTemplate, templates,
+  ALBUM_MODES, BACKGROUND_COLORS, BACKGROUND_EFFECTS, READING_DIRECTIONS, albumDesignSchema, instantiateTemplate, templates,
+  type AlbumMode, type ReadingDirection,
   type AlbumBundle, type AlbumDTO, type PageLayout, type AlbumSummary, type BackgroundColor, type BackgroundEffect,
 } from '@scrapbook/shared';
 import type { Config } from './config.js';
@@ -18,7 +19,7 @@ export const uuidParams = {
   params: { type: 'object', properties: { id: { type: 'string', format: 'uuid' } } },
 } as const;
 
-const toAlbumDTO = (r: any): AlbumDTO => ({ id: r.id, title: r.title, coverMediaId: r.cover_media_id, backgroundEffect: r.background_effect, backgroundColor: r.background_color, shareToken: r.share_token ?? null, musicMediaId: r.music_media_id ?? null });
+const toAlbumDTO = (r: any): AlbumDTO => ({ id: r.id, title: r.title, coverMediaId: r.cover_media_id, backgroundEffect: r.background_effect, backgroundColor: r.background_color, shareToken: r.share_token ?? null, musicMediaId: r.music_media_id ?? null, mode: r.mode, readingDirection: r.reading_direction });
 const title = { type: 'string', minLength: 1, maxLength: 200 } as const;
 export const withoutMedia = (l: PageLayout): PageLayout => ({
   ...l,
@@ -54,9 +55,13 @@ export function registerAlbums(app: FastifyInstance, pool: pg.Pool, config: Conf
   // Start from a design instead of one cover page, with every frame emptied (photos/videos are never copied):
   //  fromAlbumId — another album's pages, papers, stickers, text, effects and colors;
   //  design — a built-in album template sent by the web app (validated like any saved page).
-  app.post<{ Body: { title: string; fromAlbumId?: string; design?: unknown } }>(
+  // mode / readingDirection: a manga album starts with a manga layout; a copy or design brings its own.
+  app.post<{ Body: { title: string; fromAlbumId?: string; design?: unknown; mode?: AlbumMode; readingDirection?: ReadingDirection } }>(
     '/api/albums',
-    { schema: { body: { type: 'object', required: ['title'], properties: { title, fromAlbumId: { type: 'string', format: 'uuid' }, design: { type: 'object' } } } } },
+    { schema: { body: { type: 'object', required: ['title'], properties: {
+      title, fromAlbumId: { type: 'string', format: 'uuid' }, design: { type: 'object' },
+      mode: { type: 'string', enum: [...ALBUM_MODES] }, readingDirection: { type: 'string', enum: [...READING_DIRECTIONS] },
+    } } } },
     async (req, reply) => {
       const { fromAlbumId } = req.body;
       const design = req.body.design === undefined ? null : albumDesignSchema.safeParse(req.body.design);
@@ -64,24 +69,31 @@ export function registerAlbums(app: FastifyInstance, pool: pg.Pool, config: Conf
       const c = await pool.connect();
       try {
         await c.query('begin');
-        let layouts: PageLayout[] = [instantiateTemplate(templates.some((t) => t.id === 'cover') ? 'cover' : 'blank', randomUUID)];
+        let mode: AlbumMode = req.body.mode ?? 'scrapbook';
+        let direction: ReadingDirection = req.body.readingDirection ?? 'ltr';
+        const first = mode === 'manga' ? 'manga-grid' : templates.some((t) => t.id === 'cover') ? 'cover' : 'blank';
+        let layouts: PageLayout[] = [instantiateTemplate(first, randomUUID)];
         let look = { effect: 'none', color: 'walnut' };
         if (design?.success) {
           look = { effect: design.data.backgroundEffect, color: design.data.backgroundColor };
+          mode = design.data.mode ?? mode;
+          direction = design.data.readingDirection ?? direction;
           layouts = design.data.pages.map(withoutMedia);
         } else if (fromAlbumId) {
-          const src = await c.query('select background_effect, background_color from albums where id = $1', [fromAlbumId]);
+          const src = await c.query('select background_effect, background_color, mode, reading_direction from albums where id = $1', [fromAlbumId]);
           if (!src.rowCount) {
             await c.query('rollback');
             return reply.code(404).send({ error: 'template album not found' });
           }
           look = { effect: src.rows[0].background_effect, color: src.rows[0].background_color };
+          mode = src.rows[0].mode;
+          direction = src.rows[0].reading_direction;
           const pages = await c.query('select layout from pages where album_id = $1 order by position', [fromAlbumId]);
           layouts = pages.rows.map((r: { layout: PageLayout }) => withoutMedia(r.layout));
         }
         const { rows } = await c.query(
-          'insert into albums (title, background_effect, background_color) values ($1, $2, $3) returning *',
-          [req.body.title, look.effect, look.color],
+          'insert into albums (title, background_effect, background_color, mode, reading_direction) values ($1, $2, $3, $4, $5) returning *',
+          [req.body.title, look.effect, look.color, mode, direction],
         );
         for (const [i, layout] of layouts.entries()) {
           await c.query('insert into pages (album_id, position, layout) values ($1, $2, $3)', [rows[0].id, i, JSON.stringify(layout)]);
@@ -112,7 +124,7 @@ export function registerAlbums(app: FastifyInstance, pool: pg.Pool, config: Conf
     },
   );
 
-  app.patch<{ Params: { id: string }; Body: { title?: string; coverMediaId?: string | null; musicMediaId?: string | null; backgroundEffect?: BackgroundEffect; backgroundColor?: BackgroundColor } }>(
+  app.patch<{ Params: { id: string }; Body: { title?: string; coverMediaId?: string | null; musicMediaId?: string | null; backgroundEffect?: BackgroundEffect; backgroundColor?: BackgroundColor; readingDirection?: ReadingDirection; mode?: unknown } }>(
     '/api/albums/:id',
     {
       schema: {
@@ -120,11 +132,13 @@ export function registerAlbums(app: FastifyInstance, pool: pg.Pool, config: Conf
         body: { type: 'object', properties: {
           title, coverMediaId: { type: ['string', 'null'], format: 'uuid' }, backgroundEffect: { type: 'string', enum: [...BACKGROUND_EFFECTS] },
           backgroundColor: { type: 'string', enum: [...BACKGROUND_COLORS] }, musicMediaId: { type: ['string', 'null'], format: 'uuid' },
+          readingDirection: { type: 'string', enum: [...READING_DIRECTIONS] },
         } },
       },
     },
     async (req, reply) => {
-      const { title: t, coverMediaId, musicMediaId, backgroundEffect, backgroundColor } = req.body;
+      const { title: t, coverMediaId, musicMediaId, backgroundEffect, backgroundColor, readingDirection } = req.body;
+      if (req.body.mode !== undefined) return reply.code(400).send({ error: 'an album’s mode is fixed when it is created' });
       if (musicMediaId) {
         const m = await pool.query(`select 1 from media where id = $1 and album_id = $2 and kind = 'audio'`, [musicMediaId, req.params.id]);
         if (!m.rowCount) return reply.code(400).send({ error: 'music must be an audio file of this album' });
@@ -139,10 +153,11 @@ export function registerAlbums(app: FastifyInstance, pool: pg.Pool, config: Conf
                 background_effect = coalesce($5, background_effect),
                 background_color = coalesce($6, background_color),
                 music_media_id = case when $7::boolean then $8::uuid else music_media_id end,
+                reading_direction = coalesce($9, reading_direction),
                 updated_at = now()
           where id = $1 returning *`,
         [req.params.id, t ?? null, coverMediaId !== undefined, coverMediaId ?? null, backgroundEffect ?? null, backgroundColor ?? null,
-          musicMediaId !== undefined, musicMediaId ?? null],
+          musicMediaId !== undefined, musicMediaId ?? null, readingDirection ?? null],
       );
       return rows[0] ? toAlbumDTO(rows[0]) : reply.code(404).send({ error: 'not found' });
     },
