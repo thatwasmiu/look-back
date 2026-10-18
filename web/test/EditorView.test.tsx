@@ -458,7 +458,7 @@ test('manga: Add page offers the manga layouts, not the scrapbook templates', as
   await user.click(screen.getByRole('button', { name: 'Add page' }));
   const picker = screen.getByRole('dialog', { name: 'Pick a template' });
   for (const name of ['Classic grid', 'Dynamic slants', 'Splash + insets', 'Full-bleed single panel']) expect(picker.textContent).toContain(name);
-  expect(picker.textContent).not.toContain('Cover');
+  expect(picker.textContent).not.toContain('Two tilted'); // a scrapbook-only template
 });
 
 test('manga: Background → Right → left saves the reading direction', async () => {

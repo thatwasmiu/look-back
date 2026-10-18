@@ -94,7 +94,9 @@ describe('albums', () => {
     const bundle = (await call('GET', `/api/albums/${m.id}`)).json();
     expect(bundle.pages).toHaveLength(1);
     expect(bundle.pages[0].layout.background).toBe('paper-white');
-    expect(bundle.pages[0].layout.elements.every((e: { frameStyle?: string }) => e.frameStyle === 'panel')).toBe(true);
+    // starts with the manga cover: a title over one big panel
+    expect(bundle.pages[0].layout.elements.filter((e: { type: string }) => e.type === 'frame')).toHaveLength(1);
+    expect(bundle.pages[0].layout.elements.some((e: { text?: string }) => e.text === 'Tiêu đề')).toBe(true);
     expect((await call('GET', '/api/albums')).json().find((x: { id: string }) => x.id === m.id).mode).toBe('manga');
 
     const patched = await call('PATCH', `/api/albums/${m.id}`, { readingDirection: 'ltr' });
@@ -109,17 +111,19 @@ describe('albums', () => {
     const src = (await call('POST', '/api/albums', { title: 'Src', mode: 'manga', readingDirection: 'rtl' })).json();
     const img = await t.pool.query(`insert into media (album_id, kind, status, variants) values ($1,'image','ready','{}') returning id`, [src.id]);
     const page = (await call('GET', `/api/albums/${src.id}`)).json().pages[0];
-    const layout = { ...page.layout, elements: page.layout.elements.map((e: object) => ({ ...e, mediaId: img.rows[0].id })) };
+    const layout = { ...page.layout, elements: page.layout.elements.map((e: { type: string }) => (e.type === 'frame' ? { ...e, mediaId: img.rows[0].id } : e)) };
     await t.pool.query('update pages set layout = $2 where id = $1', [page.id, JSON.stringify(layout)]);
 
     const copy = (await call('POST', '/api/albums', { title: 'Copy', fromAlbumId: src.id })).json();
     expect(copy).toMatchObject({ mode: 'manga', readingDirection: 'rtl' });
-    const copied = (await call('GET', `/api/albums/${copy.id}`)).json().pages[0].layout.elements;
-    expect(copied.every((e: { mediaId: string | null }) => e.mediaId === null)).toBe(true);
+    const frames = (els: { type: string; mediaId?: string | null }[]) => els.filter((e) => e.type === 'frame');
+    const copied = frames((await call('GET', `/api/albums/${copy.id}`)).json().pages[0].layout.elements);
+    expect(copied.length).toBeGreaterThan(0);
+    expect(copied.every((e) => e.mediaId === null)).toBe(true);
 
     expect((await call('DELETE', `/api/media/${img.rows[0].id}`)).statusCode).toBe(204);
-    const after = (await call('GET', `/api/albums/${src.id}`)).json().pages[0].layout.elements;
-    expect(after.every((e: { mediaId: string | null }) => e.mediaId === null)).toBe(true);
+    const after = frames((await call('GET', `/api/albums/${src.id}`)).json().pages[0].layout.elements);
+    expect(after.every((e) => e.mediaId === null)).toBe(true);
   });
 
   it('validates title and ids', async () => {

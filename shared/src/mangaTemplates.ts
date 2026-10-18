@@ -1,4 +1,4 @@
-import type { FrameEl, PageElement } from './layout'
+import type { FrameEl, PageElement, TextEl } from './layout'
 import type { Template } from './templates'
 
 // Manga page layouts: panels (frames with frameStyle 'panel') on white paper. Page is 3:4; margin 0.04,
@@ -13,8 +13,16 @@ const m = 0.04, g = 0.025, full = 1 - 2 * m
 const third = (full - 2 * g) / 3, half = (full - g) / 2
 const row = (i: number) => m + i * (third + g)
 const page = (elements: PageElement[]) => ({ background: 'paper-white' as const, elements })
+const title = (id: string, [x, y, w, h]: Box, text: string, size: number, extra: Partial<TextEl> = {}): PageElement =>
+  ({ type: 'text', id, x, y, w, h, rotation: 0, z: 3, text, font: 'bangers', color: '#111111', size, ...extra })
 
 export const mangaTemplates: Template[] = [
+  // Like the scrapbook cover: the album's title over one big image. New manga albums start with it.
+  { id: 'manga-cover', name: 'Cover', layout: page([
+    title('title', [m, m, full, 0.13], 'Tiêu đề', 0.1),
+    panel('p1', [m, 0.19, full, 0.7]),
+    title('vol', [0.62, 0.9, 0.34, 0.06], 'Tập 1', 0.035, { font: 'patrick-hand', textStyle: 'narration' }),
+  ]) },
   { id: 'manga-grid', name: 'Classic grid', layout: page([
     panel('p1', [m, row(0), full, third]),
     panel('p2', [m, row(1), half, third]),

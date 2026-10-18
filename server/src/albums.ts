@@ -71,7 +71,7 @@ export function registerAlbums(app: FastifyInstance, pool: pg.Pool, config: Conf
         await c.query('begin');
         let mode: AlbumMode = req.body.mode ?? 'scrapbook';
         let direction: ReadingDirection = req.body.readingDirection ?? 'ltr';
-        const first = mode === 'manga' ? 'manga-grid' : templates.some((t) => t.id === 'cover') ? 'cover' : 'blank';
+        const first = mode === 'manga' ? 'manga-cover' : templates.some((t) => t.id === 'cover') ? 'cover' : 'blank';
         let layouts: PageLayout[] = [instantiateTemplate(first, randomUUID)];
         let look = { effect: 'none', color: 'walnut' };
         if (design?.success) {
