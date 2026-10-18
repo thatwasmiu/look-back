@@ -2,7 +2,7 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import type { AlbumBundle } from '@scrapbook/shared';
+import type { AlbumBundle, PageElement } from '@scrapbook/shared';
 import { EditorView, type EditorApi } from '../src/pages/Editor';
 
 afterEach(cleanup);
@@ -408,4 +408,62 @@ test('Background → Music shows the track by file name; Play previews it and ke
   await user.keyboard('{Escape}'); // picker closes, music keeps playing
   await user.click(screen.getByRole('button', { name: 'Pause music' }));
   expect(screen.queryByRole('button', { name: 'Pause music' })).toBeNull();
+});
+
+const mangaBundle = (elements: PageElement[] = []): AlbumBundle => ({
+  ...bundle, album: { ...bundle.album, mode: 'manga' },
+  pages: bundle.pages.map((p) => ({ ...p, layout: { background: 'paper-white', elements } })),
+});
+const mangaPanel: PageElement = { type: 'frame', id: 'p1', x: 0.1, y: 0.1, w: 0.5, h: 0.4, rotation: 0, z: 1, frameStyle: 'panel', mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } };
+const renderEditor = (b: AlbumBundle, api: EditorApi = { ...okApi(), updateAlbum: vi.fn().mockResolvedValue({}) }) => ({ api, ...render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={b} api={api} /></MemoryRouter>) });
+
+test('manga album: the toolbar has manga tools and no Tape / Sticker / Paper; a scrapbook album keeps its tools', () => {
+  renderEditor(mangaBundle());
+  for (const name of ['Panel', 'Bubble', 'Narration', 'Sound effect', 'Lines', 'Tone']) expect(screen.getByRole('button', { name })).toBeTruthy();
+  for (const name of ['Tape', 'Sticker', 'Paper']) expect(screen.queryByRole('button', { name })).toBeNull();
+  cleanup();
+  setup(okApi());
+  for (const name of ['Tape', 'Sticker', 'Paper', 'Frame']) expect(screen.getByRole('button', { name })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Bubble' })).toBeNull();
+});
+
+test('manga: Bubble → Shout adds a shout bubble, selected, with Font / Color tools', async () => {
+  const user = userEvent.setup();
+  const { container } = renderEditor(mangaBundle());
+  await user.click(screen.getByRole('button', { name: 'Bubble' }));
+  await user.click(screen.getByRole('button', { name: 'Shout' }));
+  expect(container.querySelector('.edit-page .manga-shout')).not.toBeNull();
+  expect(screen.getByRole('button', { name: 'Font' })).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: 'Font' }));
+  expect(screen.getAllByRole('button', { name: 'Aa' })).toHaveLength(3); // Bangers is offered in manga albums
+});
+
+test('manga: Ink on a selected panel is one saved, undoable change', async () => {
+  const user = userEvent.setup();
+  const { api, container } = renderEditor(mangaBundle([mangaPanel]));
+  fireEvent.pointerDown(container.querySelector('[data-el="p1"]')!);
+  await user.click(screen.getByRole('button', { name: 'Ink' }));
+  expect(screen.getByRole('button', { name: 'Ink' }).getAttribute('aria-pressed')).toBe('true');
+  expect(container.querySelector('[data-frame-id="p1"] .frame-window.ink')).not.toBeNull();
+  await waitFor(() => expect(api.savePage).toHaveBeenLastCalledWith('p0', expect.objectContaining({ elements: [expect.objectContaining({ id: 'p1', ink: true })] }), undefined));
+  await user.click(screen.getByRole('button', { name: 'Undo' }));
+  expect(container.querySelector('[data-frame-id="p1"] .frame-window.ink')).toBeNull();
+});
+
+test('manga: Add page offers the manga layouts, not the scrapbook templates', async () => {
+  const user = userEvent.setup();
+  renderEditor(mangaBundle());
+  await user.click(screen.getByRole('button', { name: 'Add page' }));
+  const picker = screen.getByRole('dialog', { name: 'Pick a template' });
+  for (const name of ['Classic grid', 'Dynamic slants', 'Splash + insets', 'Full-bleed single panel']) expect(picker.textContent).toContain(name);
+  expect(picker.textContent).not.toContain('Cover');
+});
+
+test('manga: Background → Right → left saves the reading direction', async () => {
+  const user = userEvent.setup();
+  const { api } = renderEditor(mangaBundle());
+  await user.click(screen.getByRole('button', { name: 'Background' }));
+  await user.click(screen.getByRole('button', { name: 'Right → left' }));
+  expect(api.updateAlbum).toHaveBeenCalledWith('a1', { readingDirection: 'rtl' });
+  expect(screen.getByRole('button', { name: 'Right → left' }).getAttribute('aria-pressed')).toBe('true');
 });
