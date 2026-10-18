@@ -162,8 +162,7 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
         )}
         {crop && selected?.type === 'frame' && selected.mediaId && <button type="button" onClick={crop}>Crop</button>}
         {frame?.mediaId && <button type="button" onClick={() => commit(assignMedia(layout, frame.id, null))}>Remove photo</button>}
-        {frame?.frameStyle === 'panel' && editShape && <button type="button" onClick={editShape}>Shape</button>}
-        {frame?.frameStyle === 'panel' && <MangaPanelTools panel={frame} layout={layout} commit={commit} />}
+        {frame?.frameStyle === 'panel' && <MangaPanelTools panel={frame} layout={layout} commit={commit} editShape={editShape} />}
         {manga && text && <MangaTextTools text={text} layout={layout} commit={commit} />}
         {selected && <button type="button" title="Duplicate (Ctrl+C, Ctrl+V)" onClick={() => add(duplicate(selected))}>⧉ Duplicate</button>}
         {selected && (

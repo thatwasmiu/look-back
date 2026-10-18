@@ -31,12 +31,15 @@ export function MangaPickerContent({ picker, add, selected }: { picker: string |
 }
 
 // With a panel selected: B&W ink, screentone, border weight.
-export function MangaPanelTools({ panel, layout, commit }: { panel: FrameEl; layout: PageLayout; commit(l: PageLayout): void }) {
+export function MangaPanelTools({ panel, layout, commit, editShape }: { panel: FrameEl; layout: PageLayout; commit(l: PageLayout): void; editShape?(): void }) {
   const set = (patch: Partial<FrameEl>) => commit(updateElement(layout, panel.id, patch));
   const border = panel.border ?? 'normal';
   return <>
-    <button type="button" aria-pressed={!!panel.ink} title="Black & white ink look" onClick={() => set({ ink: !panel.ink })}>Ink</button>
-    <button type="button" aria-pressed={!!panel.tone} title="Screentone dots" onClick={() => set({ tone: !panel.tone })}>Tone</button>
+    <span className="row" role="group" aria-label="Panel">
+      {editShape && <button type="button" title="Move each corner" onClick={editShape}>Shape</button>}
+      <button type="button" aria-pressed={!!panel.ink} title="Black & white ink look" onClick={() => set({ ink: !panel.ink })}>Ink</button>
+      <button type="button" aria-pressed={!!panel.tone} title="Screentone dots" onClick={() => set({ tone: !panel.tone })}>Tone</button>
+    </span>
     <span className="row" role="group" aria-label="Border">
       {(['none', 'thin', 'normal'] as const).map((b) => (
         <button key={b} type="button" aria-pressed={border === b} onClick={() => set({ border: b })}>{b === 'none' ? 'No border' : b === 'thin' ? 'Thin' : 'Border'}</button>

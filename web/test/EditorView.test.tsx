@@ -547,3 +547,11 @@ test('manga: dragging a Shape corner moves it, even when the browser refuses poi
     delete (HTMLElement.prototype as unknown as { setPointerCapture?: unknown }).setPointerCapture;
   }
 });
+
+test('manga: Shape, Ink and Tone sit together in one panel group', () => {
+  const { container } = renderEditor(mangaBundle([mangaPanel]));
+  fireEvent.pointerDown(container.querySelector('[data-el="p1"]')!);
+  const group = screen.getByRole('group', { name: 'Panel' });
+  expect(group.classList.contains('row')).toBe(true);
+  for (const name of ['Shape', 'Ink', 'Tone']) expect(screen.getByRole('button', { name }).parentElement).toBe(group);
+});
