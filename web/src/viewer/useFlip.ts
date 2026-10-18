@@ -19,7 +19,8 @@ export function useSpread(): boolean {
 export type Turn = { from: number[]; dir: 1 | -1 };
 
 // Page index + the outgoing pages of the turn in progress (null when idle or with reduced motion).
-export function useFlip(total: number, spread: boolean) {
+// rtl: right-to-left reading (manga) — the physical inputs mirror: ← / swipe right / left edge go forward.
+export function useFlip(total: number, spread: boolean, rtl = false) {
   const [index, setIndex] = useState(0);
   const [turn, setTurn] = useState<Turn | null>(null);
   const timer = useRef<number>();
@@ -38,13 +39,15 @@ export function useFlip(total: number, spread: boolean) {
   };
   const goRef = useRef(go);
   goRef.current = go;
+  const rtlRef = useRef(rtl);
+  rtlRef.current = rtl;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
       if ((e.target as Element | null)?.closest?.('input, textarea, select, video')) return; // video: arrows seek
-      if (e.key === 'ArrowRight') goRef.current(1);
-      else if (e.key === 'ArrowLeft') goRef.current(-1);
+      if (e.key === 'ArrowRight') goRef.current(rtlRef.current ? -1 : 1);
+      else if (e.key === 'ArrowLeft') goRef.current(rtlRef.current ? 1 : -1);
     };
     window.addEventListener('keydown', onKey);
     return () => { window.removeEventListener('keydown', onKey); clearTimeout(timer.current); };
@@ -65,7 +68,7 @@ export function useFlip(total: number, spread: boolean) {
       const dx = e.clientX - s.x, dy = e.clientY - s.y;
       if (Math.abs(dx) >= SWIPE_PX && Math.abs(dx) > Math.abs(dy) * 1.5) {
         swiped.current = true;
-        goRef.current(dx < 0 ? 1 : -1);
+        goRef.current((dx < 0) !== rtlRef.current ? 1 : -1);
       }
     },
     onPointerCancel: () => { start.current = null; },

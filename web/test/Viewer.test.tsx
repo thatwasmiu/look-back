@@ -6,10 +6,12 @@ import type { AlbumBundle } from '@scrapbook/shared';
 import Viewer from '../src/pages/Viewer';
 
 let reduced = false;
+let wide = false; // two-page spreads
 beforeEach(() => {
   reduced = false;
+  wide = false;
   vi.stubGlobal('matchMedia', (q: string) => ({
-    matches: q.includes('reduced-motion') ? reduced : false, // phone: single-page mode
+    matches: q.includes('reduced-motion') ? reduced : wide, // default phone: single-page mode
     addEventListener() {}, removeEventListener() {},
   }));
 });
@@ -120,4 +122,34 @@ test('album music: ♪ appears when the track is ready; the first tap starts it,
   await userEvent.click(await screen.findByRole('button', { name: 'Pause music' }));
   expect(pause).toHaveBeenCalled();
   expect(btn.getAttribute('aria-pressed')).toBe('false');
+});
+
+const rtl = { ...bundle, album: { ...bundle.album, mode: 'manga' as const, readingDirection: 'rtl' as const } };
+
+test('right-to-left manga, one page at a time: ← reads forward to the last page, → goes back, nothing skipped', async () => {
+  reduced = true;
+  setup(vi.fn().mockResolvedValue(json(200, rtl)));
+  await screen.findByText('1 / 5');
+  for (const n of [2, 3, 4, 5]) {
+    fireEvent.keyDown(window, { key: 'ArrowLeft' });
+    expect(screen.getByText(`${n} / 5`)).toBeTruthy();
+  }
+  fireEvent.keyDown(window, { key: 'ArrowLeft' });
+  expect(screen.getByText('5 / 5')).toBeTruthy();
+  fireEvent.keyDown(window, { key: 'ArrowRight' });
+  expect(screen.getByText('4 / 5')).toBeTruthy();
+  // the left edge button is "next" when reading right-to-left
+  expect(screen.getByRole('button', { name: 'Next page' }).className).toContain('edge-prev');
+});
+
+test('right-to-left spreads: the cover sits alone on the left, then the earlier page of a spread is on the right', async () => {
+  reduced = true;
+  wide = true;
+  const { container } = setup(vi.fn().mockResolvedValue(json(200, rtl)));
+  await screen.findByText('1 / 5');
+  expect(container.querySelector('[data-page="0"]')!.className).toContain('left');
+  fireEvent.keyDown(window, { key: 'ArrowLeft' });
+  expect(screen.getByText('2–3 / 5')).toBeTruthy();
+  expect(container.querySelector('[data-page="1"]')!.className).toContain('right');
+  expect(container.querySelector('[data-page="2"]')!.className).toContain('left');
 });

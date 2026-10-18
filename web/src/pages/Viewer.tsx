@@ -32,7 +32,8 @@ export default function Viewer() {
   );
 }
 
-const slotOf = (i: number, spread: boolean) => (!spread ? 'single' : i % 2 ? 'left' : 'right');
+// Spreads: the earlier page sits on the left (ltr) or on the right (rtl, manga); the cover sits alone on the far side.
+const slotOf = (i: number, spread: boolean, rtl = false) => (!spread ? 'single' : (i % 2 === 1) !== rtl ? 'left' : 'right');
 
 // `shared`: opened from a public share link — read-only, no way into the owner's app.
 export function Book({ bundle, shared = false }: { bundle: AlbumBundle; shared?: boolean }) {
@@ -40,7 +41,10 @@ export function Book({ bundle, shared = false }: { bundle: AlbumBundle; shared?:
   const total = pages.length;
   const media = useMemo(() => new Map(bundle.media.map((m) => [m.id, m])), [bundle.media]);
   const spread = useSpread();
-  const { index, visible, turn, go, swipe } = useFlip(total, spread);
+  const rtl = album.readingDirection === 'rtl';
+  const { index, visible, turn, go, swipe } = useFlip(total, spread, rtl);
+  const slot = (i: number) => slotOf(i, spread, rtl);
+  const forwardOnScreen = turn ? (turn.dir > 0) !== rtl : false; // a forward flip sweeps leftwards in ltr, rightwards in rtl
   const music = album.musicMediaId ? media.get(album.musicMediaId) : undefined;
   const musicSrc = music?.status === 'ready' && music.variants?.audio ? mediaUrl(music.variants.audio) : null;
 
@@ -58,7 +62,7 @@ export function Book({ bundle, shared = false }: { bundle: AlbumBundle; shared?:
     ...visiblePages(prevIndex(index, total, spread), total, spread), ...visible,
     ...visiblePages(nextIndex(index, total, spread), total, spread), ...(turn?.from ?? []),
   ]);
-  const lead = turn && (turn.dir > 0 ? 'right' : 'left');
+  const lead = turn && (forwardOnScreen ? 'right' : 'left');
 
   return (
     <main className={`viewer desk-${album.backgroundColor}`}>
@@ -72,22 +76,26 @@ export function Book({ bundle, shared = false }: { bundle: AlbumBundle; shared?:
       </header>
       {total === 0 ? <p className="empty">Chưa có trang nào.</p> : (
         <div className="stage">
-          <div className={`book${spread ? ' spread' : ''}${visible.some((i) => i % 2) ? ' has-left' : ''}${turn ? (turn.dir > 0 ? ' fwd' : ' back') : ''}`} {...swipe}>
+          <div className={`book${spread ? ' spread' : ''}${visible.some((i) => slot(i) === 'left') ? ' has-left' : ''}${turn ? (forwardOnScreen ? ' fwd' : ' back') : ''}`} {...swipe}>
             {pages.map((p, i) => {
               if (!mounted.has(i)) return null;
-              const slot = slotOf(i, spread);
+              const pos = slot(i);
               const shown = visible.includes(i);
               let state = shown ? 'shown' : 'hidden';
-              if (turn && !shown && turn.from.includes(i)) state = slot === lead || slot === 'single' ? 'sweep' : 'fade';
-              else if (turn && shown && !turn.from.some((j) => slotOf(j, spread) === slot)) state = 'shown fade-in';
+              if (turn && !shown && turn.from.includes(i)) state = pos === lead || pos === 'single' ? 'sweep' : 'fade';
+              else if (turn && shown && !turn.from.some((j) => slot(j) === pos)) state = 'shown fade-in';
               return (
-                <div key={p.id} className={`leaf ${slot} ${state}`} data-page={i} aria-hidden={!shown}>
+                <div key={p.id} className={`leaf ${pos} ${state}`} data-page={i} aria-hidden={!shown}>
                   <PageRenderer layout={p.layout} media={media} mode="view" active={shown} />
                 </div>
               );
             })}
-            <button type="button" className="edge edge-prev" aria-label="Previous page" disabled={visible[0] === 0} onClick={() => go(-1)} />
-            <button type="button" className="edge edge-next" aria-label="Next page" disabled={visible[visible.length - 1] === total - 1} onClick={() => go(1)} />
+            {/* Edges by screen side; in rtl the left one goes forward. */}
+            {(['prev', 'next'] as const).map((side) => {
+              const forward = (side === 'next') !== rtl;
+              return <button key={side} type="button" className={`edge edge-${side}`} aria-label={forward ? 'Next page' : 'Previous page'}
+                disabled={forward ? visible[visible.length - 1] === total - 1 : visible[0] === 0} onClick={() => go(forward ? 1 : -1)} />;
+            })}
           </div>
         </div>
       )}
