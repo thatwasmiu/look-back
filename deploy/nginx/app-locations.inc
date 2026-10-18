@@ -19,6 +19,11 @@ location / {
   sub_filter_once off;
   sub_filter '__ORIGIN__' '$fwd_proto://$host';
 }
+# PWA manifest: nginx's stock mime.types doesn't know .webmanifest.
+location = /manifest.webmanifest {
+  default_type application/manifest+json;
+  add_header Cache-Control "no-cache" always;
+}
 location /assets/ {
   try_files $uri =404;
   add_header Cache-Control $assets_cc always;
