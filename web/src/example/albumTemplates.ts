@@ -1,9 +1,10 @@
 // Built-in album templates for "New album → Template": a desk color, an album background effect and a run of
 // page templates. Look Back reuses the example album's pages. The server empties every frame.
-import { instantiateTemplate, type AlbumDesign, type BackgroundColor, type BackgroundEffect, type PageElement, type PageLayout } from '@scrapbook/shared';
+import { instantiateTemplate, type AlbumDesign, type AlbumMode, type BackgroundColor, type BackgroundEffect, type EffectEl, type PageElement, type PageLayout, type ReadingDirection, type TextEl } from '@scrapbook/shared';
 import { exampleAlbum } from './lookBack';
 
-type AlbumTemplate = { id: string; name: string; icon: string; design: () => AlbumDesign }; // icon: a sticker id
+// icon: a sticker id. mode: which album mode lists it (default scrapbook); manga designs take the chosen reading direction.
+type AlbumTemplate = { id: string; name: string; icon: string; mode?: AlbumMode; design: (direction?: ReadingDirection) => AlbumDesign };
 
 // randomUUID needs a secure context; the app may be opened over plain http on the LAN.
 const newId = () => `e${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -38,7 +39,131 @@ const squidDesign = (): AlbumDesign => ({ backgroundColor: 'ocean', backgroundEf
   sea('journal', { texts: ['căng cực?', undefined], stickers: ['ring'], add: [[[0.5, 0.84, 0.1, 0.1, 10], 'squid']] }),
 ] });
 
+// ---- Manga album templates: manga page layouts plus bubbles, narration, sound effects and lines. All captions are
+// our own generic lines; panels stay empty for the owner's photos. Boxes line up with the panels in mangaTemplates.ts.
+type B = [x: number, y: number, w: number, h: number, rotation?: number];
+const say = (textStyle: NonNullable<TextEl['textStyle']>, text: string, [x, y, w, h, rotation = 0]: B, extra: Partial<TextEl> = {}): TextEl => ({
+  type: 'text', id: newId(), x, y, w, h, rotation, z: 7, text, textStyle,
+  font: textStyle === 'sfx' ? 'bangers' : 'patrick-hand', color: textStyle === 'sfx' ? '#ffffff' : '#111111',
+  size: textStyle === 'sfx' ? 0.075 : textStyle === 'narration' ? 0.028 : 0.032,
+  ...(textStyle === 'speech' || textStyle === 'thought' ? { tail: 'bl' as const } : {}), ...extra,
+});
+const fx = (effect: EffectEl['effect'], [x, y, w, h]: B): EffectEl => ({ type: 'effect', id: newId(), x, y, w, h, rotation: 0, z: 6, effect });
+const mangaPage = (template: string, extras: PageElement[] = [], title?: string): PageLayout => {
+  const l = instantiateTemplate(template, newId);
+  const elements = l.elements.map((e) => (title && e.type === 'text' && e.text === 'Tiêu đề' ? { ...e, text: title } : e));
+  return { ...l, elements: [...elements, ...extras] };
+};
+const manga = (backgroundColor: BackgroundColor, backgroundEffect: BackgroundEffect, pages: () => PageLayout[]) =>
+  (direction: ReadingDirection = 'ltr'): AlbumDesign => ({ backgroundColor, backgroundEffect, mode: 'manga', readingDirection: direction, pages: pages() });
+
+const sticker = (stickerId: string, [x, y, w, h, rotation = 0]: B): PageElement =>
+  ({ type: 'sticker', id: newId(), x, y, w, h, rotation, z: 8, stickerId });
+
+// "2 3 con mực" as manga: same ocean look, music and short original captions as the scrapbook version.
+const mangaSquids = (direction: ReadingDirection = 'ltr'): AlbumDesign => ({
+  ...manga('ocean', 'bubbles', () => [
+    mangaPage('manga-cover', [
+      sticker('octopus', [0.06, 0.76, 0.18, 0.135, -8]),
+      sticker('octopus-blue', [0.24, 0.8, 0.14, 0.105, 6]),
+      sticker('infinity', [0.78, 0.035, 0.16, 0.12]),
+    ], '2 3 con mực'),
+    mangaPage('manga-slants', [
+      say('speech', 'nắm tay nha', [0.6, 0.07, 0.32, 0.13], { tail: 'br' }),
+      sticker('squid', [0.08, 0.08, 0.12, 0.12, -10]),
+      fx('speed-lines', [0.04, 0.69, 0.92, 0.27]),
+      say('sfx', 'VÚT!', [0.6, 0.74, 0.32, 0.14, -10]),
+    ]),
+    mangaPage('manga-splash', [
+      fx('focus-lines', [0.04, 0.04, 0.92, 0.92]),
+      say('thought', 'thưng vô cực ∞', [0.08, 0.07, 0.4, 0.15]),
+      sticker('infinity', [0.62, 0.86, 0.16, 0.12]),
+    ]),
+    mangaPage('manga-grid', [
+      say('speech', 'đi ăn hông?', [0.62, 0.06, 0.3, 0.12], { tail: 'br' }),
+      sticker('sushi', [0.08, 0.5, 0.14, 0.105, -6]),
+      sticker('onigiri', [0.8, 0.52, 0.13, 0.1, 6]),
+      say('narration', 'uống tăng lực', [0.06, 0.675, 0.3, 0.05]),
+      say('speech', 'nạp năng lượng', [0.6, 0.82, 0.32, 0.11], { tail: 'br' }),
+      sticker('energy-can', [0.42, 0.84, 0.1, 0.11, 8]),
+    ]),
+    mangaPage('manga-strips', [
+      say('shout', 'căng cực?', [0.08, 0.06, 0.32, 0.16, -4]),
+      sticker('ring', [0.8, 0.39, 0.12, 0.12, 6]),
+      sticker('squid', [0.82, 0.86, 0.1, 0.1, 10]),
+    ]),
+  ])(direction),
+  music: 'squids',
+});
+
+const mangaJourney = manga('slate', 'none', () => [
+  mangaPage('manga-cover', [], 'Hành trình'),
+  mangaPage('manga-slants', [
+    say('shout', 'ĐI THÔI!', [0.07, 0.06, 0.3, 0.16, -4]),
+    fx('speed-lines', [0.04, 0.69, 0.92, 0.27]),
+    say('sfx', 'VÚT!', [0.6, 0.74, 0.32, 0.14, -10]),
+  ]),
+  mangaPage('manga-grid', [
+    say('narration', 'Ngày 1', [0.06, 0.05, 0.24, 0.05]),
+    say('speech', 'Đẹp quá…', [0.62, 0.38, 0.3, 0.12], { tail: 'br' }),
+  ]),
+  mangaPage('manga-splash', [
+    fx('focus-lines', [0.04, 0.04, 0.92, 0.92]),
+    say('narration', 'Cuối cùng cũng tới nơi.', [0.52, 0.9, 0.42, 0.06]),
+  ]),
+]);
+
+const mangaDaily = manga('walnut', 'none', () => [
+  mangaPage('manga-cover', [], 'Thường ngày'),
+  mangaPage('manga-tall-stack', [
+    say('narration', '7 giờ sáng', [0.06, 0.05, 0.26, 0.05]),
+    say('thought', 'Hôm nay ăn gì nhỉ…', [0.45, 0.07, 0.42, 0.15]),
+  ]),
+  mangaPage('manga-strips', [
+    say('speech', 'Chào buổi sáng!', [0.08, 0.07, 0.36, 0.12]),
+    fx('screentone', [0.04, 0.355, 0.92, 0.29]),
+    say('sfx', 'TÁCH!', [0.65, 0.42, 0.28, 0.12, 6]),
+  ]),
+  mangaPage('manga-six', [say('narration', 'Một ngày bình thường', [0.06, 0.05, 0.4, 0.05])]),
+]);
+
+const mangaAction = manga('night', 'stars', () => [
+  mangaPage('manga-cover', [], 'Hành động'),
+  mangaPage('manga-diagonal', [
+    fx('focus-lines', [0.04, 0.04, 0.92, 0.52]),
+    say('shout', 'CẨN THẬN!', [0.08, 0.06, 0.34, 0.16, -3]),
+    say('sfx', 'BÙM!', [0.55, 0.62, 0.36, 0.16, -12]),
+  ]),
+  mangaPage('manga-slants', [
+    fx('speed-lines', [0.04, 0.04, 0.92, 0.34]),
+    say('speech', 'Chưa xong đâu!', [0.08, 0.4, 0.36, 0.12]),
+    say('sfx', 'RẦM!', [0.58, 0.72, 0.34, 0.14, 8]),
+  ]),
+  mangaPage('manga-bleed', [
+    fx('focus-lines', [0, 0, 1, 1]),
+    say('narration', 'Trận cuối.', [0.06, 0.88, 0.3, 0.06]),
+  ]),
+]);
+
+const mangaRomance = manga('rose', 'petals', () => [
+  mangaPage('manga-cover', [], 'Lãng mạn'),
+  mangaPage('manga-columns', [
+    say('thought', 'Tim đập nhanh quá…', [0.08, 0.08, 0.36, 0.15]),
+    fx('screentone', [0.5125, 0.04, 0.4475, 0.92]),
+  ]),
+  mangaPage('manga-splash', [
+    say('narration', 'Mùa hè năm ấy.', [0.08, 0.06, 0.36, 0.06]),
+    say('speech', 'Mình đi cùng nhau nhé?', [0.55, 0.36, 0.38, 0.14], { tail: 'br' }),
+  ]),
+  mangaPage('manga-grid', [say('speech', 'Ừ!', [0.72, 0.7, 0.2, 0.1])]),
+]);
+
 export const albumTemplates: AlbumTemplate[] = [
+  { id: 'manga-squids', name: '2 3 con mực', icon: 'octopus', mode: 'manga', design: mangaSquids },
+  { id: 'manga-journey', name: 'Hành trình', icon: 'plane', mode: 'manga', design: mangaJourney },
+  { id: 'manga-daily', name: 'Thường ngày', icon: 'coffee', mode: 'manga', design: mangaDaily },
+  { id: 'manga-action', name: 'Hành động', icon: 'sparkle', mode: 'manga', design: mangaAction },
+  { id: 'manga-romance', name: 'Lãng mạn', icon: 'heart', mode: 'manga', design: mangaRomance },
   { id: 'squids', name: '2 3 con mực', icon: 'octopus', design: squidDesign },
   { id: 'trip', name: 'Trip', icon: 'plane', design: fromPages('walnut', 'none',
     ['cover', 'postcard', 'one-hero', 'three-collage', 'film-day', 'hero-plus-two', 'journal']) },

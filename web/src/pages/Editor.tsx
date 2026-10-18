@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { pageLayoutSchema, templates, type AlbumBundle, type BackgroundColor, type BackgroundEffect, type MediaDTO, type PageDTO, type PageElement, type PageLayout } from '@scrapbook/shared';
+import { mangaTemplates, pageLayoutSchema, templates, type AlbumBundle, type ReadingDirection, type BackgroundColor, type BackgroundEffect, type MediaDTO, type PageDTO, type PageElement, type PageLayout } from '@scrapbook/shared';
 import { api as realApi, ApiError } from '../api';
 import { PageRenderer } from '../render/PageRenderer';
 import { EditCanvas } from '../editor/EditCanvas';
@@ -56,6 +56,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   mediaRef.current = media;
   const [coverId, setCoverId] = useState(bundle.album.coverMediaId);
   const [cropId, setCropId] = useState<string | null>(null);
+  const [shapeId, setShapeId] = useState<string | null>(null);
   const [pages, setPages] = useState<PageDTO[]>(bundle.pages);
   const [cur, setCur] = useState(0);
   const page = pages[cur] as PageDTO | undefined;
@@ -99,6 +100,14 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
     const prev = bgColor;
     setBgColorState(c);
     api.updateAlbum(albumId, { backgroundColor: c }).catch(() => { setBgColorState(prev); setOpError("Không lưu được màu bàn."); });
+  };
+  const mode = bundle.album.mode ?? 'scrapbook';
+  const pageTemplates = mode === 'manga' ? mangaTemplates : templates;
+  const [readingDirection, setReadingDirectionState] = useState<ReadingDirection>(bundle.album.readingDirection ?? 'ltr');
+  const setReadingDirection = (d: ReadingDirection) => {
+    const prev = readingDirection;
+    setReadingDirectionState(d);
+    api.updateAlbum(albumId, { readingDirection: d }).catch(() => { setReadingDirectionState(prev); setOpError('Không lưu được hướng đọc.'); });
   };
   // Album-level setting: optimistic, rolled back if the save fails.
   const setBgEffect = (e: BackgroundEffect) => {
@@ -330,6 +339,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   nav.current.switchTo = switchTo;
   const selected = layout.elements.find((e) => e.id === selectedId) ?? null;
   useEffect(() => { if (cropId !== selectedId) setCropId(null); }, [cropId, selectedId]);
+  useEffect(() => { if (shapeId !== selectedId) setShapeId(null); }, [shapeId, selectedId]);
   const trayMedia = useMemo(() => [...media.values()].filter((m) => m.kind !== 'audio' && m.id !== musicId).reverse(), [media, musicId]); // newest first; music lives in Background
   // Ctrl+C keeps a copy of the selected item (in memory, so it also pastes onto another page).
   const clip = useRef<PageElement | null>(null);
@@ -420,7 +430,8 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
         <Toolbar layout={layout} selected={selected} commit={commit}
           undo={() => setHist(undo)} redo={() => setHist(redo)} canUndo={hist.past.length > 0} canRedo={hist.future.length > 0}
           status={status} save={() => void flush().then((ok) => ok && setOpError(null))}
-          crop={() => setCropId(selectedId)} zoom={zoom} setZoom={setZoom} bgEffect={bgEffect} setBgEffect={setBgEffect} bgColor={bgColor} setBgColor={setBgColor}
+          crop={() => setCropId(selectedId)} editShape={() => setShapeId(selectedId)} zoom={zoom} setZoom={setZoom} bgEffect={bgEffect} setBgEffect={setBgEffect} bgColor={bgColor} setBgColor={setBgColor}
+          mode={mode} readingDirection={readingDirection} setReadingDirection={setReadingDirection}
           music={musicId ? media.get(musicId) ?? null : null} onMusicFile={(f) => upload.add([f], MUSIC)} onMusicRemove={removeMusic} />
       )}
       <div className="edit-main">
@@ -429,7 +440,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
         <div className="stage-wrap" onPointerDown={(e) => { if (e.target === e.currentTarget || e.target === stageRef.current) setSelectedId(null); }}>
           <div className="edit-stage" ref={stageRef}>
             {page ? <EditCanvas layout={layout} media={media} selectedId={selectedId} onSelect={setSelectedId} onCommit={commit}
-              onFrameAddMedia={addToFrame} cropId={cropId} onCrop={setCropId} zoom={zoom} />
+              onFrameAddMedia={addToFrame} cropId={cropId} onCrop={setCropId} shapeId={shapeId} onShape={setShapeId} zoom={zoom} />
               : <p className="empty">Chưa có trang nào — thêm trang ở dưới.</p>}
           </div>
           {page && cur > 0 && (
@@ -516,7 +527,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
             <span>New page</span>
             <button type="button" className="template-close" aria-label="Close" title="Close" onClick={() => setPicking(false)}>×</button>
           </div>
-          {templates.map((t) => (
+          {pageTemplates.map((t) => (
             <button key={t.id} type="button" className="template" onClick={() => addPage(t.id)}>
               <PageRenderer layout={t.layout} media={noMedia} mode="edit" active={false} />
               <span>{t.name}</span>

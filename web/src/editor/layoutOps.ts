@@ -64,6 +64,13 @@ export const newEffect = (effect: EffectEl['effect']): EffectEl => effect === 'l
   : { type: 'effect', ...box(0.6, 0.45), rotation: 0, effect };
 export const newText = (): TextEl =>
   ({ type: 'text', ...box(0.5, 0.08), text: 'ghi chú', font: 'patrick-hand', color: '#4a3b2c', size: 0.045 });
+// Manga: an empty bordered panel; bubbles / narration in Patrick Hand, sound effects big in Bangers.
+export const newPanel = (): FrameEl => ({ ...newFrame('panel'), border: 'normal' });
+export const newMangaText = (textStyle: 'speech' | 'shout' | 'thought' | 'narration' | 'sfx'): TextEl => ({
+  type: 'text', ...box(textStyle === 'narration' ? 0.5 : 0.36, textStyle === 'narration' ? 0.07 : 0.2), text: textStyle === 'sfx' ? 'BÙM!' : '…',
+  font: textStyle === 'sfx' ? 'bangers' : 'patrick-hand', color: textStyle === 'sfx' ? '#ffffff' : '#111111',
+  size: textStyle === 'sfx' ? 0.08 : 0.035, textStyle, ...(textStyle === 'speech' || textStyle === 'thought' ? { tail: 'bl' as const } : {}),
+});
 // Round shapes (circle, heart) are kept visually square: h = 0.75w on the 3:4 page.
 const ROUND: FrameEl['frameStyle'][] = ['circle', 'heart'];
 // Polaroid with a square photo window (h = 0.825w, see templates.ts); round shapes start square.

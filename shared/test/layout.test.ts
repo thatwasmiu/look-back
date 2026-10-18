@@ -66,3 +66,31 @@ describe('effects', () => {
     expect(ok(l)).toBe(false)
   })
 })
+
+describe('manga additions', () => {
+  const page = (elements: unknown[], background = 'paper-cream') => ({ background, elements })
+  it('a layout saved before manga mode (no shape / textStyle) still parses unchanged', () => {
+    const before = sample()
+    const parsed = pageLayoutSchema.parse(before)
+    expect(parsed).toEqual(before)
+  })
+  it('accepts a slanted manga panel with ink and tone', () => {
+    expect(ok(page([{ ...base, id: 'p', type: 'frame', frameStyle: 'panel', mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 },
+      shape: [[0, 0], [1, 0], [1, 0.8], [0, 1]], border: 'normal', ink: true, tone: true }]))).toBe(true)
+  })
+  it('rejects a panel shape with 2 points or a point outside 0..1', () => {
+    const panel = (shape: unknown) => page([{ ...base, id: 'p', type: 'frame', frameStyle: 'panel', mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 }, shape }])
+    expect(ok(panel([[0, 0], [1, 1]]))).toBe(false)
+    expect(ok(panel([[0, 0], [1.2, 0], [1, 1]]))).toBe(false)
+  })
+  it('accepts manga text styles and the bangers font', () => {
+    for (const textStyle of ['plain', 'speech', 'shout', 'thought', 'narration', 'sfx']) {
+      expect(ok(page([{ ...base, id: 't', type: 'text', text: 'ĐÙNG!', font: 'bangers', color: '#111111', size: 0.06, textStyle, tail: 'bl' }]))).toBe(true)
+    }
+  })
+  it('accepts speed / focus lines and screentone effects, and white manga paper', () => {
+    for (const effect of ['speed-lines', 'focus-lines', 'screentone']) {
+      expect(ok(page([{ ...base, id: 'f', type: 'effect', effect }], 'paper-white'))).toBe(true)
+    }
+  })
+})

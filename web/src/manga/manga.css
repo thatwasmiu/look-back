@@ -1,0 +1,62 @@
+/* Manga mode. Sizes in cqh: they scale with the page (compiled to var(--cqh) for older iPhones). */
+
+/* Panels: black border = the outer box's padding; the photo window sits inside it. */
+.frame-panel { padding: .5cqh; background: #111; }
+.frame-panel.panel-border-thin { padding: .25cqh; }
+.frame-panel.panel-border-none { padding: 0; background: none; }
+.frame-panel .frame-window { background: #ece8df; box-shadow: none; }
+.frame-panel .slot-empty { border-color: #8886; color: #555; }
+.frame-window.ink .blur-image, .frame-window.ink video, .frame-window.ink .video { filter: grayscale(1) contrast(1.2); }
+/* Screentone: halftone dots over the photo. */
+.tone { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: multiply;
+  background: radial-gradient(#111a .14cqh, transparent .2cqh) 0 0 / .7cqh .7cqh; }
+
+/* Speech / thought / narration / sound effects: fill the element box; the words stay centered. */
+.manga-text { position: relative; width: 100%; height: 100%; display: grid; place-items: center; text-align: center;
+  line-height: 1.1; white-space: pre-wrap; overflow-wrap: anywhere; }
+.manga-words { position: relative; z-index: 1; padding: 0 8%; }
+
+.manga-speech { background: #fff; border: .35cqh solid #111; border-radius: 50%; }
+.manga-thought { background: #fff; border: .3cqh solid #111; border-radius: 46% 54% 50% 50% / 55% 45% 55% 45%; font-style: italic; }
+.manga-narration { background: #fffbe6; border: .3cqh solid #111; text-align: left; place-items: center start; }
+.manga-narration .manga-words { padding: 0 6%; }
+.manga-sfx { font-weight: 400; letter-spacing: .05em; -webkit-text-stroke: .35cqh #111; paint-order: stroke fill;
+  text-shadow: .3cqh .3cqh 0 #111; }
+
+/* Tails: a small rotated square on the chosen corner (speech); two small dots (thought). */
+.manga-speech:not(.tail-none)::after { content: ''; position: absolute; width: 14%; aspect-ratio: 1; background: #fff;
+  border-right: .35cqh solid #111; border-bottom: .35cqh solid #111; }
+.manga-speech.tail-bl::after { left: 18%; bottom: -5%; transform: rotate(35deg) skew(12deg, 12deg); }
+.manga-speech.tail-br::after { right: 18%; bottom: -5%; transform: rotate(55deg) skew(12deg, 12deg); }
+.manga-speech.tail-tl::after { left: 18%; top: -5%; transform: rotate(-145deg) skew(12deg, 12deg); }
+.manga-speech.tail-tr::after { right: 18%; top: -5%; transform: rotate(-125deg) skew(12deg, 12deg); }
+.manga-thought:not(.tail-none)::before, .manga-thought:not(.tail-none)::after { content: ''; position: absolute; aspect-ratio: 1;
+  background: #fff; border: .3cqh solid #111; border-radius: 50%; }
+.manga-thought:not(.tail-none)::before { width: 9%; }
+.manga-thought:not(.tail-none)::after { width: 5%; }
+.manga-thought.tail-bl::before { left: 8%; bottom: -10%; } .manga-thought.tail-bl::after { left: 1%; bottom: -22%; }
+.manga-thought.tail-br::before { right: 8%; bottom: -10%; } .manga-thought.tail-br::after { right: 1%; bottom: -22%; }
+.manga-thought.tail-tl::before { left: 8%; top: -10%; } .manga-thought.tail-tl::after { left: 1%; top: -22%; }
+.manga-thought.tail-tr::before { right: 8%; top: -10%; } .manga-thought.tail-tr::after { right: 1%; top: -22%; }
+
+/* Shout: a spiky burst (black, then white inset) behind the words. */
+.manga-shout { font-weight: 700; }
+.manga-shout .burst-ink, .manga-shout .burst-paper { position: absolute; inset: 0;
+  clip-path: polygon(50% 0, 59% 17%, 78% 4%, 75% 25%, 98% 20%, 84% 42%, 100% 56%, 80% 64%, 91% 88%, 65% 77%, 52% 100%, 42% 79%, 18% 95%, 22% 70%, 0 66%, 15% 48%, 2% 27%, 25% 29%, 20% 5%, 40% 19%); }
+.manga-shout .burst-ink { background: #111; }
+.manga-shout .burst-paper { background: #fff; inset: 4%; }
+
+/* Page overlays (effect elements): static, cover their box. */
+.fx-speed-lines { background: repeating-linear-gradient(100deg, transparent 0 1.1cqh, #111c 1.1cqh 1.25cqh); }
+.fx-focus-lines { background: repeating-conic-gradient(from 0deg at 50% 50%, #111d 0 1.2deg, transparent 1.2deg 6deg);
+  -webkit-mask: radial-gradient(circle at 50% 50%, transparent 34%, #000 62%); mask: radial-gradient(circle at 50% 50%, transparent 34%, #000 62%); }
+.fx-screentone { background: radial-gradient(#1118 .14cqh, transparent .2cqh) 0 0 / .7cqh .7cqh; }
+
+/* Shape mode: corner handles over a panel (sizes in px: they must stay grabbable at any zoom). */
+.el:has(> .shape-overlay) { z-index: 1000 !important; }
+.shape-overlay { position: absolute; inset: 0; z-index: 2; touch-action: none; box-shadow: 0 0 0 100vmax #0004; }
+.shape-outline { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.shape-outline polygon { fill: none; stroke: #fffaf0; stroke-width: .6; stroke-dasharray: 2 1.5; vector-effect: non-scaling-stroke; }
+.shape-handle { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; padding: 0; border-radius: 50%;
+  background: #fff; border: 3px solid var(--accent, #b5402e); box-shadow: 0 1px 4px #0006; cursor: grab; touch-action: none; }
+.shape-handle:focus-visible { outline: 3px solid #4a90d9; }

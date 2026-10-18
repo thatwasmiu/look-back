@@ -13,7 +13,7 @@ const { EditorView } = await import('../src/pages/Editor');
 afterEach(cleanup);
 const m = { id: 'm1abcdefgh', albumId: 'a1', kind: 'image' as const, status: 'ready' as const, width: 4, height: 3, durationSec: null, blurDataUrl: null, variants: { original: 'm1/o.jpg', display: 'm1/d.webp', thumb: 'm1/t.webp' }, error: null };
 const bundleWith = (media: AlbumBundle['media']): AlbumBundle => ({
-  album: { id: 'a1', title: 'Trip', coverMediaId: null, backgroundEffect: 'none', backgroundColor: 'walnut', shareToken: null, musicMediaId: null },
+  album: { id: 'a1', title: 'Trip', coverMediaId: null, backgroundEffect: 'none', backgroundColor: 'walnut', shareToken: null, musicMediaId: null, mode: 'scrapbook', readingDirection: 'ltr' },
   pages: [{ id: 'p0', albumId: 'a1', position: 0, layout: { background: 'paper-cream', elements: [
     { type: 'frame', id: 'f1', x: 0.1, y: 0.1, w: 0.5, h: 0.4, rotation: 0, z: 1, frameStyle: 'polaroid', mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } },
   ] } }],

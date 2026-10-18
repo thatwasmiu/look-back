@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import Moveable from 'react-moveable';
 import type { FrameEl, MediaDTO, PageElement, PageLayout, TextEl } from '@scrapbook/shared';
 import { PageRenderer } from '../render/PageRenderer';
+import { ShapeOverlay, type Shape } from '../manga/ShapeOverlay';
 import { fontFamily } from '../render/decor';
 import { assignMedia, updateElement } from './layoutOps';
 
@@ -12,6 +13,7 @@ type Props = {
   onCommit(l: PageLayout): void; // one history entry
   onFrameAddMedia?(frameId: string): void; // empty frame tapped: media tray/upload hooks in here
   cropId?: string | null; onCrop?(frameId: string | null): void; // frame in crop mode (pan/zoom the photo inside it)
+  shapeId?: string | null; onShape?(frameId: string | null): void; // manga panel in shape mode (move its corners)
   zoom?: number; // 1 = page fits the stage
 };
 type Crop = FrameEl['crop'];
@@ -20,7 +22,7 @@ const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)
 
 // Selected element gets react-moveable handles. During a gesture only a transient layout changes (live preview);
 // the gesture end commits it once. Moveable reports CSS px relative to the page box; page units = px / box size.
-export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFrameAddMedia, cropId = null, onCrop, zoom = 1 }: Props) {
+export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFrameAddMedia, cropId = null, onCrop, shapeId = null, onShape, zoom = 1 }: Props) {
   const pageRef = useRef<HTMLDivElement>(null);
   const moveableRef = useRef<Moveable>(null);
   const [live, setLive] = useState<PageLayout | null>(null);
@@ -30,6 +32,9 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
   // Crop gesture preview; committed once on Done (or a tap outside the frame).
   const [cropLive, setCropLive] = useState<Crop | null>(null);
   useEffect(() => setCropLive(null), [cropId]);
+  // Shape-mode preview, committed once on Done.
+  const [shapeLive, setShapeLive] = useState<Shape | null>(null);
+  useEffect(() => setShapeLive(null), [shapeId]);
   // The page box resizes with the stage (window, phone tray opening): keep the handles on the element.
   useEffect(() => {
     if (typeof ResizeObserver === 'undefined') return; // jsdom
@@ -37,14 +42,19 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
     ro.observe(pageRef.current!);
     return () => ro.disconnect();
   }, []);
-  const shown = cropId && cropLive ? updateElement(live ?? layout, cropId, { crop: cropLive }) : live ?? layout;
+  const base = cropId && cropLive ? updateElement(live ?? layout, cropId, { crop: cropLive }) : live ?? layout;
+  const shown = shapeId && shapeLive ? updateElement(base, shapeId, { shape: shapeLive }) : base;
+  const finishShape = () => {
+    if (shapeId && shapeLive) onCommit(updateElement(layout, shapeId, { shape: shapeLive }));
+    onShape?.(null);
+  };
   const selected = layout.elements.find((e) => e.id === selectedId) ?? null;
   const pinned = !!selected?.pinned;
   const finishCrop = () => {
     if (cropId && cropLive) onCommit(updateElement(layout, cropId, { crop: cropLive }));
     onCrop?.(null);
   };
-  const target = selected && editingId !== selected.id && cropId !== selected.id
+  const target = selected && editingId !== selected.id && cropId !== selected.id && shapeId !== selected.id
     ? [...pageRef.current?.querySelectorAll<HTMLElement>('[data-el]') ?? []].find((n) => n.dataset.el === selected.id) ?? null : null;
 
   const size = () => {
@@ -109,7 +119,9 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
     if (el?.type === 'frame' && el.mediaId) { onSelect(el.id); onCrop?.(el.id); }
   };
 
-  const renderOverlay = (el: PageElement) => el.id === cropId && el.type === 'frame'
+  const renderOverlay = (el: PageElement) => el.id === shapeId && el.type === 'frame'
+    ? <ShapeOverlay el={el} onChange={setShapeLive} onDone={finishShape} />
+    : el.id === cropId && el.type === 'frame'
     ? <CropOverlay el={el} media={el.mediaId ? media.get(el.mediaId) : undefined} onChange={setCropLive} onDone={finishCrop}
       onRemove={() => { onCommit(assignMedia(layout, el.id, null)); onCrop?.(null); }} />
     : el.id === editingId && el.type === 'text'
@@ -167,7 +179,8 @@ function TextEditor({ el, onDone }: { el: TextEl; onDone(text: string): void }) 
   return (
     <div className="text text-editing" contentEditable suppressContentEditableWarning spellCheck={false}
       ref={(n) => { if (n && document.activeElement !== n) { n.focus(); document.getSelection()?.selectAllChildren(n); } }}
-      style={{ fontFamily: fontFamily[el.font], color: el.color, fontSize: `calc(${el.size * 100} * var(--cqh))` }}
+      // White sound-effect lettering has an outline when drawn; while typing it would be invisible on white paper.
+      style={{ fontFamily: fontFamily[el.font], color: el.textStyle === 'sfx' ? '#111111' : el.color, fontSize: `calc(${el.size * 100} * var(--cqh))` }}
       onBlur={(e) => onDone(e.currentTarget.innerText.replace(/\n$/, ''))}
       onKeyDown={(e) => { if (e.key === 'Escape') e.currentTarget.blur(); }}>
       {el.text}

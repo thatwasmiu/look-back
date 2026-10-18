@@ -69,6 +69,16 @@ const sections: Section[] = [
       { h: 'Thanh công cụ dưới đáy', img: 'phone', p: ['Công cụ nằm ở đáy màn hình cho dễ bấm; các bảng chọn mở lên phía trên.', '**Hide tools** ẩn bớt Photos, Pages và công cụ để nhìn trang rộng hơn; **Show tools** để hiện lại.'] },
     ],
   },
+  {
+    id: 'manga', title: '9. Manga', features: [
+      { h: 'Tạo album manga', img: 'manga-new-album', p: ['Bấm **New album** → chọn **Manga** thay vì **Scrapbook**, rồi chọn hướng đọc **Left → right** hoặc **Right → left**. Chế độ chỉ chọn một lần khi tạo album, sau đó không đổi được.', 'Album manga mới có sẵn **trang bìa**: tên truyện ở trên, một khung tranh lớn và nhãn “Tập 1”. Nhấp đúp vào chữ để đổi.', 'Mẫu manga dựng sẵn (hiện khi chọn **Manga**): **2 3 con mực** (nền biển, sticker bạch tuộc, có nhạc nếu server có file nhạc của mẫu), **Hành trình**, **Thường ngày**, **Hành động**, **Lãng mạn**. Mỗi mẫu có trang bìa và vài trang đã sẵn bong bóng thoại, lời dẫn, hiệu ứng âm thanh, đường tốc độ; khung tranh để trống cho ảnh của bạn. Mục chép thiết kế chỉ liệt kê album manga.'] },
+      { h: 'Khung tranh (Panel) và bố cục trang', img: 'manga-editor', p: ['Trang manga dùng giấy trắng và khung tranh viền đen. **Add page** cho chọn 10 bố cục: Cover, Classic grid, Dynamic slants, Splash + insets, Tall + stacked, Two tall columns, Three horizontal strips, Diagonal split, Six-panel grid, Full-bleed single panel.', '**Panel** thêm một khung tranh mới. Đưa ảnh/video vào khung giống khung ảnh scrapbook: **+ add**, kéo từ **Photos**, hoặc dán.', 'Khi chọn một khung, nhóm **Shape · Ink · Tone** hiện ra: **Ink** chuyển ảnh sang đen trắng kiểu mực in, **Tone** phủ chấm tram lên khung. Các nút **No border / Thin / Border** đổi độ dày viền.'] },
+      { h: 'Khung tranh tự do (Shape)', p: ['Chọn một khung → **Shape**: bốn góc hiện chấm tròn, kéo từng góc để tạo khung xiên, hình thang hay tứ giác bất kỳ. Trên PC có thể bấm vào một chấm rồi dùng phím mũi tên để chỉnh nhỏ từng chút.', '**Reset** đưa khung về hình chữ nhật, **Done** để lưu (một bước, hoàn tác được bằng ↶).'] },
+      { h: 'Bong bóng thoại, lời dẫn, hiệu ứng âm thanh', p: ['**Bubble** → **Speech** (lời nói), **Shout** (hét), **Thought** (suy nghĩ). **Narration** là ô lời dẫn hình chữ nhật. **Sound effect** là chữ lớn kiểu tiếng động.', 'Khi chọn bong bóng Speech hoặc Thought: nhóm **Tail** (↙ ↘ ↖ ↗ ∅) chọn góc đặt đuôi bong bóng, hướng về nhân vật đang nói.', 'Nhấp đúp để sửa chữ; **Font** và **Color** đổi kiểu chữ và màu như chữ thường.'] },
+      { h: 'Đường tốc độ, đường tập trung, tông chấm', p: ['**Lines** → **Speed lines** (đường tốc độ) hoặc **Focus lines** (đường tập trung về giữa). **Screentone** thêm lớp chấm tram.', 'Nếu đang chọn một khung, lớp mới phủ đúng khung đó; nếu không, lớp hiện ở giữa trang. Kéo, đổi cỡ hay xoay như các vật khác.'] },
+      { h: 'Đọc từ phải sang trái', p: ['Khi tạo album manga, chọn **Left → right** hoặc **Right → left**. Đổi lại sau trong **Background** → **Reading direction**.', 'Đọc phải sang trái: phím ←, vuốt sang phải hoặc bấm mép trái là sang trang tiếp; trang bìa nằm bên trái và trang trước của mỗi cặp nằm bên phải.'] },
+    ],
+  },
 ];
 
 const shortcuts: [string, string][] = [
@@ -93,7 +103,7 @@ export default function Guide() {
       </header>
       <nav className="guide-toc" aria-label="Mục lục">
         {sections.map((s) => <a key={s.id} href={`#${s.id}`}>{s.title}</a>)}
-        <a href="#shortcuts">9. Phím tắt</a>
+        <a href="#shortcuts">10. Phím tắt</a>
       </nav>
       {sections.map((s) => (
         <section key={s.id} id={s.id}>
@@ -108,7 +118,7 @@ export default function Guide() {
         </section>
       ))}
       <section id="shortcuts">
-        <h2>9. Phím tắt</h2>
+        <h2>10. Phím tắt</h2>
         <table>
           <tbody>{shortcuts.map(([k, v]) => <tr key={k}><th scope="row"><kbd>{k}</kbd></th><td>{v}</td></tr>)}</tbody>
         </table>

@@ -1,8 +1,9 @@
+import { readFileSync } from 'node:fs';
 import { afterEach, expect, test, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import type { AlbumBundle } from '@scrapbook/shared';
+import type { AlbumBundle, PageElement } from '@scrapbook/shared';
 import { EditorView, type EditorApi } from '../src/pages/Editor';
 
 afterEach(cleanup);
@@ -13,7 +14,7 @@ const mediaApi = { getMedia: vi.fn(), deleteMedia: vi.fn(), updateAlbum: vi.fn()
 const okApi = (): EditorApi => ({ savePage: vi.fn().mockResolvedValue({}), addPage: vi.fn(), deletePage: vi.fn(), reorderPages: vi.fn(), ...mediaApi });
 
 const bundle: AlbumBundle = {
-  album: { id: 'a1', title: 'Trip', coverMediaId: null, backgroundEffect: 'none', backgroundColor: 'walnut', shareToken: null, musicMediaId: null },
+  album: { id: 'a1', title: 'Trip', coverMediaId: null, backgroundEffect: 'none', backgroundColor: 'walnut', shareToken: null, musicMediaId: null, mode: 'scrapbook', readingDirection: 'ltr' },
   pages: [0, 1].map((i) => ({ id: `p${i}`, albumId: 'a1', position: i, layout: { background: 'paper-cream', elements: [] } })),
   media: [],
 };
@@ -408,4 +409,149 @@ test('Background → Music shows the track by file name; Play previews it and ke
   await user.keyboard('{Escape}'); // picker closes, music keeps playing
   await user.click(screen.getByRole('button', { name: 'Pause music' }));
   expect(screen.queryByRole('button', { name: 'Pause music' })).toBeNull();
+});
+
+const mangaBundle = (elements: PageElement[] = []): AlbumBundle => ({
+  ...bundle, album: { ...bundle.album, mode: 'manga' },
+  pages: bundle.pages.map((p) => ({ ...p, layout: { background: 'paper-white', elements } })),
+});
+const mangaPanel: PageElement = { type: 'frame', id: 'p1', x: 0.1, y: 0.1, w: 0.5, h: 0.4, rotation: 0, z: 1, frameStyle: 'panel', mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } };
+const renderEditor = (b: AlbumBundle, api: EditorApi = { ...okApi(), updateAlbum: vi.fn().mockResolvedValue({}) }) => ({ api, ...render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={b} api={api} /></MemoryRouter>) });
+
+test('manga album: the toolbar has manga tools and no Tape / Sticker / Paper; a scrapbook album keeps its tools', () => {
+  renderEditor(mangaBundle());
+  for (const name of ['Panel', 'Bubble', 'Narration', 'Sound effect', 'Lines', 'Screentone']) expect(screen.getByRole('button', { name })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Tone' })).toBeNull(); // the panel Tone toggle only shows with a panel selected
+  for (const name of ['Tape', 'Sticker', 'Paper']) expect(screen.queryByRole('button', { name })).toBeNull();
+  cleanup();
+  setup(okApi());
+  for (const name of ['Tape', 'Sticker', 'Paper', 'Frame']) expect(screen.getByRole('button', { name })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Bubble' })).toBeNull();
+});
+
+test('manga: Bubble → Shout adds a shout bubble, selected, with Font / Color tools', async () => {
+  const user = userEvent.setup();
+  const { container } = renderEditor(mangaBundle());
+  await user.click(screen.getByRole('button', { name: 'Bubble' }));
+  await user.click(screen.getByRole('button', { name: 'Shout' }));
+  expect(container.querySelector('.edit-page .manga-shout')).not.toBeNull();
+  expect(screen.getByRole('button', { name: 'Font' })).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: 'Font' }));
+  expect(screen.getAllByRole('button', { name: 'Aa' })).toHaveLength(3); // Bangers is offered in manga albums
+});
+
+test('manga: Ink on a selected panel is one saved, undoable change', async () => {
+  const user = userEvent.setup();
+  const { api, container } = renderEditor(mangaBundle([mangaPanel]));
+  fireEvent.pointerDown(container.querySelector('[data-el="p1"]')!);
+  await user.click(screen.getByRole('button', { name: 'Ink' }));
+  expect(screen.getByRole('button', { name: 'Ink' }).getAttribute('aria-pressed')).toBe('true');
+  expect(container.querySelector('[data-frame-id="p1"] .frame-window.ink')).not.toBeNull();
+  await waitFor(() => expect(api.savePage).toHaveBeenLastCalledWith('p0', expect.objectContaining({ elements: [expect.objectContaining({ id: 'p1', ink: true })] }), undefined));
+  await user.click(screen.getByRole('button', { name: 'Undo' }));
+  expect(container.querySelector('[data-frame-id="p1"] .frame-window.ink')).toBeNull();
+});
+
+test('manga: Add page offers the manga layouts, not the scrapbook templates', async () => {
+  const user = userEvent.setup();
+  renderEditor(mangaBundle());
+  await user.click(screen.getByRole('button', { name: 'Add page' }));
+  const picker = screen.getByRole('dialog', { name: 'Pick a template' });
+  for (const name of ['Classic grid', 'Dynamic slants', 'Splash + insets', 'Full-bleed single panel']) expect(picker.textContent).toContain(name);
+  expect(picker.textContent).not.toContain('Two tilted'); // a scrapbook-only template
+});
+
+test('manga: Background → Right → left saves the reading direction', async () => {
+  const user = userEvent.setup();
+  const { api } = renderEditor(mangaBundle());
+  await user.click(screen.getByRole('button', { name: 'Background' }));
+  await user.click(screen.getByRole('button', { name: 'Right → left' }));
+  expect(api.updateAlbum).toHaveBeenCalledWith('a1', { readingDirection: 'rtl' });
+  expect(screen.getByRole('button', { name: 'Right → left' }).getAttribute('aria-pressed')).toBe('true');
+});
+
+const mangaText = (id: string, textStyle: 'speech' | 'sfx', color: string): PageElement =>
+  ({ type: 'text', id, x: 0.2, y: 0.5, w: 0.36, h: 0.2, rotation: 0, z: 3, text: 'BÙM!', font: textStyle === 'sfx' ? 'bangers' : 'patrick-hand', color, size: 0.06, textStyle, tail: 'bl' });
+
+test('manga: editing a bubble hides its drawn words, and sound-effect text is readable while typing', () => {
+  const { container } = renderEditor(mangaBundle([mangaText('s1', 'sfx', '#ffffff')]));
+  fireEvent.doubleClick(container.querySelector('[data-el="s1"]')!);
+  const editor = container.querySelector<HTMLElement>('[data-el="s1"] .text-editing')!;
+  expect(editor).not.toBeNull();
+  expect(editor.style.color).toBe('rgb(17, 17, 17)'); // white SFX would be invisible on white paper while typing
+  expect(container.querySelector('.edit-page')!.classList.contains('editing')).toBe(true);
+  expect(readFileSync('src/styles.css', 'utf8')).toContain('.edit-page.editing .el-text .manga-text');
+});
+
+test('manga: a selected speech bubble can point its tail at any corner', async () => {
+  const user = userEvent.setup();
+  const { container } = renderEditor(mangaBundle([mangaText('b1', 'speech', '#111111')]));
+  fireEvent.pointerDown(container.querySelector('[data-el="b1"]')!);
+  await user.click(screen.getByRole('button', { name: 'Tail bottom-right' }));
+  expect(container.querySelector('[data-el="b1"] .manga-speech.tail-br')).not.toBeNull();
+  expect(screen.getByRole('button', { name: 'Tail bottom-right' }).getAttribute('aria-pressed')).toBe('true');
+});
+
+test('manga: with a panel selected, new speed lines start over that panel instead of covering the page', async () => {
+  const user = userEvent.setup();
+  const { container } = renderEditor(mangaBundle([mangaPanel]));
+  fireEvent.pointerDown(container.querySelector('[data-el="p1"]')!);
+  await user.click(screen.getByRole('button', { name: 'Lines' }));
+  await user.click(screen.getByRole('button', { name: 'Speed lines' }));
+  const fx = container.querySelector<HTMLElement>('.edit-page .el-effect')!;
+  expect([fx.style.left, fx.style.top, fx.style.width, fx.style.height]).toEqual(['10%', '10%', '50%', '40%']);
+});
+
+test('manga: Shape lets each corner of a panel move on its own; Done saves it as one change, Reset squares it', async () => {
+  const user = userEvent.setup();
+  const { api, container } = renderEditor(mangaBundle([mangaPanel]));
+  fireEvent.pointerDown(container.querySelector('[data-el="p1"]')!);
+  await user.click(screen.getByRole('button', { name: 'Shape' }));
+  const corner3 = screen.getByRole('button', { name: 'Corner 3' }); // bottom-right
+  corner3.focus();
+  await user.keyboard('{ArrowLeft}{ArrowLeft}{ArrowUp}');
+  await user.click(screen.getByRole('button', { name: 'Done' }));
+  await waitFor(() => expect(api.savePage).toHaveBeenLastCalledWith('p0', expect.objectContaining({
+    elements: [expect.objectContaining({ id: 'p1', x: 0.1, y: 0.1, shape: [[0, 0], [1, 0], [0.96, 0.98], [0, 1]] })],
+  }), undefined));
+  expect(container.querySelector<HTMLElement>('[data-frame-id="p1"] .frame-window')!.style.clipPath).toBe('polygon(0% 0%, 100% 0%, 96% 98%, 0% 100%)');
+
+  await user.click(screen.getByRole('button', { name: 'Shape' }));
+  await user.click(screen.getByRole('button', { name: 'Reset' }));
+  await user.click(screen.getByRole('button', { name: 'Done' }));
+  await waitFor(() => expect(api.savePage).toHaveBeenLastCalledWith('p0', expect.objectContaining({
+    elements: [expect.objectContaining({ id: 'p1', shape: [[0, 0], [1, 0], [1, 1], [0, 1]] })],
+  }), undefined));
+});
+
+test('manga: dragging a Shape corner moves it, even when the browser refuses pointer capture', async () => {
+  const user = userEvent.setup();
+  const w = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(200);
+  const h = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(200);
+  const cap = vi.fn(() => { throw new DOMException('Invalid pointer id', 'NotFoundError'); });
+  (HTMLElement.prototype as unknown as { setPointerCapture: unknown }).setPointerCapture = cap;
+  try {
+    const { container } = renderEditor(mangaBundle([mangaPanel]));
+    fireEvent.pointerDown(container.querySelector('[data-el="p1"]')!);
+    await user.click(screen.getByRole('button', { name: 'Shape' }));
+    const handle = screen.getByRole('button', { name: 'Corner 3' });
+    const overlay = container.querySelector('.shape-overlay')!;
+    // jsdom has no PointerEvent (clientX would be dropped): pointer-typed MouseEvents carry the coordinates.
+    const ptr = (type: string, x: number, y: number) => new MouseEvent(type, { bubbles: true, clientX: x, clientY: y });
+    fireEvent(handle, ptr('pointerdown', 300, 300));
+    fireEvent(overlay, ptr('pointermove', 260, 280)); // −40px, −20px of a 200px box
+    fireEvent(overlay, ptr('pointerup', 260, 280));
+    expect(container.querySelector('.shape-outline polygon')!.getAttribute('points')).toBe('0,0 100,0 80,90 0,100');
+  } finally {
+    w.mockRestore(); h.mockRestore();
+    delete (HTMLElement.prototype as unknown as { setPointerCapture?: unknown }).setPointerCapture;
+  }
+});
+
+test('manga: Shape, Ink and Tone sit together in one panel group', () => {
+  const { container } = renderEditor(mangaBundle([mangaPanel]));
+  fireEvent.pointerDown(container.querySelector('[data-el="p1"]')!);
+  const group = screen.getByRole('group', { name: 'Panel' });
+  expect(group.classList.contains('row')).toBe(true);
+  for (const name of ['Shape', 'Ink', 'Tone']) expect(screen.getByRole('button', { name }).parentElement).toBe(group);
 });

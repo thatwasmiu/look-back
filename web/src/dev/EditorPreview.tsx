@@ -66,7 +66,7 @@ const fakeApi: EditorApi = {
   },
   async updateAlbum(id, patch) {
     await wait(); cover = patch.coverMediaId ?? cover; bg = patch.backgroundEffect ?? bg; desk = patch.backgroundColor ?? desk;
-    return { id, title: 'dev', coverMediaId: cover, backgroundEffect: bg, backgroundColor: desk, shareToken: null, musicMediaId: null };
+    return { id, title: 'dev', coverMediaId: cover, backgroundEffect: bg, backgroundColor: desk, shareToken: null, musicMediaId: null, mode: 'scrapbook', readingDirection: 'ltr' };
   },
 };
 
@@ -113,7 +113,23 @@ function useFakeUpload(albumId: string, onCreated: (mediaId: string, targetFrame
   };
 }
 
+// /dev/editor?manga: a manga album — slanted panels with the sample photos, a shout bubble, a sound effect, speed lines.
+function mangaPages(): PageDTO[] {
+  let n = 0;
+  const layout = instantiateTemplate('manga-slants', () => `m${n++}`);
+  const photos = [...media.values()].filter((m) => m.kind === 'image' && m.status === 'ready').map((m) => m.id);
+  let i = 0;
+  layout.elements = layout.elements.map((e) => (e.type === 'frame' ? { ...e, mediaId: photos[i++ % photos.length] ?? null } : e));
+  layout.elements.push(
+    { type: 'text', id: 'shout', x: 0.08, y: 0.05, w: 0.34, h: 0.2, rotation: -4, z: 5, text: 'ĐI THÔI!', font: 'patrick-hand', color: '#111111', size: 0.04, textStyle: 'shout' },
+    { type: 'text', id: 'sfx', x: 0.55, y: 0.74, w: 0.36, h: 0.14, rotation: -10, z: 5, text: 'VÚT!', font: 'bangers', color: '#ffffff', size: 0.08, textStyle: 'sfx' },
+    { type: 'effect', id: 'speed', x: 0.04, y: 0.69, w: 0.92, h: 0.27, rotation: 0, z: 4, effect: 'speed-lines' },
+  );
+  return [{ id: 'mp0', albumId: 'dev', position: 0, layout }];
+}
+
 export default function EditorPreview() {
-  const bundle: AlbumBundle = { album: { id: 'dev', title: 'Đà Lạt (dev editor)', coverMediaId: cover, backgroundEffect: bg, backgroundColor: desk, shareToken: null, musicMediaId: null }, pages: structuredClone(pages), media: structuredClone([...media.values()]) };
+  const manga = typeof location !== 'undefined' && new URLSearchParams(location.search).has('manga');
+  const bundle: AlbumBundle = { album: { id: 'dev', title: manga ? 'Truyện mùa hè (dev)' : 'Đà Lạt (dev editor)', coverMediaId: cover, backgroundEffect: bg, backgroundColor: desk, shareToken: null, musicMediaId: null, mode: manga ? 'manga' : 'scrapbook', readingDirection: 'ltr' }, pages: manga ? mangaPages() : structuredClone(pages), media: structuredClone([...media.values()]) };
   return <EditorView bundle={bundle} api={fakeApi} uploader={useFakeUpload} />;
 }

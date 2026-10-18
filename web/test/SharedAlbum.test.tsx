@@ -8,7 +8,7 @@ beforeEach(() => vi.stubGlobal('matchMedia', () => ({ matches: false, addEventLi
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 const bundle: AlbumBundle = {
-  album: { id: 'a1', title: 'Trip', coverMediaId: null, backgroundEffect: 'none', backgroundColor: 'walnut', shareToken: null, musicMediaId: null },
+  album: { id: 'a1', title: 'Trip', coverMediaId: null, backgroundEffect: 'none', backgroundColor: 'walnut', shareToken: null, musicMediaId: null, mode: 'scrapbook', readingDirection: 'ltr' },
   pages: [{ id: 'p0', albumId: 'a1', position: 0, layout: { background: 'paper-cream', elements: [] } }], media: [],
 };
 const open = (token: string) => render(

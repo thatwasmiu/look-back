@@ -65,6 +65,9 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .modal-actions { display: flex; justify-content: flex-end; gap: .5rem; }
 .modal:has(.start-from) { width: min(34rem, 100%); max-height: calc(100vh - 32px); overflow-y: auto; }
 .start-from { display: flex; flex-direction: column; gap: .4rem; }
+.mode-switch { display: flex; gap: .4rem; }
+.mode-switch button { flex: 1; padding: .45rem .6rem; border-radius: 8px; background: #f3ead7; color: var(--ink); border: 2px solid transparent; }
+.mode-switch button[aria-checked='true'] { border-color: var(--accent); background: #fff4ec; font-weight: 600; }
 .start-label { font-size: .85rem; opacity: .75; }
 .start-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(6.2rem, 1fr)); gap: .45rem; }
 .start-card { display: flex; flex-direction: column; align-items: center; gap: .25rem; padding: .5rem .3rem .45rem; border-radius: 10px;
@@ -235,6 +238,8 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .edit-stage { flex: 1; min-height: 0; container-type: size; display: grid; place-items: safe center; overflow: auto; isolation: isolate; /* Moveable's z-index stays under the tools */ }
 .edit-page { position: relative; width: calc(min(100cqw - 24px, (100cqh - 24px) * .75) * var(--zoom, 1)); touch-action: none; }
 .edit-page.editing .el-text > .text:not(.text-editing) { visibility: hidden; }
+/* Manga bubbles / narration / sound effects: hide the drawn words while their text is being typed. */
+.edit-page.editing .el-text .manga-text { visibility: hidden; }
 .el-text .text-editing { position: absolute; inset: 0; outline: 1px dashed #4a3b2c88; cursor: text; user-select: text; -webkit-user-select: text; }
 .page-edit .el { cursor: grab; }
 .editor-moveable { --moveable-color: #b5543a; }
@@ -343,7 +348,7 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
     box-shadow: 0 2px 8px #0003;
   }
   .editor > .editor-bar h1 { font-size: 1.3rem; }
-  .editor > .toolbar { grid-column: 1; grid-row: 1 / span 10; width: 8.5rem; padding: .6rem .5rem; box-shadow: 2px 0 8px #0004; }
+  .editor > .toolbar { grid-column: 1; grid-row: 1 / span 10; width: 11rem; padding: .6rem .5rem; box-shadow: 2px 0 8px #0004; }
   .editor > .edit-main { min-height: 0; grid-row: 1 / span 2; }
   .toolbar .tools { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
   .toolbar .tools .sep { width: auto; height: 1px; margin: .2rem 0; }
