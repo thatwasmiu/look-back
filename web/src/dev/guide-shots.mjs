@@ -36,6 +36,9 @@ const album = (id, title, cover, pageCount, shareToken = null) => ({
   await page.getByLabel('Album title').fill('Tà Xùa 2026');
   await page.getByRole('radio', { name: '2 3 con mực' }).click();
   await shot(page, 'new-album');
+  await page.getByRole('radio', { name: 'Manga' }).click();
+  await page.getByRole('radio', { name: 'Right → left' }).click();
+  await shot(page, 'manga-new-album');
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Share Đà Lạt 2026' }).click();
   await settle(page);
@@ -89,6 +92,16 @@ const album = (id, title, cover, pageCount, shareToken = null) => ({
   await page.getByRole('button', { name: 'Add page' }).click();
   await settle(page);
   await shot(page, 'templates');
+  await page.close();
+}
+
+// ---- Manga editor (dev sample: slanted panels, shout bubble, sound effect, speed lines) ----
+{
+  const page = await browser.newPage({ viewport: { width: 1100, height: 720 } });
+  await page.goto(`${BASE}/dev/editor?manga`);
+  await page.locator('.edit-page .frame-panel').first().waitFor();
+  await settle(page);
+  await shot(page, 'manga-editor');
   await page.close();
 }
 

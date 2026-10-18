@@ -69,6 +69,15 @@ const sections: Section[] = [
       { h: 'Thanh công cụ dưới đáy', img: 'phone', p: ['Công cụ nằm ở đáy màn hình cho dễ bấm; các bảng chọn mở lên phía trên.', '**Hide tools** ẩn bớt Photos, Pages và công cụ để nhìn trang rộng hơn; **Show tools** để hiện lại.'] },
     ],
   },
+  {
+    id: 'manga', title: '9. Manga', features: [
+      { h: 'Tạo album manga', img: 'manga-new-album', p: ['Bấm **New album** → chọn **Manga** thay vì **Scrapbook**. Chế độ chỉ chọn một lần khi tạo album, sau đó không đổi được.', 'Album manga bắt đầu với một trang **Classic grid**. Không có mẫu album dựng sẵn cho manga; mục chép thiết kế chỉ liệt kê album manga.'] },
+      { h: 'Khung tranh (Panel) và bố cục trang', img: 'manga-editor', p: ['Trang manga dùng giấy trắng và khung tranh viền đen. **Add page** cho chọn 9 bố cục: Classic grid, Dynamic slants, Splash + insets, Tall + stacked, Two tall columns, Three horizontal strips, Diagonal split, Six-panel grid, Full-bleed single panel.', '**Panel** thêm một khung tranh mới. Đưa ảnh/video vào khung giống khung ảnh scrapbook: **+ add**, kéo từ **Photos**, hoặc dán.', 'Khi chọn một khung: **Ink** chuyển ảnh sang đen trắng kiểu mực in, **Tone** phủ chấm tram, nút **No border / Thin / Border** đổi độ dày viền.'] },
+      { h: 'Bong bóng thoại, lời dẫn, hiệu ứng âm thanh', p: ['**Bubble** → **Speech** (lời nói), **Shout** (hét), **Thought** (suy nghĩ). **Narration** là ô lời dẫn hình chữ nhật. **Sound effect** là chữ lớn kiểu tiếng động.', 'Nhấp đúp để sửa chữ; **Font** và **Color** đổi kiểu chữ và màu như chữ thường.'] },
+      { h: 'Đường tốc độ, đường tập trung, tông chấm', p: ['**Lines** → **Speed lines** (đường tốc độ) hoặc **Focus lines** (đường tập trung về giữa). **Tone** thêm lớp chấm tram.', 'Các lớp này ban đầu phủ cả trang; kéo góc để thu nhỏ vừa một khung tranh.'] },
+      { h: 'Đọc từ phải sang trái', p: ['Khi tạo album manga, chọn **Left → right** hoặc **Right → left**. Đổi lại sau trong **Background** → **Reading direction**.', 'Đọc phải sang trái: phím ←, vuốt sang phải hoặc bấm mép trái là sang trang tiếp; trang bìa nằm bên trái và trang trước của mỗi cặp nằm bên phải.'] },
+    ],
+  },
 ];
 
 const shortcuts: [string, string][] = [
@@ -93,7 +102,7 @@ export default function Guide() {
       </header>
       <nav className="guide-toc" aria-label="Mục lục">
         {sections.map((s) => <a key={s.id} href={`#${s.id}`}>{s.title}</a>)}
-        <a href="#shortcuts">9. Phím tắt</a>
+        <a href="#shortcuts">10. Phím tắt</a>
       </nav>
       {sections.map((s) => (
         <section key={s.id} id={s.id}>
@@ -108,7 +117,7 @@ export default function Guide() {
         </section>
       ))}
       <section id="shortcuts">
-        <h2>9. Phím tắt</h2>
+        <h2>10. Phím tắt</h2>
         <table>
           <tbody>{shortcuts.map(([k, v]) => <tr key={k}><th scope="row"><kbd>{k}</kbd></th><td>{v}</td></tr>)}</tbody>
         </table>
