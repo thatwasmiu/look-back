@@ -348,7 +348,7 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
     box-shadow: 0 2px 8px #0003;
   }
   .editor > .editor-bar h1 { font-size: 1.3rem; }
-  .editor > .toolbar { grid-column: 1; grid-row: 1 / span 10; width: 8.5rem; padding: .6rem .5rem; box-shadow: 2px 0 8px #0004; }
+  .editor > .toolbar { grid-column: 1; grid-row: 1 / span 10; width: 11rem; padding: .6rem .5rem; box-shadow: 2px 0 8px #0004; }
   .editor > .edit-main { min-height: 0; grid-row: 1 / span 2; }
   .toolbar .tools { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
   .toolbar .tools .sep { width: auto; height: 1px; margin: .2rem 0; }
