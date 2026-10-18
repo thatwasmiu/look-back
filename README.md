@@ -22,7 +22,7 @@ Production runs as Docker Compose: `db` (Postgres 16), `api`, `worker` (ffmpeg/s
 
 ### Default: behind your own HTTPS nginx
 
-The app's nginx serves **plain HTTP on `127.0.0.1:8080` only** (unreachable from outside the host) and takes the
+The app's nginx serves **plain HTTP on `127.0.0.1:2611` only** (unreachable from outside the host) and takes the
 visitor's IP from the outer proxy's `X-Forwarded-For` — needed for the login rate limit. Your nginx on the host
 terminates HTTPS (certbot, Cloudflare origin cert, …) and proxies everything:
 
@@ -41,7 +41,7 @@ server {
   proxy_send_timeout 300s;
 
   location / {
-    proxy_pass http://127.0.0.1:8080;
+    proxy_pass http://127.0.0.1:2611;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $remote_addr;   # overwrite, don't append: clients can't spoof their IP
@@ -55,7 +55,7 @@ server {
 }
 ```
 
-Locally (no outer nginx) just open http://localhost:8080.
+Locally (no outer nginx) just open http://localhost:2611.
 
 ### Alternative: HTTPS directly from the app (no outer nginx)
 

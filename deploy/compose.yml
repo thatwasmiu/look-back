@@ -45,7 +45,7 @@ services:
     # For HTTPS directly on 80/443 instead: add -f compose.standalone.yml.
     environment:
       LOOKBACK_MODE: behind-proxy
-    ports: ["127.0.0.1:8080:80"]
+    ports: ["127.0.0.1:2611:80"]
     volumes:
       - media:/data/media:ro
 
