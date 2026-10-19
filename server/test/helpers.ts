@@ -28,7 +28,7 @@ export async function testApp(overrides: Partial<Config> = {}) {
   };
   const pool = createPool(config.databaseUrl);
   await migrate(pool);
-  await pool.query('truncate albums, pages, media cascade');
+  await pool.query('truncate albums, pages, media, pending_deletes, storage_locations cascade');
   const boss = await createQueue(config.databaseUrl);
   await boss.purgeQueue(JOB_PROCESS_MEDIA);
   const app = await buildApp(config, pool, boss);
