@@ -31,7 +31,8 @@ test('"+ add" offers Upload first, then the uploaded photos; picking one puts it
   await user.click(screen.getByRole('button', { name: '+ add' }));
   const dialog = screen.getByRole('dialog', { name: 'Add photo or video' });
   const options = dialog.querySelectorAll('.frame-menu-grid button');
-  expect(options[0].textContent).toContain('Upload');
+  expect(options[0].textContent).toContain('Take photo/video'); // phones only (CSS)
+  expect(options[1].textContent).toContain('Upload');
   await user.click(screen.getByRole('button', { name: 'Use image m1abcdef' }));
   expect(screen.queryByRole('dialog')).toBeNull();
   await user.click(screen.getByRole('button', { name: 'Undo' })); // the pick was one layout change
@@ -46,4 +47,16 @@ test('"+ add" with nothing uploaded goes straight to the file dialog', async () 
   await user.click(screen.getByRole('button', { name: '+ add' }));
   expect(screen.queryByRole('dialog')).toBeNull();
   expect(click).toHaveBeenCalled();
+});
+
+test('"Take photo/video" opens the camera input (capture) for that frame', async () => {
+  const user = userEvent.setup();
+  setup(bundleWith([m]));
+  const camera = screen.getByLabelText('Take photo or video') as HTMLInputElement;
+  expect(camera.getAttribute('capture')).toBe('environment');
+  const click = vi.spyOn(camera, 'click');
+  await user.click(screen.getByRole('button', { name: '+ add' }));
+  await user.click(screen.getByRole('button', { name: /Take photo\/video/ }));
+  expect(click).toHaveBeenCalled();
+  expect(screen.queryByRole('dialog')).toBeNull();
 });

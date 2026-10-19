@@ -42,7 +42,7 @@ test('press and hold on an unselected item still selects and drags in one gestur
   expect(m.dragStart).toHaveBeenCalledTimes(1);
 });
 
-test('tapping an empty frame deselects it, then opens the photo picker after the click is done', async () => {
+test('tapping "+ add" on an empty frame deselects it, then opens the photo picker after the click is done', async () => {
   vi.useFakeTimers();
   try {
     const frame: PageLayout = { background: 'paper-cream', elements: [
@@ -51,7 +51,10 @@ test('tapping an empty frame deselects it, then opens the photo picker after the
     const onSelect = vi.fn();
     const onFrameAddMedia = vi.fn();
     render(<EditCanvas layout={frame} media={new Map()} selectedId="f1" onSelect={onSelect} onCommit={() => {}} onFrameAddMedia={onFrameAddMedia} />);
-    act(() => m.props.onClick({ isDouble: false }));
+    const add = document.querySelector('.slot-empty')!;
+    act(() => m.props.onClick({ isDouble: false, inputTarget: add.parentElement })); // tap elsewhere on the frame
+    expect(onSelect).not.toHaveBeenCalled();
+    act(() => m.props.onClick({ isDouble: false, inputTarget: add }));
     expect(onSelect).toHaveBeenCalledWith(null); // nothing left for a stray drag to grab while the dialog is open
     expect(onFrameAddMedia).not.toHaveBeenCalled(); // not from inside the gesture
     act(() => { vi.runAllTimers(); });
@@ -129,4 +132,23 @@ test('crop mode Size slider can make the photo smaller than the frame; Fill rese
   expect(onCommit).toHaveBeenLastCalledWith(expect.objectContaining({ elements: [expect.objectContaining({ crop: { x: 0.5, y: 0.5, scale: 0.6 } })] }));
   fireEvent.click(getByRole('button', { name: 'Fill' }));
   expect((getByRole('slider', { name: 'Photo size' }) as HTMLInputElement).value).toBe('1');
+});
+
+test('one tap on "+ add" of an unselected frame opens the picker (no select first)', async () => {
+  vi.useFakeTimers();
+  try {
+    const frame: PageLayout = { background: 'paper-cream', elements: [
+      { type: 'frame', id: 'f1', x: 0.1, y: 0.1, w: 0.4, h: 0.3, rotation: 0, z: 1, frameStyle: 'polaroid', mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } },
+    ] };
+    const onSelect = vi.fn();
+    const onFrameAddMedia = vi.fn();
+    render(<EditCanvas layout={frame} media={new Map()} selectedId={null} onSelect={onSelect} onCommit={() => {}} onFrameAddMedia={onFrameAddMedia} />);
+    const add = document.querySelector('.slot-empty')!;
+    act(() => { add.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true })); });
+    expect(onSelect).not.toHaveBeenCalledWith('f1'); // not selected, so no drag starts either
+    act(() => { add.dispatchEvent(new MouseEvent('pointerup', { bubbles: true })); vi.runAllTimers(); });
+    expect(onFrameAddMedia).toHaveBeenCalledWith('f1');
+  } finally {
+    vi.useRealTimers();
+  }
 });

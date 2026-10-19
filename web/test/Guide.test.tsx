@@ -21,3 +21,16 @@ test('the guide has a Manga section with reading direction', () => {
   expect(screen.getByRole('heading', { level: 3, name: 'Khung tranh tự do (Shape)' })).toBeTruthy();
   expect(screen.getByText(/Tail/, { selector: 'strong' })).toBeTruthy();
 });
+
+test('opened from the editor (installed app), ← Back goes back to the editor', async () => {
+  const { Routes, Route } = await import('react-router-dom');
+  const { default: userEvent } = await import('@testing-library/user-event');
+  render(
+    <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+      initialEntries={['/albums/a1/edit', { pathname: '/guide', state: { back: true } }]} initialIndex={1}>
+      <Routes><Route path="/guide" element={<Guide />} /><Route path="/albums/a1/edit" element={<p>editor</p>} /></Routes>
+    </MemoryRouter>,
+  );
+  await userEvent.click(screen.getByRole('link', { name: '← Back' }));
+  expect(screen.getByText('editor')).toBeTruthy();
+});

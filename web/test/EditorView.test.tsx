@@ -343,6 +343,21 @@ test('a pinned item ignores arrow nudges until it is unpinned', async () => {
   expect(el().style.left).not.toBe(x0);
 });
 
+test('Pin all pins every item on the page; unpinning is one item at a time', async () => {
+  const user = userEvent.setup();
+  const { container } = setup(okApi());
+  await user.click(screen.getByRole('button', { name: 'Text' }));
+  const el = () => container.querySelector<HTMLElement>('.edit-page .el-text')!;
+  const x0 = el().style.left;
+  await user.click(screen.getByRole('button', { name: '📌 Pin all' }));
+  expect(screen.queryByRole('button', { name: '📌 Pin all' })).toBeNull(); // nothing left to pin; no "Unpin all"
+  expect(screen.getByRole('button', { name: '📌 Unpin' }).getAttribute('aria-pressed')).toBe('true');
+  await user.keyboard('{ArrowRight}');
+  expect(el().style.left).toBe(x0);
+  await user.click(screen.getByRole('button', { name: '📌 Unpin' }));
+  expect(screen.getByRole('button', { name: '📌 Pin all' })).toBeTruthy();
+});
+
 test('Ctrl+C / Ctrl+V pastes a copy of the selected item (also on another page); Duplicate does the same', async () => {
   const user = userEvent.setup();
   const { container } = setup(okApi());

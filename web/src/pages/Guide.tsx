@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 // Usage guide: one section per area of the app, one heading per feature. Button names are the app's own (English).
 type Feature = { h: string; img?: string; p: string[] }; // img: web/public/guide/<img>.jpg (src/dev/guide-shots.mjs)
@@ -30,7 +30,7 @@ const sections: Section[] = [
     id: 'media', title: '4. Ảnh và video', features: [
       { h: 'Tải lên', img: 'editor', p: ['Bấm **Upload** trong khu **Photos**. Hỗ trợ ảnh và video lớn; tải lên tiếp tục được nếu mạng chập chờn.', 'Ảnh được nén và tạo bản xem nhanh (mờ → nét); video được chuyển sang dạng phát mượt (HLS). Trong lúc tải và xử lý, ảnh hiện nhãn “đang tải…” / “đang xử lý…”; lỗi sẽ hiện “tải lên lỗi”.'] },
       { h: 'Dán ảnh từ clipboard', p: ['Chụp màn hình hoặc “Copy image” rồi nhấn **Ctrl+V** trong màn trang trí. Nếu đang chọn một khung trống, ảnh vào thẳng khung đó; nếu không, ảnh vào khu **Photos**.'] },
-      { h: 'Đưa ảnh vào khung', img: 'frame-menu', p: ['Bấm **+ add** trên khung trống → chọn **Upload** (tải ảnh mới) hoặc chọn một ảnh đã tải.', 'Hoặc kéo ảnh từ **Photos** thả vào khung, hoặc chọn khung rồi bấm ảnh trong **Photos**.'] },
+      { h: 'Đưa ảnh vào khung', img: 'frame-menu', p: ['Bấm **+ add** trên khung trống → chọn **Upload** (tải ảnh mới) hoặc chọn một ảnh đã tải. Trên điện thoại có thêm **Take photo/video** để chụp/quay ngay bằng camera.', 'Hoặc kéo ảnh từ **Photos** thả vào khung, hoặc chọn khung rồi bấm ảnh trong **Photos**.'] },
       { h: 'Ảnh bìa và xóa ảnh', p: ['Trong **Photos**: nút ★ đặt làm ảnh bìa album; nút xóa xóa ảnh khỏi album (các khung đang dùng ảnh đó sẽ trống lại).'] },
     ],
   },
@@ -50,7 +50,7 @@ const sections: Section[] = [
     id: 'items', title: '6. Thao tác với vật trên trang', features: [
       { h: 'Chọn, di chuyển, đổi cỡ, xoay', img: 'selected', p: ['Bấm vào vật để chọn. Giữ chuột và kéo để di chuyển (thả chuột là dừng). Kéo các góc để đổi cỡ, kéo nút tròn phía trên để xoay. Trên điện thoại có thể chụm / xoay hai ngón.', 'Bấm vào chỗ trống trên trang hoặc ra phần nền xung quanh để bỏ chọn.'] },
       { h: 'Lớp trên / dưới và xóa', p: ['↑ đưa lên trên, ↓ đưa xuống dưới, 🗑 xóa. Phím Delete / Backspace cũng xóa vật đang chọn.'] },
-      { h: 'Ghim (Pin)', p: ['**📌 Pin** khóa vật tại chỗ: không kéo, đổi cỡ, xoay hay dịch bằng phím mũi tên được nữa. **📌 Unpin** để mở khóa.'] },
+      { h: 'Ghim (Pin)', p: ['**📌 Pin** khóa vật tại chỗ: không kéo, đổi cỡ, xoay hay dịch bằng phím mũi tên được nữa. **📌 Unpin** để mở khóa.', '**📌 Pin all** ghim một lần mọi vật trên trang. Muốn bỏ ghim thì chọn từng vật rồi bấm **📌 Unpin**.'] },
       { h: 'Nhân bản và sao chép', p: ['**⧉ Duplicate** tạo bản sao ngay cạnh. Hoặc **Ctrl+C** rồi **Ctrl+V**, kể cả dán sang trang khác.'] },
       { h: 'Hoàn tác', p: ['↶ / ↷ hoặc **Ctrl+Z** / **Ctrl+Shift+Z** (hoặc **Ctrl+Y**).'] },
       { h: 'Phóng to trang', p: ['− / + phóng từ 100% đến 300%, bấm số % để về vừa màn hình. **Ctrl + cuộn chuột** cũng phóng to.'] },
@@ -95,10 +95,12 @@ const shortcuts: [string, string][] = [
 const rich = (s: string) => s.split(/\*\*(.+?)\*\*/g).map((part, i) => (i % 2 ? <strong key={i}>{part}</strong> : part));
 
 export default function Guide() {
+  const back = (useLocation().state as { back?: boolean } | null)?.back; // opened from the editor in the installed app
+  const navigate = useNavigate();
   return (
     <main className="guide">
       <header>
-        <Link to="/">← Albums</Link>
+        <Link to="/" onClick={(e) => { if (back) { e.preventDefault(); navigate(-1); } }}>{back ? '← Back' : '← Albums'}</Link>
         <h1>Hướng dẫn sử dụng</h1>
       </header>
       <nav className="guide-toc" aria-label="Mục lục">

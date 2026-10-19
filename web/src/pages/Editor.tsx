@@ -17,6 +17,8 @@ import { ACCEPT, pollUntilSettled, useUpload } from '../editor/useUpload';
 export type EditorApi = Pick<typeof realApi,
   'addPage' | 'savePage' | 'deletePage' | 'reorderPages' | 'getMedia' | 'deleteMedia' | 'updateAlbum'>;
 
+const standalone = window.matchMedia?.('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
+
 export default function Editor() {
   const { id = '' } = useParams();
   const [bundle, setBundle] = useState<AlbumBundle | null>(null);
@@ -257,9 +259,11 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   // "+ add" on an empty frame: pick from what's already uploaded, or upload new (first option).
   // With nothing uploaded yet it goes straight to the file dialog.
   const [frameMenu, setFrameMenu] = useState<string | null>(null);
-  const uploadToFrame = (frameId: string) => {
+  // camera: the phone-only "Take photo/video" (same input with capture, which opens the camera directly).
+  const cameraPick = useRef<HTMLInputElement | null>(null);
+  const uploadToFrame = (frameId: string, camera = false) => {
     framePick.current.frameId = frameId;
-    framePick.current.input?.click();
+    (camera ? cameraPick.current : framePick.current.input)?.click();
   };
   const addToFrame = (frameId: string) => {
     if (trayMedia.some((m) => m.status !== 'failed')) setFrameMenu(frameId);
@@ -423,8 +427,14 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
         <button type="button" className="panels-toggle" aria-pressed={panelsHidden} onClick={() => setPanelsHidden((v) => !v)}>
           {panelsHidden ? 'Show tools' : 'Hide tools'}
         </button>
-        {/* New tab: the editor keeps its state (and autosave) while the guide is open. */}
-        <a className="guide-help" href="/guide" target="_blank" rel="noopener" aria-label="Hướng dẫn sử dụng" title="Hướng dẫn sử dụng">?</a>
+        {/* New tab: the editor keeps its state (and autosave) while the guide is open. An installed app (PWA) has
+            no tabs or back button there, so it saves and opens the guide in place; the guide's ← Back returns here. */}
+        {standalone
+          ? <Link className="guide-help" to="/guide" aria-label="Hướng dẫn sử dụng" title="Hướng dẫn sử dụng" onClick={(e) => {
+            e.preventDefault();
+            void run('mở hướng dẫn', async () => { if (await saved()) navigate('/guide', { state: { back: true } }); });
+          }}>?</Link>
+          : <a className="guide-help" href="/guide" target="_blank" rel="noopener" aria-label="Hướng dẫn sử dụng" title="Hướng dẫn sử dụng">?</a>}
       </header>
       {page && (
         <Toolbar layout={layout} selected={selected} commit={commit}
@@ -463,6 +473,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
               <button type="button" className="modal-close" aria-label="Close" onClick={() => setFrameMenu(null)} autoFocus>×</button>
               <h2>Add to frame</h2>
               <div className="frame-menu-grid">
+                <button type="button" className="frame-menu-upload frame-menu-camera" onClick={() => { uploadToFrame(frameMenu, true); setFrameMenu(null); }}>📷<span>Take photo/video</span></button>
                 <button type="button" className="frame-menu-upload" onClick={() => { uploadToFrame(frameMenu); setFrameMenu(null); }}>⬆<span>Upload</span></button>
                 {trayMedia.filter((m) => m.status !== 'failed').map((m) => {
                   const src = thumbOf(m);
@@ -479,8 +490,11 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
           </div>,
           document.body,
         )}
-        <input type="file" accept={ACCEPT} hidden aria-label="Upload into frame" ref={(n) => { framePick.current.input = n; }}
-          onChange={(e) => { upload.add([...e.target.files ?? []], framePick.current.frameId); e.target.value = ''; }} />
+        {(['Upload into frame', 'Take photo or video'] as const).map((label, i) => (
+          <input key={label} type="file" accept={ACCEPT} hidden aria-label={label} capture={i ? 'environment' : undefined}
+            ref={(n) => { if (i) cameraPick.current = n; else framePick.current.input = n; }}
+            onChange={(e) => { upload.add([...e.target.files ?? []], framePick.current.frameId); e.target.value = ''; }} />
+        ))}
       </div>
       {opError && <p role="alert" className="error op-error">{opError}</p>}
       <nav className={`page-strip${pagesOpen ? ' open' : ''}`} aria-label="Pages">

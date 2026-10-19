@@ -5,7 +5,7 @@
 .frame-panel.panel-border-thin { padding: .25cqh; }
 .frame-panel.panel-border-none { padding: 0; background: none; }
 .frame-panel .frame-window { background: #ece8df; box-shadow: none; }
-.frame-panel .slot-empty { border-color: #8886; color: #555; }
+.frame-panel .slot-empty { border-color: #8884; background: #fff8; color: #555; }
 .frame-window.ink .blur-image, .frame-window.ink video, .frame-window.ink .video { filter: grayscale(1) contrast(1.2); }
 /* Screentone: halftone dots over the photo. */
 .tone { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: multiply;

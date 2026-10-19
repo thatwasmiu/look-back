@@ -169,6 +169,10 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
           <button type="button" aria-pressed={!!selected.pinned} title={selected.pinned ? 'Unpin to move, resize or rotate again' : 'Lock in place'}
             onClick={() => commit(updateElement(layout, selected.id, { pinned: !selected.pinned }))}>{selected.pinned ? '📌 Unpin' : '📌 Pin'}</button>
         )}
+        {/* One way only: unpinning stays per item, so a stray tap can't unlock the whole page. */}
+        {layout.elements.some((e) => !e.pinned) && (
+          <button type="button" title="Lock every item on this page" onClick={() => commit({ ...layout, elements: layout.elements.map((e) => ({ ...e, pinned: true })) })}>📌 Pin all</button>
+        )}
         <span className="sep" />
         <span className="row">
           <button type="button" disabled={!sel} aria-label="Bring forward" title="Bring forward" onClick={() => sel && commit(bringForward(layout, sel))}>↑</button>

@@ -95,6 +95,18 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
     if (cropId) finishCrop();
     const id = (e.target as Element).closest('[data-el]')?.getAttribute('data-el') ?? null;
     if (id !== editingId) setEditingId(null);
+    // "+ add" on a frame that isn't selected yet: one tap opens the picker (no select-then-tap-again).
+    // Opened after the tap ends, like the selected case below, so the file dialog can't strand a gesture.
+    if (id && id !== selectedId && onFrameAddMedia && (e.target as Element).closest('.slot-empty')) {
+      const up = (u: Event) => {
+        window.removeEventListener('pointercancel', cancel);
+        if ((u.target as Element | null)?.closest?.('.slot-empty')) { onSelect(null); setTimeout(() => onFrameAddMedia(id), 0); }
+      };
+      const cancel = () => window.removeEventListener('pointerup', up);
+      window.addEventListener('pointerup', up, { once: true });
+      window.addEventListener('pointercancel', cancel, { once: true });
+      return;
+    }
     if (id === selectedId) return;
     const m = moveableRef.current;
     const native = e.nativeEvent;
@@ -161,7 +173,8 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
         onClick={(e) => {
           if (!selected) return;
           if (e.isDouble) startEditing(selected.id);
-          else if (selected.type === 'frame' && !selected.mediaId && onFrameAddMedia) {
+          // Only the "+ add" button itself: the rest of the frame stays for selecting, dragging and resizing (phones).
+          else if (selected.type === 'frame' && !selected.mediaId && onFrameAddMedia && (e.inputTarget as Element | null)?.closest?.('.slot-empty')) {
             // The native file dialog swallows mouse events: opened mid-gesture it left a half-finished drag that
             // grabbed the frame afterwards. Deselect first (nothing to drag) and open it once this click is done.
             const id = selected.id;
