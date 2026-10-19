@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { FrameEl } from '@scrapbook/shared';
 
 // "Chụp theo khung" (phones): an in-app camera whose preview shows the frame's own shape and proportions, so the
@@ -33,6 +33,10 @@ export function FrameCamera({ frame, onCapture, onClose }: { frame: FrameEl; onC
   const pinch = useRef<{ d: number; z: number } | null>(null);
   const recorder = useRef<MediaRecorder | null>(null);
   const aspect = frameAspect(frame);
+  const maskId = `cam-mask-${useId().replace(/:/g, '')}`;
+  const shapeEl = (fill: string) => (frame.frameStyle === 'heart'
+    ? <path d={HEART} transform="scale(1 1.11)" fill={fill} />
+    : <polygon points={(frame.shape ?? []).map(([x, y]) => `${x * 100},${y * 100}`).join(' ')} fill={fill} />);
   const shape = shapeOf(frame);
 
   const release = () => { stream.current?.getTracks().forEach((t) => t.stop()); stream.current = null; };
@@ -139,20 +143,29 @@ export function FrameCamera({ frame, onCapture, onClose }: { frame: FrameEl; onC
       onPointerDown={onPointer} onPointerMove={onPointer} onPointerUp={onPointer} onPointerCancel={onPointer}>
       <video ref={videoRef} className="camera-feed" style={{ transform: feedTransform }} autoPlay playsInline muted />
       <div ref={windowRef} className={`camera-window shape-${shape}`} style={{ aspectRatio: String(aspect), '--aspect': aspect } as React.CSSProperties}>
+        {/* little stickers on the corners of the frame */}
+        {(['tl', 'tr', 'bl', 'br'] as const).map((c, i) => <span key={c} className={`camera-deco deco-${c}`} aria-hidden>{i % 2 ? '♥' : '✿'}</span>)}
         {(shape === 'heart' || shape === 'panel') && (
           <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
-            {shape === 'heart' ? <path d={HEART} transform="scale(1 1.11)" />
-              : <polygon points={frame.shape!.map(([x, y]) => `${x * 100},${y * 100}`).join(' ')} />}
+            {/* dim the box outside the shape too, then draw its dashed outline */}
+            <defs>
+              <mask id={maskId}>
+                <rect width="100" height="100" fill="white" />
+                {shapeEl('black')}
+              </mask>
+            </defs>
+            <rect className="camera-dim" width="100" height="100" mask={`url(#${maskId})`} />
+            {shapeEl('none')}
           </svg>
         )}
       </div>
       {error && <p className="camera-error" role="alert">{error}</p>}
-      {recording && <p className="camera-timer" role="status">● {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}</p>}
+      {recording && <p className="camera-timer" role="status"><span className="rec-dot" aria-hidden />{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}</p>}
       <div className="camera-top">
-        <button type="button" onClick={() => { if (recording) recorder.current?.stop(); release(); onClose(); }}>Đóng</button>
+        <button type="button" className="camera-round" aria-label="Đóng" onClick={() => { if (recording) recorder.current?.stop(); release(); onClose(); }}>✕</button>
         <div className="mode-switch" role="radiogroup" aria-label="Chế độ">
           {(['photo', 'video'] as const).map((m) => (
-            <button key={m} type="button" role="radio" aria-checked={mode === m} disabled={recording} onClick={() => setMode(m)}>{m === 'photo' ? 'Ảnh' : 'Video'}</button>
+            <button key={m} type="button" role="radio" aria-label={m === 'photo' ? 'Ảnh' : 'Video'} aria-checked={mode === m} disabled={recording} onClick={() => setMode(m)}>{m === 'photo' ? '📷 Ảnh' : '🎬 Video'}</button>
           ))}
         </div>
       </div>
@@ -160,15 +173,15 @@ export function FrameCamera({ frame, onCapture, onClose }: { frame: FrameEl; onC
         <label className="camera-zoom">
           <input type="range" aria-label="Zoom" min={zoomRange.min} max={zoomRange.max} step={zoomRange.step} value={zoom}
             onChange={(e) => setZoom(Number(e.target.value))} />
-          <span>{zoom.toFixed(1)}×</span>
+          <span className="camera-pill">{zoom.toFixed(1)}×</span>
         </label>
       )}
       <div className="camera-bottom">
-        <button type="button" disabled={recording} onClick={() => setFacing(facing === 'environment' ? 'user' : 'environment')}>Đổi camera</button>
-        {hw.torch && <button type="button" className="camera-torch" aria-pressed={torch} onClick={toggleTorch}>⚡ Đèn</button>}
-        {mode === 'photo' ? <button type="button" className="camera-shutter" onClick={shoot}>Chụp</button>
-          : recording ? <button type="button" className="camera-shutter recording" onClick={stopRecording}>Dừng</button>
-            : <button type="button" className="camera-shutter rec" onClick={record}>Quay</button>}
+        <button type="button" className="camera-round camera-flip" aria-label="Đổi camera" disabled={recording} onClick={() => setFacing(facing === 'environment' ? 'user' : 'environment')}>🔄</button>
+        {mode === 'photo' ? <button type="button" className="camera-shutter" aria-label="Chụp" onClick={shoot}><span aria-hidden>♥</span></button>
+          : recording ? <button type="button" className="camera-shutter recording" aria-label="Dừng" onClick={stopRecording}><span aria-hidden /></button>
+            : <button type="button" className="camera-shutter rec" aria-label="Quay" onClick={record}><span aria-hidden /></button>}
+        {hw.torch && <button type="button" className="camera-round camera-torch" aria-label="⚡ Đèn" aria-pressed={torch} onClick={toggleTorch}>⚡</button>}
       </div>
     </div>
   );

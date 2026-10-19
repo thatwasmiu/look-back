@@ -451,29 +451,50 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .drive-status.drive-incomplete { color: #a0731a; }
 .drive-status.drive-error, .drive-status.drive-needs-reconnect { color: #a33a2a; }
 
-
-/* ---- "Chụp theo khung": in-app camera with the frame's outline (phones) ---- */
-.camera { position: fixed; inset: 0; z-index: 1000; background: #000; color: #fff; overflow: hidden; }
+/* ---- "Chụp theo khung": in-app camera with the frame's outline (phones) — soft, sticker-like ---- */
+.camera { position: fixed; inset: 0; z-index: 1000; background: #2a1d2b; color: #fff; overflow: hidden; touch-action: none;
+  font-family: 'Patrick Hand', cursive; --cam-pink: #ff9ec2; --cam-cream: #fff6e8; --cam-ink: #5b3d52; --cam-plum: rgba(58, 30, 54, .58); }
 .camera-feed { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .camera-window { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%);
-  width: min(88vw, calc(66vh * var(--aspect))); box-shadow: 0 0 0 200vmax rgba(0, 0, 0, .55); outline: 2px solid #fff; }
+  width: min(86vw, calc(62vh * var(--aspect))); border-radius: 18px;
+  box-shadow: 0 0 0 200vmax var(--cam-plum); outline: 3px dashed var(--cam-cream); }
 .camera-window.shape-circle { border-radius: 50%; }
-.camera-window.shape-heart, .camera-window.shape-panel { outline: none; box-shadow: 0 0 0 200vmax rgba(0, 0, 0, .35); }
+.camera-window.shape-heart, .camera-window.shape-panel { border-radius: 0; outline: none; }
 .camera-window svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.camera-window svg path, .camera-window svg polygon { fill: none; stroke: #fff; stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+.camera-window svg .camera-dim { fill: var(--cam-plum); stroke: none; }
+.camera-window svg > path, .camera-window svg > polygon { stroke: var(--cam-cream); stroke-width: 3; stroke-dasharray: 8 6; vector-effect: non-scaling-stroke; }
+.camera-deco { position: absolute; font-size: 1.6rem; line-height: 1; color: var(--cam-pink); text-shadow: 0 1px 3px #0005; animation: cam-bob 2.4s ease-in-out infinite; }
+.deco-tl { left: -.7rem; top: -.9rem; }
+.deco-tr { right: -.7rem; top: -.9rem; animation-delay: .6s; }
+.deco-bl { left: -.7rem; bottom: -.9rem; animation-delay: 1.2s; }
+.deco-br { right: -.7rem; bottom: -.9rem; animation-delay: 1.8s; }
+@keyframes cam-bob { 50% { transform: translateY(-4px) rotate(-8deg); } }
 .camera-top, .camera-bottom { position: absolute; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between;
-  gap: .8rem; padding: max(.8rem, env(safe-area-inset-top)) 16px .8rem; }
+  gap: .8rem; padding: max(.9rem, env(safe-area-inset-top)) 16px .8rem; }
 .camera-top { top: 0; }
-.camera-bottom { bottom: 0; padding-bottom: max(1.2rem, env(safe-area-inset-bottom)); justify-content: center; }
-.camera-top .mode-switch { margin: 0; }
-.camera-shutter { width: 4.6rem; height: 4.6rem; border-radius: 50%; border: 4px solid #fff; background: #fffc; color: #222; font-weight: bold; }
-.camera-shutter.rec, .camera-shutter.recording { background: #d23b2e; color: #fff; }
-.camera-bottom > button:first-child { position: absolute; left: 16px; }
-.camera-timer { position: absolute; top: 4.2rem; left: 0; right: 0; text-align: center; color: #ff6b5e; font-weight: bold; margin: 0; }
-.camera-error { position: absolute; top: 40%; left: 16px; right: 16px; background: #000c; padding: 1rem; border-radius: 10px; text-align: center; }
-.camera { touch-action: none; }
-.camera-zoom { position: absolute; left: 16px; right: 16px; bottom: 7.4rem; display: flex; align-items: center; gap: .6rem; color: #fff; font-weight: bold; }
-.camera-zoom input { flex: 1; }
-.camera-torch { position: absolute; right: 16px; }
-.camera-torch[aria-pressed='true'] { background: #ffd23f; color: #222; }
+.camera-bottom { bottom: 0; padding-bottom: max(1.4rem, env(safe-area-inset-bottom)); justify-content: center; }
+.camera-round { width: 3rem; height: 3rem; padding: 0; border-radius: 50%; border: 0; background: var(--cam-cream); color: var(--cam-ink);
+  font-size: 1.25rem; box-shadow: 0 3px 0 #0003; }
+.camera-round:disabled { opacity: .5; }
+.camera-flip { position: absolute; left: 22px; }
+.camera-torch { position: absolute; right: 22px; }
+.camera-torch[aria-pressed='true'] { background: #ffe066; box-shadow: 0 0 18px #ffe066; }
+.camera-top .mode-switch { margin: 0; background: var(--cam-cream); border-radius: 99px; padding: .25rem; gap: .2rem; }
+.camera-top .mode-switch button { border-radius: 99px; background: transparent; color: var(--cam-ink); font-family: inherit; font-size: 1rem; padding: .35rem .9rem; }
+.camera-top .mode-switch button[aria-checked='true'] { background: var(--cam-pink); color: #fff; }
+.camera-shutter { width: 5rem; height: 5rem; padding: 0; border-radius: 50%; border: 5px solid var(--cam-pink); background: var(--cam-cream);
+  display: grid; place-items: center; box-shadow: 0 0 0 4px var(--cam-cream), 0 6px 16px #0006; color: var(--cam-pink); font-size: 2rem; }
+.camera-shutter:active { transform: scale(.94); }
+.camera-shutter.rec span { width: 2.2rem; height: 2.2rem; border-radius: 50%; background: #ff5a6e; }
+.camera-shutter.recording span { width: 1.7rem; height: 1.7rem; border-radius: 6px; background: #ff5a6e; animation: cam-pulse 1s ease-in-out infinite; }
+@keyframes cam-pulse { 50% { transform: scale(.8); } }
+.camera-zoom { position: absolute; left: 22px; right: 22px; bottom: 8rem; display: flex; align-items: center; gap: .6rem; }
+.camera-zoom input { flex: 1; accent-color: var(--cam-pink); }
+.camera-pill { background: var(--cam-cream); color: var(--cam-ink); border-radius: 99px; padding: .15rem .6rem; font-size: .95rem; }
+.camera-timer { position: absolute; top: 4.6rem; left: 50%; transform: translateX(-50%); margin: 0; display: inline-flex; align-items: center; gap: .4rem;
+  background: var(--cam-cream); color: #c2334d; border-radius: 99px; padding: .2rem .8rem; font-size: 1.05rem; }
+.rec-dot { width: .6rem; height: .6rem; border-radius: 50%; background: #ff5a6e; animation: cam-pulse 1s ease-in-out infinite; }
+.camera-error { position: absolute; top: 40%; left: 16px; right: 16px; background: var(--cam-cream); color: var(--cam-ink); padding: 1rem;
+  border-radius: 14px; text-align: center; font-size: 1.05rem; box-shadow: 0 6px 16px #0005; }
+@media (prefers-reduced-motion: reduce) { .camera-deco, .camera-shutter.recording span, .rec-dot { animation: none; } }
 
