@@ -9,6 +9,7 @@ import Editor from './pages/Editor';
 import SharedAlbum from './pages/SharedAlbum';
 import Guide from './pages/Guide';
 import PrintAlbum from './pages/PrintAlbum';
+import Manage from './pages/Manage';
 
 // Dev-only renderer/viewer showcases; import.meta.env.DEV is false in builds, so they're tree-shaken out.
 const Preview = import.meta.env.DEV ? lazy(() => import('./dev/Preview')) : null;
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="/albums/:id" element={<Viewer />} />
           <Route path="/albums/:id/edit" element={<Editor />} />
           <Route path="/albums/:id/print" element={<PrintAlbum />} />
+          <Route path="/manage" element={<Manage />} /> {/* hidden: linked from nowhere */}
         </Route>
       </Routes>
       <UpdateNotice />

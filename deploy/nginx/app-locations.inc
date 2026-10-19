@@ -39,6 +39,14 @@ location /api/ {
   proxy_pass http://$api;
 }
 
+# Backup download (/manage): a long tar stream made on the fly — pass it straight through, no buffering or timeout.
+location = /api/manage/backup {
+  proxy_buffering off;
+  proxy_read_timeout 3600s;
+  proxy_send_timeout 3600s;
+  proxy_pass http://$api;
+}
+
 # tus: 50 MiB chunks streamed straight to the api (Location stays relative: tus relativeLocation=true).
 location /api/uploads {
   client_max_body_size 60m;

@@ -52,4 +52,13 @@ export const api = {
   reorderPages: (albumId: string, pageIds: string[]) => req<void>('PUT', `/albums/${albumId}/page-order`, { pageIds }),
   getMedia: (id: string) => req<MediaDTO>('GET', `/media/${id}`),
   deleteMedia: (id: string) => req<void>('DELETE', `/media/${id}`),
+  manage: () => req<ManageInfo>('GET', '/manage'),
 };
+
+// Hidden /manage page: storage use and every media file (server/src/manage.ts).
+export type ManagedFile = {
+  id: string; albumId: string; albumTitle: string; kind: 'image' | 'video' | 'audio'; status: string;
+  name: string | null; error: string | null; createdAt: string; bytes: number; used: boolean; thumb: string | null;
+};
+export type ManageInfo = { disk: { total: number; free: number }; mediaBytes: number; dbBytes: number; files: ManagedFile[] };
+

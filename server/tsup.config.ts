@@ -3,7 +3,7 @@ import { defineConfig } from 'tsup';
 
 // Bundles our code + @scrapbook/shared (TS source); all other deps stay external (native sharp/sodium-native etc.).
 export default defineConfig({
-  entry: ['src/index.ts', 'src/worker.ts'],
+  entry: ['src/index.ts', 'src/worker.ts', 'src/restore.ts'],
   format: 'esm',
   target: 'node22',
   platform: 'node',

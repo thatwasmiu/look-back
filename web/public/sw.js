@@ -9,11 +9,13 @@ self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 
 const put = (cache, req, res) => { if (res.ok && res.status === 200) caches.open(cache).then((c) => c.put(req, res)); };
+// The app shell only ever stores an HTML page (never a file someone navigated to).
+const putShell = (key, res) => { if ((res.headers.get('content-type') ?? '').includes('text/html')) put(SHELL, key, res); };
 
 async function networkFirst(req, cache, key = req) {
   try {
     const res = await fetch(req);
-    put(cache, key, res.clone());
+    if (cache === SHELL) putShell(key, res.clone()); else put(cache, key, res.clone());
     return res;
   } catch (err) {
     const hit = await caches.match(key, { cacheName: cache });
@@ -35,7 +37,8 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== location.origin || req.headers.has('range')) return;
   const p = url.pathname;
-  if (req.mode === 'navigate') return e.respondWith(networkFirst(req, SHELL, '/')); // one app shell for every route
+  if (p.startsWith('/api/manage/backup')) return; // a big download: straight from the network, never cached
+  if (req.mode === 'navigate' && !p.startsWith('/api/') && !p.startsWith('/media/')) return e.respondWith(networkFirst(req, SHELL, '/')); // one app shell for every route
   if (p.startsWith('/api/uploads') || p.startsWith('/api/share/') && p.endsWith('/preview.jpg')) return;
   if (p.startsWith('/api/')) return e.respondWith(networkFirst(req, API));
   if (p.startsWith('/media/') && /\.(m3u8|ts|mp4|mov|webm|mp3|m4a|aac|ogg|wav)$/.test(p)) return;

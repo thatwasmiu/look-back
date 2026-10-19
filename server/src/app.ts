@@ -4,6 +4,7 @@ import type PgBoss from 'pg-boss';
 import { registerAlbums } from './albums.js';
 import { registerAuth } from './auth.js';
 import type { Config } from './config.js';
+import { registerManage } from './manage.js';
 import { registerMedia } from './media.js';
 import { registerPages } from './pages.js';
 import { registerShare } from './share.js';
@@ -15,6 +16,7 @@ export async function buildApp(config: Config, pool: pg.Pool, boss: PgBoss): Pro
   app.get('/api/health', async () => ({ ok: true }));
   registerAlbums(app, pool, config, boss);
   registerShare(app, pool, config);
+  registerManage(app, pool, config);
   registerPages(app, pool);
   registerMedia(app, pool, config);
   registerUploads(app, config, pool, boss);
