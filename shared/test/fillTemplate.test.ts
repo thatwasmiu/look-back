@@ -44,7 +44,7 @@ describe('fillTemplate', () => {
     if (!t) return
     const all = textSlots(t).map(() => 'Chào!')
     const speech = fillTemplate(t.id, all, [], id).elements.find((e) => e.type === 'text' && e.textStyle === 'speech')
-    expect(speech).toMatchObject({ text: 'Chào!', font: 'patrick-hand', tail: 'bl' })
+    expect(speech).toMatchObject({ text: 'Chào!', font: 'patrick-hand', tail: t.ai!.texts!.find((s) => s.style === 'speech')!.tail ?? 'bl' })
   })
 
   it('result passes pageLayoutSchema for every template', () => {

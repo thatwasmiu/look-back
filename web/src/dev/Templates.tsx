@@ -1,7 +1,8 @@
 // Dev-only review of the starter templates (route /dev/templates): each one filled with sample media, and empty
-// as it appears in the editor. ?only=<id> shows one template; ?book shows them (minus blank) in the flip viewer.
+// as it appears in the editor. ?only=<id> shows one template; ?book shows them (minus blank) in the flip viewer;
+// ?manga lists the manga layouts; ?ai fills every AI text slot and sticker spot with sample content.
 import type { AlbumBundle, PageLayout } from '@scrapbook/shared';
-import { templates } from '@scrapbook/shared';
+import { fillTemplate, mangaTemplates, stickerSpotCount, templates, textSlots, type Template } from '@scrapbook/shared';
 import { PageRenderer } from '../render/PageRenderer';
 import { Book } from '../pages/Viewer';
 import { media } from './Preview';
@@ -23,15 +24,21 @@ export default function Templates() {
   const q = new URLSearchParams(location.search);
   if (q.has('book')) return <Book bundle={bundle} />;
   const only = q.get('only');
+  const list = q.has('manga') ? mangaTemplates : templates;
+  const sample: Record<string, string> = { plain: 'Ghi chú mẫu', speech: 'Đi thôi nào!', thought: 'Hôm nay vui ghê…', shout: 'NHANH LÊN!', narration: '8 giờ sáng', sfx: 'BÙM!' };
+  let n = 0;
+  const shown = (t: Template) => (q.has('ai')
+    ? fillTemplate(t.id, textSlots(t).map((s) => sample[s.style]), Array(stickerSpotCount(t)).fill('sparkle'), () => `ai${n++}`)
+    : t.layout);
   return (
     <main style={{ padding: 24, display: 'grid', gap: 32, gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))' }}>
-      {templates.filter((t) => !only || t.id === only).flatMap((t) => [
+      {list.filter((t) => !only || t.id === only).flatMap((t) => [
         <figure key={t.id} id={t.id} style={{ margin: 0 }}>
-          <PageRenderer layout={fill(t.id, t.layout)} media={media} mode="view" />
+          <PageRenderer layout={fill(t.id, shown(t))} media={media} mode="view" />
           <figcaption style={{ marginTop: 8, fontSize: 13, opacity: 0.7 }}>{t.id} · {t.name}</figcaption>
         </figure>,
         <figure key={`${t.id}-empty`} style={{ margin: 0 }}>
-          <PageRenderer layout={t.layout} media={media} mode="edit" />
+          <PageRenderer layout={shown(t)} media={media} mode="edit" />
           <figcaption style={{ marginTop: 8, fontSize: 13, opacity: 0.7 }}>{t.id} · empty (edit)</figcaption>
         </figure>,
       ])}

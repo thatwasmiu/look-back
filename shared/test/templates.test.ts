@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { instantiateTemplate, pageLayoutSchema, templates } from '../src/index'
+import { instantiateTemplate, mangaTemplates, pageLayoutSchema, STICKER_IDS, templates } from '../src/index'
 
 const required = ['cover', 'blank', 'one-hero', 'two-tilted', 'three-collage', 'four-grid-loose', 'hero-plus-two', 'video-feature',
-  'memories', 'film-day', 'postcard', 'sweet-heart', 'old-album', 'vintage', 'journal', 'instant-fan']
-// Sticker ids in the web registry (web/src/render/decor.tsx); shared can't import web code.
-const stickerIds = ['flower', 'heart', 'star', 'leaf', 'sun', 'moon', 'camera', 'plane', 'ticket', 'coffee', 'cloud', 'arrow', 'butterfly']
+  'memories', 'film-day', 'postcard', 'sweet-heart', 'old-album', 'vintage', 'journal', 'instant-fan',
+  'six-grid', 'round-stickers', 'photobooth', 'hero-note', 'tilted-pair', 'journey', 'quote-photo', 'the-end']
+const stickerIds = [...STICKER_IDS]
 
 describe('templates', () => {
   it('has every required template', () => {
@@ -73,4 +73,18 @@ describe('instantiateTemplate', () => {
   it('throws on unknown id', () => {
     expect(() => instantiateTemplate('nope', () => 'x')).toThrow(/unknown template/)
   })
+})
+
+describe('AI metadata', () => {
+  const inPage = ([x = 0, y = 0, w = 0, h = 0]: (number | undefined)[]) => x >= 0 && y >= 0 && x + w <= 1.0001 && y + h <= 1.0001
+  for (const t of [...templates, ...mangaTemplates]) {
+    it(`${t.id}: about and boxes inside the page`, () => {
+      if (t.id === 'blank') return expect(t.ai).toBeUndefined()
+      expect(t.ai?.about.length, t.id).toBeGreaterThan(10)
+      expect(t.ai!.about.length, t.id).toBeLessThanOrEqual(80)
+      for (const e of t.layout.elements) expect(inPage([e.x, e.y, e.w, e.h]), `${t.id} ${e.id}`).toBe(true)
+      for (const s of t.ai!.texts ?? []) expect(inPage(s.box), `${t.id} text slot`).toBe(true)
+      for (const b of t.ai!.stickers ?? []) expect(inPage(b), `${t.id} sticker spot`).toBe(true)
+    })
+  }
 })

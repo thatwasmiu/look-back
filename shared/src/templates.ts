@@ -23,7 +23,34 @@ const sticker = (id: string, b: Box, stickerId: string): PageElement => ({ type:
 const text = (id: string, b: Box, t: string, font: TextEl['font'], size: number, color = '#4a3b2c'): PageElement =>
   ({ type: 'text', ...at(id, b, 5), text: t, font, size, color })
 
-export const templates: Template[] = [
+// What each page is good for, for the AI album prompt. Its texts are the layout's own (title, note).
+const SCRAPBOOK_AI: Record<string, TemplateAi> = Object.fromEntries(Object.entries({
+  cover: 'Album cover: big title over one photo',
+  'one-hero': 'One big photo with a caption, for a key moment',
+  'two-tilted': 'Two tilted photos and a short note, a before/after or pair',
+  'three-collage': 'Collage of three photos with a title',
+  'four-grid-loose': 'Four photos in a loose grid, several small moments',
+  'hero-plus-two': 'One big photo above two small ones, no text',
+  'video-feature': 'One wide photo or video with title and note',
+  memories: 'Two overlapping photos, big title and a note',
+  'film-day': 'Two film-strip photos, travel or outing vibe',
+  postcard: 'Postcard: three stamp photos, "greetings from" title',
+  'sweet-heart': 'Heart photo plus two round ones, love or friendship',
+  'old-album': 'Four photos with photo corners, nostalgic',
+  vintage: 'Two scalloped photos, old-days mood',
+  journal: 'Journal page: three photos, "today" title and note',
+  'instant-fan': 'Three instant photos fanned out, a fun group moment',
+  'six-grid': 'Six small photos in a grid, a busy day or many steps',
+  'round-stickers': 'Four round photos, cute details or faces',
+  photobooth: 'Photobooth strip of three photos with title and note',
+  'hero-note': 'Tall photo with a long note card, a story moment',
+  'tilted-pair': 'Two big tilted photos, a pair or two people',
+  journey: 'Journey: four stamp photos along a path, travel steps',
+  'quote-photo': 'Big quote with one photo below',
+  'the-end': 'Closing page: The End, one heart photo',
+}).map(([id, about]) => [id, { about }]))
+
+export const templates: Template[] = ([
   { id: 'cover', name: 'Cover', layout: { background: 'paper-kraft', elements: [
     text('title', [0.1, 0.06, 0.8, 0.13, -2], 'Tiêu đề', 'dancing-script', 0.1, '#3b2a1a'),
     frame('f1', [0.15, 0.22, 0.7, 0.5775, -3]),
@@ -160,7 +187,69 @@ export const templates: Template[] = [
     sticker('s2', [0.68, 0.76, 0.22, 0.13, 4], 'cloud'),
     text('note', [0.3, 0.8, 0.4, 0.08, -1], 'ghi chú…', 'patrick-hand', 0.04),
   ] } },
-]
+  { id: 'six-grid', name: 'Grid of six', layout: { background: 'paper-grid', elements: [
+    text('title', [0.1, 0.02, 0.8, 0.08, -1], 'Tiêu đề', 'dancing-script', 0.055),
+    ...[0, 1, 2].flatMap((r) => [0, 1].map((c) =>
+      frame(`f${r}${c}`, [0.08 + c * 0.46, 0.11 + r * 0.28, 0.38, 0.25, (r + c) % 2 ? 2 : -2], 'plain'))),
+  ] } },
+  { id: 'round-stickers', name: 'Round photos', layout: { background: 'paper-dots', elements: [
+    text('title', [0.1, 0.025, 0.8, 0.08, -2], 'Tiêu đề', 'dancing-script', 0.06, '#7a4a2e'),
+    frame('f1', [0.08, 0.12, 0.4, 0.3, -4], 'circle'),
+    frame('f2', [0.52, 0.2, 0.4, 0.3, 5], 'circle'),
+    frame('f3', [0.1, 0.5, 0.36, 0.27, 3], 'circle'),
+    frame('f4', [0.54, 0.58, 0.36, 0.27, -5], 'circle'),
+    text('note', [0.08, 0.84, 0.44, 0.08, -2], 'ghi chú…', 'patrick-hand', 0.04),
+    sticker('s1', [0.78, 0.86, 0.14, 0.1, 6], 'sparkle'),
+  ] } },
+  { id: 'photobooth', name: 'Photobooth strip', layout: { background: 'paper-cream', elements: [
+    frame('f1', [0.1, 0.08, 0.4, 0.25, -2], 'plain'),
+    frame('f2', [0.1, 0.36, 0.4, 0.25, -2], 'plain'),
+    frame('f3', [0.1, 0.64, 0.4, 0.25, -2], 'plain'),
+    tape('t1', [0.22, 0.06, 0.16, 0.04, -3], 'pink'),
+    text('title', [0.56, 0.12, 0.38, 0.14, 3], 'Tiêu đề', 'dancing-script', 0.06, '#7a4a2e'),
+    text('note', [0.56, 0.5, 0.36, 0.12, 2], 'ghi chú…', 'patrick-hand', 0.04),
+    sticker('s1', [0.62, 0.72, 0.2, 0.15, 6], 'camera'),
+  ] } },
+  { id: 'hero-note', name: 'Photo + note card', layout: { background: 'paper-kraft', elements: [
+    frame('f1', [0.08, 0.07, 0.6, 0.633, -3]),
+    tape('t1', [0.28, 0.05, 0.2, 0.045, 4], 'yellow'),
+    sticker('s1', [0.74, 0.12, 0.16, 0.12, 8], 'star'),
+    text('title', [0.08, 0.78, 0.4, 0.1, -2], 'Tiêu đề', 'dancing-script', 0.055, '#3b2a1a'),
+    text('note', [0.5, 0.72, 0.42, 0.18, 3], 'ghi chú…', 'patrick-hand', 0.04, '#3b2a1a'),
+  ] } },
+  { id: 'tilted-pair', name: 'Tilted pair', layout: { background: 'paper-grid', elements: [
+    frame('f1', [0.07, 0.1, 0.5, 0.4125, -7]),
+    frame('f2', [0.42, 0.36, 0.5, 0.4125, 6], 'polaroid', 2),
+    tape('t1', [0.5, 0.34, 0.18, 0.04, -30], 'mint'),
+    text('title', [0.08, 0.8, 0.6, 0.09, -2], 'Tiêu đề', 'dancing-script', 0.055),
+    sticker('s1', [0.72, 0.82, 0.16, 0.12, -6], 'heart'),
+  ] } },
+  { id: 'journey', name: 'Journey', layout: { background: 'paper-cream', elements: [
+    text('title', [0.5, 0.04, 0.44, 0.1, -2], 'Hành trình', 'dancing-script', 0.06, '#2f5d7c'),
+    frame('f1', [0.07, 0.08, 0.34, 0.26, -4], 'stamp'),
+    frame('f2', [0.58, 0.2, 0.34, 0.26, 5], 'stamp'),
+    frame('f3', [0.1, 0.45, 0.34, 0.26, 3], 'stamp'),
+    frame('f4', [0.56, 0.66, 0.34, 0.26, -4], 'stamp'),
+    sticker('s1', [0.44, 0.14, 0.1, 0.1, 0], 'pin'),
+    sticker('s2', [0.44, 0.44, 0.14, 0.1, 8], 'arrow'),
+    sticker('s3', [0.1, 0.78, 0.18, 0.12, -6], 'plane'),
+    text('note', [0.12, 0.9, 0.4, 0.07, -1], 'ghi chú…', 'patrick-hand', 0.04),
+  ] } },
+  { id: 'quote-photo', name: 'Quote + photo', layout: { background: 'paper-cream', elements: [
+    text('title', [0.08, 0.06, 0.84, 0.26, -2], '“Một câu nói…”', 'dancing-script', 0.06, '#7a4a2e'),
+    frame('f1', [0.14, 0.36, 0.72, 0.47, 3]),
+    tape('t1', [0.4, 0.34, 0.2, 0.045, -3], 'kraft'),
+    sticker('s1', [0.78, 0.28, 0.14, 0.1, 8], 'leaf'),
+    text('note', [0.3, 0.87, 0.4, 0.07, -1], 'ghi chú…', 'patrick-hand', 0.04),
+  ] } },
+  { id: 'the-end', name: 'The End', layout: { background: 'paper-kraft', elements: [
+    text('title', [0.1, 0.08, 0.8, 0.14, -2], 'The End', 'dancing-script', 0.1, '#3b2a1a'),
+    frame('f1', [0.25, 0.3, 0.5, 0.375, 0], 'heart'),
+    text('note', [0.2, 0.74, 0.6, 0.08, -1], 'ghi chú…', 'patrick-hand', 0.04, '#3b2a1a'),
+    sticker('s1', [0.12, 0.82, 0.14, 0.1, -6], 'sparkle'),
+    sticker('s2', [0.74, 0.82, 0.14, 0.1, 6], 'heart'),
+  ] } },
+] satisfies Template[]).map((t) => ({ ...t, ai: SCRAPBOOK_AI[t.id] }))
 
 // Scrapbook page templates first, then manga page layouts.
 export const findTemplate = (id: string): Template | undefined => templates.find((x) => x.id === id) ?? mangaTemplates.find((x) => x.id === id)

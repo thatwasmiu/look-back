@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { findTemplate, instantiateTemplate, mangaTemplates, pageLayoutSchema } from '../src/index'
 
-const IDS = ['manga-cover', 'manga-grid', 'manga-slants', 'manga-splash', 'manga-tall-stack', 'manga-columns', 'manga-strips', 'manga-diagonal', 'manga-six', 'manga-bleed']
+const IDS = ['manga-cover', 'manga-grid', 'manga-slants', 'manga-splash', 'manga-tall-stack', 'manga-columns', 'manga-strips', 'manga-diagonal', 'manga-six', 'manga-bleed',
+  'manga-yonkoma', 'manga-five-slash', 'manga-inset', 'manga-dialogue', 'manga-action', 'manga-flashback', 'manga-chapter', 'manga-ending']
 
 describe('manga page layouts', () => {
-  it('has the ten layouts, each a valid white page of panels (and optional text)', () => {
+  it('has the eighteen layouts, each a valid white page of panels (and optional text)', () => {
     expect(mangaTemplates.map((t) => t.id)).toEqual(IDS)
     for (const t of mangaTemplates) {
       expect(pageLayoutSchema.safeParse(t.layout).success, t.id).toBe(true)
