@@ -24,7 +24,7 @@ export async function verifyPassword(pw: string, stored: string): Promise<boolea
 }
 
 declare module '@fastify/secure-session' {
-  interface SessionData { owner: true }
+  interface SessionData { owner: true; driveState?: string } // driveState: OAuth state while connecting Google Drive
 }
 
 export function registerAuth(app: FastifyInstance, config: Config, pool: pg.Pool): void {

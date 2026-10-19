@@ -7,6 +7,7 @@ import type { Config } from './config.js';
 import { registerLocations } from './locations.js';
 import { registerManage } from './manage.js';
 import { registerRemoteMedia } from './remoteMedia.js';
+import { registerDriveRoutes } from './driveRoutes.js';
 import { registerMedia } from './media.js';
 import { registerPages } from './pages.js';
 import { registerShare } from './share.js';
@@ -21,6 +22,7 @@ export async function buildApp(config: Config, pool: pg.Pool, boss: PgBoss): Pro
   registerManage(app, pool, config, boss);
   registerLocations(app, pool, config);
   registerRemoteMedia(app, pool, config);
+  registerDriveRoutes(app, pool, config, boss);
   registerPages(app, pool);
   registerMedia(app, pool, config);
   registerUploads(app, config, pool, boss);

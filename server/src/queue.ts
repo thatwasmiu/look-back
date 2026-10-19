@@ -4,6 +4,7 @@ export const JOB_PROCESS_MEDIA = 'process-media';
 export type ProcessMediaJob = { mediaId: string; uploadPath: string };
 export const JOB_MOVE_MEDIA = 'move-media';
 export type MoveMediaJob = { mediaId: string; to: string | null }; // to: a location id, null = the VPS disk
+export const JOB_DRIVE_BACKUP = 'drive-backup';
 
 export async function createQueue(databaseUrl: string): Promise<PgBoss> {
   const boss = new PgBoss(databaseUrl);
@@ -17,5 +18,9 @@ export async function createQueue(databaseUrl: string): Promise<PgBoss> {
   const move = { name: JOB_MOVE_MEDIA, retryLimit: 0, expireInSeconds: 4 * 3600 };
   await boss.createQueue(JOB_MOVE_MEDIA, move);
   await boss.updateQueue(JOB_MOVE_MEDIA, move);
+  // Google Drive backup: scheduled (cron) or "Backup ngay"; one try, the outcome is shown on /manage.
+  const drive = { name: JOB_DRIVE_BACKUP, retryLimit: 0, expireInSeconds: 4 * 3600 };
+  await boss.createQueue(JOB_DRIVE_BACKUP, drive);
+  await boss.updateQueue(JOB_DRIVE_BACKUP, drive);
   return boss;
 }
