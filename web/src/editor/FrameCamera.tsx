@@ -24,6 +24,13 @@ export function FrameCamera({ frame, onCapture, onClose }: { frame: FrameEl; onC
   const videoRef = useRef<HTMLVideoElement>(null);
   const windowRef = useRef<HTMLDivElement>(null);
   const stream = useRef<MediaStream | null>(null);
+  const track = useRef<MediaStreamTrack | null>(null);
+  // What this camera can do itself (Chrome Android: zoom, torch). Without camera zoom, photos get digital zoom.
+  const [hw, setHw] = useState<{ zoom: { min: number; max: number; step: number } | null; torch: boolean }>({ zoom: null, torch: false });
+  const [zoom, setZoomState] = useState(1);
+  const [torch, setTorch] = useState(false);
+  const pointers = useRef(new Map<number, number>()); // pointerId → x, for pinch
+  const pinch = useRef<{ d: number; z: number } | null>(null);
   const recorder = useRef<MediaRecorder | null>(null);
   const aspect = frameAspect(frame);
   const shape = shapeOf(frame);
@@ -37,6 +44,12 @@ export function FrameCamera({ frame, onCapture, onClose }: { frame: FrameEl; onC
     navigator.mediaDevices?.getUserMedia({ video: { facingMode: facing, ...HI_RES }, audio: mode === 'video' }).then((s) => {
       if (cancelled) { s.getTracks().forEach((t) => t.stop()); return; }
       stream.current = s;
+      const t = s.getVideoTracks?.()[0] ?? null;
+      track.current = t;
+      const caps = (t?.getCapabilities?.() ?? {}) as { zoom?: { min: number; max: number; step?: number }; torch?: boolean };
+      setHw({ zoom: caps.zoom ? { min: caps.zoom.min, max: caps.zoom.max, step: caps.zoom.step || 0.1 } : null, torch: !!caps.torch });
+      setZoomState(caps.zoom?.min ?? 1);
+      setTorch(false);
       const v = videoRef.current;
       if (v) { v.srcObject = s; void v.play().catch(() => {}); }
     }, (e: Error) => {
@@ -50,6 +63,32 @@ export function FrameCamera({ frame, onCapture, onClose }: { frame: FrameEl; onC
     const t = setInterval(() => setSeconds((n) => n + 1), 1000);
     return () => clearInterval(t);
   }, [recording]);
+
+  const zoomRange = hw.zoom ?? { min: 1, max: 4, step: 0.1 };
+  const digital = !hw.zoom;
+  const canZoom = !digital || mode === 'photo'; // digital zoom can't reach the recorded video
+  const setZoom = (v: number) => {
+    const z = Math.round(Math.min(zoomRange.max, Math.max(zoomRange.min, v)) * 10) / 10;
+    setZoomState(z);
+    if (!digital) void track.current?.applyConstraints({ advanced: [{ zoom: z } as MediaTrackConstraintSet] }).catch(() => {});
+  };
+  const toggleTorch = () => {
+    const on = !torch;
+    setTorch(on);
+    void track.current?.applyConstraints({ advanced: [{ torch: on } as MediaTrackConstraintSet] }).catch(() => setTorch(!on));
+  };
+  const onPointer = (e: React.PointerEvent) => {
+    if (!canZoom) return;
+    if (e.type === 'pointerdown' || e.type === 'pointermove') pointers.current.set(e.pointerId, e.clientX);
+    else { pointers.current.delete(e.pointerId); pinch.current = null; return; }
+    if (pointers.current.size !== 2) return;
+    const [a, b] = [...pointers.current.values()];
+    const d = Math.abs(a - b) || 1;
+    if (!pinch.current) pinch.current = { d, z: zoom };
+    else setZoom(pinch.current.z * (d / pinch.current.d));
+  };
+  const scale = digital && canZoom ? zoom : 1;
+  const feedTransform = facing === 'user' ? `scale(${-scale}, ${scale})` : scale === 1 ? '' : `scale(${scale})`;
 
   const done = (blob: Blob, ext: string) => {
     release();
@@ -96,8 +135,9 @@ export function FrameCamera({ frame, onCapture, onClose }: { frame: FrameEl; onC
   const stopRecording = () => { setRecording(false); recorder.current?.stop(); };
 
   return (
-    <div className="camera" role="dialog" aria-label="Chụp theo khung">
-      <video ref={videoRef} className={`camera-feed${facing === 'user' ? ' mirrored' : ''}`} autoPlay playsInline muted />
+    <div className="camera" role="dialog" aria-label="Chụp theo khung"
+      onPointerDown={onPointer} onPointerMove={onPointer} onPointerUp={onPointer} onPointerCancel={onPointer}>
+      <video ref={videoRef} className="camera-feed" style={{ transform: feedTransform }} autoPlay playsInline muted />
       <div ref={windowRef} className={`camera-window shape-${shape}`} style={{ aspectRatio: String(aspect), '--aspect': aspect } as React.CSSProperties}>
         {(shape === 'heart' || shape === 'panel') && (
           <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
@@ -116,8 +156,16 @@ export function FrameCamera({ frame, onCapture, onClose }: { frame: FrameEl; onC
           ))}
         </div>
       </div>
+      {canZoom && (
+        <label className="camera-zoom">
+          <input type="range" aria-label="Zoom" min={zoomRange.min} max={zoomRange.max} step={zoomRange.step} value={zoom}
+            onChange={(e) => setZoom(Number(e.target.value))} />
+          <span>{zoom.toFixed(1)}×</span>
+        </label>
+      )}
       <div className="camera-bottom">
         <button type="button" disabled={recording} onClick={() => setFacing(facing === 'environment' ? 'user' : 'environment')}>Đổi camera</button>
+        {hw.torch && <button type="button" className="camera-torch" aria-pressed={torch} onClick={toggleTorch}>⚡ Đèn</button>}
         {mode === 'photo' ? <button type="button" className="camera-shutter" onClick={shoot}>Chụp</button>
           : recording ? <button type="button" className="camera-shutter recording" onClick={stopRecording}>Dừng</button>
             : <button type="button" className="camera-shutter rec" onClick={record}>Quay</button>}

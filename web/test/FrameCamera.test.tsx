@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { FrameEl } from '@scrapbook/shared';
 import { FrameCamera, frameAspect } from '../src/editor/FrameCamera';
@@ -85,4 +85,64 @@ test('a camera that cannot open shows why and points to Take photo/video', async
   render(<FrameCamera frame={frame()} onCapture={() => {}} onClose={() => {}} />);
   expect(await screen.findByRole('alert')).toHaveProperty('textContent', expect.stringContaining('Take photo/video'));
   await act(async () => {});
+});
+
+function withTrack(caps: Record<string, unknown>) {
+  const applyConstraints = vi.fn(async () => {});
+  const track = { stop, getCapabilities: () => caps, applyConstraints };
+  gum.mockImplementation(async () => ({ getTracks: () => [track], getVideoTracks: () => [track] }));
+  return applyConstraints;
+}
+
+test('hardware zoom: the slider drives the camera zoom (photos and videos)', async () => {
+  const apply = withTrack({ zoom: { min: 1, max: 5, step: 0.1 } });
+  const user = userEvent.setup();
+  render(<FrameCamera frame={frame()} onCapture={() => {}} onClose={() => {}} />);
+  const slider = await screen.findByRole('slider', { name: 'Zoom' });
+  expect(slider.getAttribute('max')).toBe('5');
+  fireEvent.change(slider, { target: { value: '2' } });
+  await waitFor(() => expect(apply).toHaveBeenLastCalledWith({ advanced: [{ zoom: 2 }] }));
+  expect((document.querySelector('.camera-feed') as HTMLElement).style.transform).not.toContain('scale(2');
+  await user.click(screen.getByRole('radio', { name: 'Video' }));
+  expect(await screen.findByRole('slider', { name: 'Zoom' })).toBeTruthy();
+});
+
+test('digital zoom without camera zoom: scales the preview, photos only', async () => {
+  withTrack({});
+  const user = userEvent.setup();
+  render(<FrameCamera frame={frame()} onCapture={() => {}} onClose={() => {}} />);
+  const slider = await screen.findByRole('slider', { name: 'Zoom' });
+  expect(slider.getAttribute('max')).toBe('4');
+  fireEvent.change(slider, { target: { value: '2' } });
+  expect((document.querySelector('.camera-feed') as HTMLElement).style.transform).toBe('scale(2)');
+  await user.click(screen.getByRole('radio', { name: 'Video' }));
+  await waitFor(() => expect(screen.queryByRole('slider', { name: 'Zoom' })).toBeNull());
+  expect((document.querySelector('.camera-feed') as HTMLElement).style.transform).toBe('');
+});
+
+test('pinching with two fingers zooms in', async () => {
+  withTrack({});
+  render(<FrameCamera frame={frame()} onCapture={() => {}} onClose={() => {}} />);
+  await screen.findByRole('slider', { name: 'Zoom' });
+  const cam = document.querySelector('.camera') as HTMLElement;
+  const p = (type: string, id: number, x: number) => cam.dispatchEvent(Object.assign(new MouseEvent(type, { bubbles: true, clientX: x, clientY: 300 }), { pointerId: id }));
+  act(() => { p('pointerdown', 1, 100); p('pointerdown', 2, 200); p('pointermove', 2, 300); p('pointerup', 1, 100); p('pointerup', 2, 300); });
+  expect((screen.getByRole('slider', { name: 'Zoom' }) as HTMLInputElement).value).toBe('2');
+});
+
+test('flash (torch) toggles only where the camera has one', async () => {
+  const apply = withTrack({ torch: true });
+  const user = userEvent.setup();
+  render(<FrameCamera frame={frame()} onCapture={() => {}} onClose={() => {}} />);
+  const btn = await screen.findByRole('button', { name: '⚡ Đèn' });
+  await user.click(btn);
+  expect(apply).toHaveBeenLastCalledWith({ advanced: [{ torch: true }] });
+  expect(btn.getAttribute('aria-pressed')).toBe('true');
+  await user.click(btn);
+  expect(apply).toHaveBeenLastCalledWith({ advanced: [{ torch: false }] });
+  cleanup();
+  withTrack({});
+  render(<FrameCamera frame={frame()} onCapture={() => {}} onClose={() => {}} />);
+  await screen.findByRole('slider', { name: 'Zoom' });
+  expect(screen.queryByRole('button', { name: '⚡ Đèn' })).toBeNull();
 });
