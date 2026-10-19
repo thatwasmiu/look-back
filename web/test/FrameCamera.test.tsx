@@ -198,3 +198,26 @@ test('a tall frame held sideways asks to turn the phone upright', async () => {
   render(<FrameCamera frame={frame()} windowShape={{ aspect: 0.5, radius: '0px' }} onCapture={() => {}} onClose={() => {}} />);
   expect((await screen.findByRole('note')).textContent).toContain('Xoay dọc điện thoại');
 });
+
+test('leaving the app releases the camera; coming back opens it again (iOS kills the stream in the background)', async () => {
+  render(<FrameCamera frame={frame()} onCapture={() => {}} onClose={() => {}} />);
+  await waitFor(() => expect(gum).toHaveBeenCalledTimes(1));
+  const vis = (state: 'hidden' | 'visible') => {
+    Object.defineProperty(document, 'visibilityState', { value: state, configurable: true });
+    act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+  };
+  vis('hidden');
+  expect(stop).toHaveBeenCalled();
+  vis('visible');
+  await waitFor(() => expect(gum).toHaveBeenCalledTimes(2));
+});
+
+test('a stream that the phone ends is reopened', async () => {
+  const listeners: Record<string, () => void> = {};
+  const track = { stop, addEventListener: (t: string, f: () => void) => { listeners[t] = f; }, removeEventListener() {} };
+  gum.mockImplementation(async () => ({ getTracks: () => [track], getVideoTracks: () => [track] }));
+  render(<FrameCamera frame={frame()} onCapture={() => {}} onClose={() => {}} />);
+  await waitFor(() => expect(listeners.ended).toBeTypeOf('function'));
+  act(() => listeners.ended());
+  await waitFor(() => expect(gum).toHaveBeenCalledTimes(2));
+});

@@ -54,6 +54,7 @@ export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame:
   const [mode, setMode] = useState<Mode>('photo');
   const [facing, setFacing] = useState<Facing>('environment');
   const [error, setError] = useState<string | null>(null);
+  const [session, setSession] = useState(0); // bump to open the camera again (iOS ends the stream in the background)
   const [recording, setRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -86,17 +87,37 @@ export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame:
       stream.current = s;
       const t = s.getVideoTracks?.()[0] ?? null;
       track.current = t;
+      t?.addEventListener?.('ended', () => { if (stream.current === s) { stream.current = null; setSession((n) => n + 1); } });
       const caps = (t?.getCapabilities?.() ?? {}) as { zoom?: { min: number; max: number; step?: number }; torch?: boolean };
       setHw({ zoom: caps.zoom ? { min: caps.zoom.min, max: caps.zoom.max, step: caps.zoom.step || 0.1 } : null, torch: !!caps.torch });
       setZoomState(caps.zoom?.min ?? 1);
       setTorch(false);
       const v = videoRef.current;
-      if (v) { v.srcObject = s; void v.play().catch(() => {}); }
+      if (v) {
+        // iOS Safari plays a live preview inline only when muted as an attribute (React doesn't write `muted`).
+        v.muted = true;
+        v.setAttribute('muted', '');
+        v.setAttribute('playsinline', '');
+        v.srcObject = s;
+        void v.play().catch(() => {});
+      }
     }, (e: Error) => {
       if (!cancelled) setError(`${e.name === 'NotAllowedError' ? 'Bạn chưa cho phép dùng camera.' : 'Không mở được camera.'} Hãy dùng nút Take photo/video.`);
     }) ?? setError('Trình duyệt này không mở được camera. Hãy dùng nút Take photo/video.');
     return () => { cancelled = true; release(); };
-  }, [facing, mode]);
+  }, [facing, mode, session]);
+
+  // Leaving the app (switching apps, locking the phone): let go of the camera; coming back: open it again.
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        if (recorder.current?.state === 'recording') recorder.current.stop(); // keeps what was recorded
+        release();
+      } else if (!stream.current) setSession((n) => n + 1);
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
 
   useEffect(() => {
     if (!recording) return;
