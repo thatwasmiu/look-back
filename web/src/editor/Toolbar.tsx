@@ -40,7 +40,7 @@ const statusLabel: Record<SaveStatus, string> = { saved: 'Saved', saving: 'Savin
 // pickers open above it.
 export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo, status, save, crop, zoom, setZoom, bgEffect, setBgEffect, bgColor, setBgColor, editShape, music = null, onMusicFile, onMusicRemove, mode = 'scrapbook', readingDirection = 'ltr', setReadingDirection }: Props) {
   const manga = mode === 'manga';
-  const [picker, setPicker] = useState<'frame' | 'frameStyle' | 'sticker' | 'tape' | 'bg' | 'effect' | 'albumFx' | 'font' | 'color' | MangaPicker | null>(null);
+  const [picker, setPicker] = useState<'frame' | 'frameStyle' | 'sticker' | 'tape' | 'bg' | 'effect' | 'albumFx' | 'font' | MangaPicker | null>(null);
   const toggle = (p: typeof picker) => setPicker((cur) => (cur === p ? null : p));
   const ref = useRef<HTMLDivElement>(null);
   // Music preview while editing: the <audio> lives outside the picker, so it keeps playing once the picker closes.
@@ -126,13 +126,17 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
             {(manga ? MANGA_FONTS : SCRAPBOOK_FONTS).map((f) => (
               <button key={f} type="button" className="font-option" aria-pressed={text.font === f} style={{ fontFamily: fontFamily[f] }} onClick={() => setText({ font: f })}>Aa</button>
             ))}
-            <small className="picker-hint">double-tap text to edit</small>
-          </>}
-          {picker === 'color' && text && <>
+            {/* Size: a step is ×1.15; quick taps on one text are a single undo step. */}
+            <span className="font-size">
+              <button type="button" aria-label="Smaller text" disabled={text.size <= 0.012} onClick={() => setText({ size: Math.max(0.01, +(text.size / 1.15).toFixed(4)) }, `size:${text.id}`)}>A−</button>
+              <span aria-label="Text size">{Math.round(text.size * 1000)}</span>
+              <button type="button" aria-label="Bigger text" disabled={text.size >= 0.25} onClick={() => setText({ size: Math.min(0.3, +(text.size * 1.15).toFixed(4)) }, `size:${text.id}`)}>A+</button>
+            </span>
             {inks.map((c) => (
               <button key={c} type="button" className="ink" aria-label={`ink ${c}`} aria-pressed={text.color === c} style={{ background: c }} onClick={() => setText({ color: c })} />
             ))}
             <input type="color" className="ink-custom" aria-label="Text color" value={text.color} onChange={(e) => setText({ color: e.target.value }, `color:${text.id}`)} />
+            <small className="picker-hint">double-tap text to edit</small>
           </>}
           {picker === 'bg' && backgrounds.map((b) => (
             <button key={b} type="button" aria-label={b} aria-pressed={layout.background === b}
@@ -154,10 +158,10 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
         <button type="button" aria-expanded={picker === 'effect'} onClick={() => toggle('effect')}>Effect</button>
         <button type="button" aria-expanded={picker === 'albumFx'} onClick={() => toggle('albumFx')}>Background</button>
         {musicPlaying && <button type="button" className="music-btn on" aria-label="Pause music" title="Pause music" onClick={toggleMusic}>♪</button>}
-        {text && <button type="button" aria-expanded={picker === 'font'} onClick={() => toggle('font')}>Font</button>}
+        {/* One panel for the lettering: typeface, size and color. */}
         {text && (
-          <button type="button" aria-expanded={picker === 'color'} onClick={() => toggle('color')}>
-            <span className="color-dot" style={{ background: text.color }} aria-hidden />Color
+          <button type="button" aria-expanded={picker === 'font'} onClick={() => toggle('font')}>
+            <span className="color-dot" style={{ background: text.color }} aria-hidden />Font
           </button>
         )}
         {crop && selected?.type === 'frame' && selected.mediaId && <button type="button" onClick={crop}>Crop</button>}

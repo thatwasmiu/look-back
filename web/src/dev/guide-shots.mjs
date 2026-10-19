@@ -78,9 +78,9 @@ const album = (id, title, cover, pageCount, shareToken = null) => ({
   await shot(page, 'frame-menu');
   await btn(page, 'Close').click();
 
-  // Text with the Color picker open.
+  // Text with the Font panel (typeface, size, color) open.
   await btn(page, 'Text').click();
-  await btn(page, 'Color').click();
+  await btn(page, 'Font').click();
   await settle(page);
   await shot(page, 'text');
   await page.keyboard.press('Escape');

@@ -388,16 +388,22 @@ test('pasting a clipboard image uploads it into the selected empty frame', () =>
   expect(add).toHaveBeenLastCalledWith([png], 'f1');
 });
 
-test('with text selected, Font and Color open pickers that restyle it', async () => {
+test('with text selected, Font opens one panel for typeface, size and color', async () => {
   const user = userEvent.setup();
   const { container } = setup(okApi());
   expect(screen.queryByRole('button', { name: 'Font' })).toBeNull();
   await user.click(screen.getByRole('button', { name: 'Text' }));
-  await user.click(screen.getByRole('button', { name: 'Color' }));
+  await user.click(screen.getByRole('button', { name: 'Font' }));
   await user.click(screen.getByRole('button', { name: 'ink #a33a2a' }));
   expect(container.querySelector<HTMLElement>('.edit-page .el-text .text')!.style.color).toBe('rgb(163, 58, 42)');
-  await user.click(screen.getByRole('button', { name: 'Font' }));
   expect(screen.getAllByRole('button', { name: 'Aa' })).toHaveLength(2);
+  const fontSize = () => parseFloat(container.querySelector<HTMLElement>('.edit-page .el-text .text')!.style.fontSize.replace(/[^\d.]/g, ''));
+  const before = fontSize();
+  await user.click(screen.getByRole('button', { name: 'Bigger text' }));
+  await user.click(screen.getByRole('button', { name: 'Bigger text' }));
+  expect(fontSize()).toBeGreaterThan(before);
+  await user.click(screen.getByRole('button', { name: 'Undo' })); // both taps were one change
+  expect(fontSize()).toBe(before);
 });
 
 test('Background → Music shows the track by file name; Play previews it and keeps playing with the picker closed', async () => {
