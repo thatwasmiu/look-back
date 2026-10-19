@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import type { FrameEl } from '@scrapbook/shared';
 
 // "Chụp theo khung" (phones): an in-app camera whose preview shows the frame's own shape and proportions, so the
@@ -29,6 +29,20 @@ export function frameWindowShape(el: HTMLElement | null): WindowShape | null {
   return { aspect: w / h, radius };
 }
 
+// Held upright the camera's picture is tall, so a wide frame only gets a thin slice of it (and the reverse held
+// sideways): suggest turning the phone when the frame's shape fights the orientation.
+const PORTRAIT = '(orientation: portrait)';
+function usePortrait(): boolean {
+  return useSyncExternalStore((cb) => {
+    const mq = typeof matchMedia === 'function' ? matchMedia(PORTRAIT) : null;
+    mq?.addEventListener?.('change', cb);
+    return () => mq?.removeEventListener?.('change', cb);
+  }, () => (typeof matchMedia === 'function' ? matchMedia(PORTRAIT).matches : true));
+}
+export const rotateHint = (aspect: number, portrait: boolean) =>
+  portrait && aspect >= 1.25 ? 'Xoay ngang điện thoại để chụp đủ khung rộng'
+    : !portrait && aspect <= 0.8 ? 'Xoay dọc điện thoại để chụp đủ khung cao' : null;
+
 // Width / height of the frame on the page (pages are 3:4) — fallback when the photo area can't be measured.
 export const frameAspect = (f: FrameEl) => (f.w * 3) / (f.h * 4);
 const shapeOf = (f: FrameEl) => (f.frameStyle === 'circle' ? 'circle' : f.frameStyle === 'heart' ? 'heart' : f.shape ? 'panel' : 'rect');
@@ -54,6 +68,7 @@ export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame:
   const pinch = useRef<{ d: number; z: number } | null>(null);
   const recorder = useRef<MediaRecorder | null>(null);
   const aspect = windowShape?.aspect ?? frameAspect(frame);
+  const hint = rotateHint(aspect, usePortrait());
   const maskId = `cam-mask-${useId().replace(/:/g, '')}`;
   const shapeEl = (fill: string) => (frame.frameStyle === 'heart'
     ? <path d={HEART} transform="scale(1 1.11)" fill={fill} />
@@ -180,6 +195,7 @@ export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame:
           </svg>
         )}
       </div>
+      {hint && !error && <p className="camera-hint" role="note"><span aria-hidden>📱↻</span> {hint} <small>(tắt khoá xoay màn hình nếu đang bật)</small></p>}
       {error && <p className="camera-error" role="alert">{error}</p>}
       {recording && <p className="camera-timer" role="status"><span className="rec-dot" aria-hidden />{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}</p>}
       <div className="camera-top">

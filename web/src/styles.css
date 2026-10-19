@@ -480,7 +480,7 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .camera-torch { position: absolute; right: 22px; }
 .camera-torch[aria-pressed='true'] { background: #ffe066; box-shadow: 0 0 18px #ffe066; }
 .camera-top .mode-switch { margin: 0; background: var(--cam-cream); border-radius: 99px; padding: .25rem; gap: .2rem; }
-.camera-top .mode-switch button { border-radius: 99px; background: transparent; color: var(--cam-ink); font-family: inherit; font-size: 1rem; padding: .35rem .9rem; }
+.camera-top .mode-switch button { white-space: nowrap; border-radius: 99px; background: transparent; color: var(--cam-ink); font-family: inherit; font-size: 1rem; padding: .35rem .9rem; }
 .camera-top .mode-switch button[aria-checked='true'] { background: var(--cam-pink); color: #fff; }
 .camera-shutter { width: 5rem; height: 5rem; padding: 0; border-radius: 50%; border: 5px solid var(--cam-pink); background: var(--cam-cream);
   display: grid; place-items: center; box-shadow: 0 0 0 4px var(--cam-cream), 0 6px 16px #0006; color: var(--cam-pink); font-size: 2rem; }
@@ -497,4 +497,18 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .camera-error { position: absolute; top: 40%; left: 16px; right: 16px; background: var(--cam-cream); color: var(--cam-ink); padding: 1rem;
   border-radius: 14px; text-align: center; font-size: 1.05rem; box-shadow: 0 6px 16px #0005; }
 @media (prefers-reduced-motion: reduce) { .camera-deco, .camera-shutter.recording span, .rec-dot { animation: none; } }
+.camera-hint { position: absolute; left: 50%; bottom: 11.5rem; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px);
+  margin: 0; background: var(--cam-cream); color: var(--cam-ink); border-radius: 14px; padding: .45rem .8rem; text-align: center;
+  font-size: 1.05rem; box-shadow: 0 4px 12px #0005; }
+.camera-hint small { display: block; font-size: .8rem; opacity: .75; }
+/* Phone held sideways: a bigger window centred, buttons in a column on the right. */
+@media (orientation: landscape) {
+  .camera-window { top: 50%; left: calc(50% - 2.5rem); width: min(74vw, calc(84vh * var(--aspect))); }
+  .camera-top { padding-top: max(.6rem, env(safe-area-inset-top)); padding-right: 6.5rem; }
+  .camera-bottom { top: 0; bottom: 0; left: auto; right: 0; width: 6.5rem; flex-direction: column; justify-content: center; gap: 1rem;
+    padding: 1rem max(.8rem, env(safe-area-inset-right)) 1rem .8rem; }
+  .camera-flip, .camera-torch { position: static; }
+  .camera-zoom { left: 22px; right: 7.5rem; bottom: .8rem; }
+  .camera-hint { bottom: 3.6rem; left: calc(50% - 3rem); }
+}
 

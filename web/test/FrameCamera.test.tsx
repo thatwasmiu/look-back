@@ -170,3 +170,31 @@ test('the camera window takes the measured photo area: proportions and rounding,
   expect(w.style.aspectRatio).toBe('0.8');
   expect(w.style.borderRadius).toBe('5% / 4%');
 });
+
+function orientation(portrait: boolean) {
+  vi.stubGlobal('matchMedia', (q: string) => ({ matches: q.includes('portrait') ? portrait : !portrait, addEventListener() {}, removeEventListener() {} }));
+}
+
+test('a wide frame held upright asks to turn the phone sideways', async () => {
+  orientation(true);
+  render(<FrameCamera frame={frame()} windowShape={{ aspect: 2.5, radius: '0px' }} onCapture={() => {}} onClose={() => {}} />);
+  expect((await screen.findByRole('note')).textContent).toContain('Xoay ngang điện thoại');
+});
+
+test('no hint once the phone is sideways, or for a frame that fits', async () => {
+  orientation(false);
+  render(<FrameCamera frame={frame()} windowShape={{ aspect: 2.5, radius: '0px' }} onCapture={() => {}} onClose={() => {}} />);
+  await waitFor(() => expect(gum).toHaveBeenCalled());
+  expect(screen.queryByRole('note')).toBeNull();
+  cleanup();
+  orientation(true);
+  render(<FrameCamera frame={frame()} windowShape={{ aspect: 0.9, radius: '0px' }} onCapture={() => {}} onClose={() => {}} />);
+  await waitFor(() => expect(gum).toHaveBeenCalled());
+  expect(screen.queryByRole('note')).toBeNull();
+});
+
+test('a tall frame held sideways asks to turn the phone upright', async () => {
+  orientation(false);
+  render(<FrameCamera frame={frame()} windowShape={{ aspect: 0.5, radius: '0px' }} onCapture={() => {}} onClose={() => {}} />);
+  expect((await screen.findByRole('note')).textContent).toContain('Xoay dọc điện thoại');
+});
