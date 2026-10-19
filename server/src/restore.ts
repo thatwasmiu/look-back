@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type pg from 'pg';
 import { createPool } from './db.js';
-import { BACKUP_TABLES } from './manage.js';
+import { BACKUP_TABLES } from './backup.js';
 import { migrate } from './migrate.js';
 
 // Restores a backup made by GET /api/manage/backup: REPLACES every album, page and media row and the whole media
