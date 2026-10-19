@@ -31,8 +31,9 @@ test('"+ add" offers Upload first, then the uploaded photos; picking one puts it
   await user.click(screen.getByRole('button', { name: '+ add' }));
   const dialog = screen.getByRole('dialog', { name: 'Add photo or video' });
   const options = dialog.querySelectorAll('.frame-menu-grid button');
-  expect(options[0].textContent).toContain('Take photo/video'); // phones only (CSS)
-  expect(options[1].textContent).toContain('Upload');
+  expect(options[0].textContent).toContain('Chụp theo khung'); // phones only (CSS)
+  expect(options[1].textContent).toContain('Take photo/video'); // phones only (CSS)
+  expect(options[2].textContent).toContain('Upload');
   await user.click(screen.getByRole('button', { name: 'Use image m1abcdef' }));
   expect(screen.queryByRole('dialog')).toBeNull();
   await user.click(screen.getByRole('button', { name: 'Undo' })); // the pick was one layout change
@@ -59,4 +60,15 @@ test('"Take photo/video" opens the camera input (capture) for that frame', async
   await user.click(screen.getByRole('button', { name: /Take photo\/video/ }));
   expect(click).toHaveBeenCalled();
   expect(screen.queryByRole('dialog')).toBeNull();
+});
+
+test('"Chụp theo khung" opens the in-app camera for that frame', async () => {
+  const user = userEvent.setup();
+  setup(bundleWith([m]));
+  await user.click(screen.getByRole('button', { name: '+ add' }));
+  await user.click(screen.getByRole('button', { name: /Chụp theo khung/ }));
+  expect(screen.queryByRole('dialog', { name: 'Add photo or video' })).toBeNull();
+  expect(screen.getByRole('dialog', { name: 'Chụp theo khung' })).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: 'Đóng' }));
+  expect(screen.queryByRole('dialog', { name: 'Chụp theo khung' })).toBeNull();
 });

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { mangaTemplates, pageLayoutSchema, templates, type AlbumBundle, type ReadingDirection, type BackgroundColor, type BackgroundEffect, type MediaDTO, type PageDTO, type PageElement, type PageLayout } from '@scrapbook/shared';
+import { mangaTemplates, pageLayoutSchema, templates, type AlbumBundle, type ReadingDirection, type BackgroundColor, type BackgroundEffect, type FrameEl, type MediaDTO, type PageDTO, type PageElement, type PageLayout } from '@scrapbook/shared';
 import { api as realApi, ApiError } from '../api';
 import { PageRenderer } from '../render/PageRenderer';
 import { EditCanvas } from '../editor/EditCanvas';
@@ -13,12 +13,15 @@ import { useAutosave } from '../editor/useAutosave';
 import { MediaTray, thumbOf } from '../editor/MediaTray';
 import { mediaUrl } from '../mediaUrl';
 import { ACCEPT, pollUntilSettled, useUpload } from '../editor/useUpload';
+import { FrameCamera } from '../editor/FrameCamera';
 import { dropLocalPreview, LocalPreview } from '../localPreview';
 
 export type EditorApi = Pick<typeof realApi,
   'addPage' | 'savePage' | 'deletePage' | 'reorderPages' | 'getMedia' | 'deleteMedia' | 'updateAlbum'>;
 
 const standalone = window.matchMedia?.('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
+
+const phone = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
 
 export default function Editor() {
   const { id = '' } = useParams();
@@ -263,8 +266,10 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   }, [upload.items, watch]);
   const framePick = useRef<{ input: HTMLInputElement | null; frameId: string }>({ input: null, frameId: '' });
   // "+ add" on an empty frame: pick from what's already uploaded, or upload new (first option).
-  // With nothing uploaded yet it goes straight to the file dialog.
+  // With nothing uploaded yet it goes straight to the file dialog — except on phones, where the menu also offers the
+  // cameras.
   const [frameMenu, setFrameMenu] = useState<string | null>(null);
+  const [cameraFrame, setCameraFrame] = useState<FrameEl | null>(null); // "Chụp theo khung" open for this frame
   // camera: the phone-only "Take photo/video" (same input with capture, which opens the camera directly).
   const cameraPick = useRef<HTMLInputElement | null>(null);
   const uploadToFrame = (frameId: string, camera = false) => {
@@ -272,7 +277,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
     (camera ? cameraPick.current : framePick.current.input)?.click();
   };
   const addToFrame = (frameId: string) => {
-    if (trayMedia.some((m) => m.status !== 'failed')) setFrameMenu(frameId);
+    if (trayMedia.some((m) => m.status !== 'failed') || phone) setFrameMenu(frameId);
     else uploadToFrame(frameId);
   };
   const putInFrame = (mediaId: string, frameId: string) => commit((l) => assignMedia(l, frameId, mediaId), frameId);
@@ -472,6 +477,11 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
           onPick={(id) => selected?.type === 'frame' && putInFrame(id, selected.id)} onDrop={putInFrame}
           onDelete={deleteMedia} onSetCover={setCover} />
         {/* Portal: inside .edit-main's stacking context the tools would paint over the backdrop. */}
+        {cameraFrame && createPortal(
+          <FrameCamera frame={cameraFrame} onClose={() => setCameraFrame(null)}
+            onCapture={(file) => { upload.add([file], cameraFrame.id); setCameraFrame(null); }} />,
+          document.body,
+        )}
         {frameMenu && createPortal(
           <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setFrameMenu(null); }}
             onKeyDown={(e) => { if (e.key === 'Escape') setFrameMenu(null); }}>
@@ -479,6 +489,11 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
               <button type="button" className="modal-close" aria-label="Close" onClick={() => setFrameMenu(null)} autoFocus>×</button>
               <h2>Add to frame</h2>
               <div className="frame-menu-grid">
+                <button type="button" className="frame-menu-upload frame-menu-camera" onClick={() => {
+                  const f = layout.elements.find((e) => e.id === frameMenu);
+                  if (f?.type === 'frame') setCameraFrame(f);
+                  setFrameMenu(null);
+                }}>🎯<span>Chụp theo khung</span></button>
                 <button type="button" className="frame-menu-upload frame-menu-camera" onClick={() => { uploadToFrame(frameMenu, true); setFrameMenu(null); }}>📷<span>Take photo/video</span></button>
                 <button type="button" className="frame-menu-upload" onClick={() => { uploadToFrame(frameMenu); setFrameMenu(null); }}>⬆<span>Upload</span></button>
                 {trayMedia.filter((m) => m.status !== 'failed').map((m) => {
