@@ -49,8 +49,47 @@ describe('AI settings in /manage', () => {
     expect((await owner('POST', '/api/manage/ai/test')).json()).toEqual({ ok: false, error: 'Hết lượt miễn phí của Gemini, thử lại sau.' });
   });
 
+  it('POST /api/ai/album builds a manga album from the answer', async () => {
+    await owner('PUT', '/api/manage/ai', { key: KEY });
+    const pages = ['manga-cover', 'manga-grid', 'manga-yonkoma', 'manga-action', 'manga-ending'].map((template) => ({ template, texts: ['Đi làm'], stickers: [] }));
+    g.reply({ text: JSON.stringify({ title: 'Một ngày đi làm', backgroundColor: 'slate', backgroundEffect: 'rain', pages }) });
+    const before = (await t.pool.query('select count(*)::int as n from albums')).rows[0].n;
+    const res = await owner('POST', '/api/ai/album', { prompt: '1 ngày đi làm', mode: 'manga', readingDirection: 'rtl' });
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toMatchObject({ title: 'Một ngày đi làm', mode: 'manga', readingDirection: 'rtl', backgroundColor: 'slate', backgroundEffect: 'rain' });
+    expect(g.lastRequest()!.body.contents[0].parts[0].text).toContain('1 ngày đi làm');
+    const rows = (await t.pool.query('select layout from pages where album_id = $1 order by position', [res.json().id])).rows;
+    expect(rows).toHaveLength(5);
+    for (const r of rows) for (const e of r.layout.elements) if (e.type === 'frame') expect(e.mediaId).toBeNull();
+    expect((await t.pool.query('select count(*)::int as n from albums')).rows[0].n).toBe(before + 1);
+  });
+
+  it('the typed title wins over the AI one', async () => {
+    const pages = ['cover', 'journal', 'six-grid', 'the-end'].map((template) => ({ template, texts: [], stickers: [] }));
+    g.reply({ text: JSON.stringify({ title: 'AI title', backgroundColor: 'rose', backgroundEffect: 'none', pages }) });
+    const res = await owner('POST', '/api/ai/album', { prompt: 'sinh nhật', mode: 'scrapbook', title: 'Của tôi' });
+    expect(res.json()).toMatchObject({ title: 'Của tôi', mode: 'scrapbook' });
+  });
+
+  it('rejects bad input and maps Gemini failures without creating an album', async () => {
+    const count = async () => (await t.pool.query('select count(*)::int as n from albums')).rows[0].n;
+    const before = await count();
+    expect((await owner('POST', '/api/ai/album', { prompt: 'x'.repeat(201), mode: 'manga' })).statusCode).toBe(400);
+    expect((await owner('POST', '/api/ai/album', { prompt: '', mode: 'manga' })).statusCode).toBe(400);
+    g.reply({ text: 'not json' });
+    const bad = await owner('POST', '/api/ai/album', { prompt: 'abc', mode: 'manga' });
+    expect(bad.statusCode).toBe(502);
+    expect(bad.json()).toEqual({ error: 'AI trả lời không dùng được, thử lại.' });
+    g.reply({ status: 429, body: {} });
+    expect((await owner('POST', '/api/ai/album', { prompt: 'abc', mode: 'manga' })).json()).toEqual({ error: 'Hết lượt miễn phí của Gemini, thử lại sau.' });
+    expect(await count()).toBe(before);
+  });
+
   it('removing the key', async () => {
     expect((await owner('DELETE', '/api/manage/ai/key')).json()).toMatchObject({ hasKey: false, last4: null });
     expect((await owner('POST', '/api/manage/ai/test')).json()).toEqual({ ok: false, error: 'Chưa có Gemini key — thêm trong /manage.' });
+    const res = await owner('POST', '/api/ai/album', { prompt: 'abc', mode: 'scrapbook' });
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toEqual({ error: 'Chưa có Gemini key — thêm trong /manage.' });
   });
 });

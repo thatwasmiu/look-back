@@ -1,6 +1,9 @@
+import { randomUUID } from 'node:crypto';
+import { ALBUM_MODES, READING_DIRECTIONS, type AlbumMode, type ReadingDirection } from '@scrapbook/shared';
 import type { FastifyInstance } from 'fastify';
 import type pg from 'pg';
 import type { Config } from './config.js';
+import { answerSchema, buildPrompt, toDesign } from './aiAlbum.js';
 import { aiErrorMessage, DEFAULT_MODEL, generateJson, NO_KEY } from './gemini.js';
 import { decryptSecret, encryptSecret } from './secrets.js';
 
@@ -47,5 +50,33 @@ export function registerAiRoutes(app: FastifyInstance, pool: pg.Pool, config: Co
     } catch (e) {
       return { ok: false, error: aiErrorMessage(e) };
     }
+  });
+
+  // New album from a description. The design goes through POST /api/albums (same validation, pages and
+  // transaction as a built-in template), so there is one way an album gets created.
+  app.post<{ Body: { prompt: string; mode: AlbumMode; readingDirection?: ReadingDirection; title?: string } }>('/api/ai/album', {
+    schema: { body: { type: 'object', required: ['prompt', 'mode'], additionalProperties: false, properties: {
+      prompt: { type: 'string', minLength: 1, maxLength: 200, pattern: '\\S' },
+      mode: { type: 'string', enum: [...ALBUM_MODES] },
+      readingDirection: { type: 'string', enum: [...READING_DIRECTIONS] },
+      title: { type: 'string', maxLength: 200 },
+    } } },
+  }, async (req, reply) => {
+    const { prompt, mode, readingDirection = 'ltr' } = req.body;
+    const s = await loadAiSettings(pool, config);
+    if (!s.key) return reply.code(400).send({ error: NO_KEY });
+    let design;
+    try {
+      design = toDesign(await generateJson(config, s.key, s.model, buildPrompt(prompt.trim(), mode), answerSchema(mode)), mode, readingDirection, randomUUID);
+    } catch (e) {
+      req.log.warn({ err: e instanceof Error ? e.message : e }, 'ai album failed');
+      return reply.code(502).send({ error: aiErrorMessage(e) });
+    }
+    const { title: aiTitle, ...rest } = design;
+    const res = await app.inject({
+      method: 'POST', url: '/api/albums', headers: { cookie: req.headers.cookie ?? '' },
+      payload: { title: req.body.title?.trim() || aiTitle || 'Album AI', design: rest },
+    });
+    return reply.code(res.statusCode).type('application/json').send(res.body);
   });
 }
