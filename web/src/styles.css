@@ -476,6 +476,7 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .camera-round { width: 3rem; height: 3rem; padding: 0; border-radius: 50%; border: 0; background: var(--cam-cream); color: var(--cam-ink);
   font-size: 1.25rem; box-shadow: 0 3px 0 #0003; }
 .camera-round:disabled { opacity: .5; }
+.camera-round { display: grid; place-items: center; }
 .camera-flip { position: absolute; left: 22px; }
 .camera-torch { position: absolute; right: 22px; }
 .camera-torch[aria-pressed='true'] { background: #ffe066; box-shadow: 0 0 18px #ffe066; }

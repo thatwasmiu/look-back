@@ -235,12 +235,34 @@ export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame:
         </label>
       )}
       <div className="camera-bottom">
-        <button type="button" className="camera-round camera-flip" aria-label="Đổi camera" disabled={recording} onClick={() => setFacing(facing === 'environment' ? 'user' : 'environment')}>🔄</button>
+        <button type="button" className="camera-round camera-flip" aria-label="Đổi camera" disabled={recording} onClick={() => setFacing(facing === 'environment' ? 'user' : 'environment')}><FlipIcon /></button>
         {mode === 'photo' ? <button type="button" className="camera-shutter" aria-label="Chụp" onClick={shoot}><span aria-hidden>♥</span></button>
           : recording ? <button type="button" className="camera-shutter recording" aria-label="Dừng" onClick={stopRecording}><span aria-hidden /></button>
             : <button type="button" className="camera-shutter rec" aria-label="Quay" onClick={record}><span aria-hidden /></button>}
-        {hw.torch && <button type="button" className="camera-round camera-torch" aria-label="⚡ Đèn" aria-pressed={torch} onClick={toggleTorch}>⚡</button>}
+        {hw.torch && <button type="button" className="camera-round camera-torch" aria-label="⚡ Đèn" aria-pressed={torch} onClick={toggleTorch}><BoltIcon /></button>}
       </div>
     </div>
   );
 }
+
+// Line icons in the camera's ink colour (emoji like 🔄 / ⚡ look different on every phone, often a blue square).
+function FlipIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 9.5a8 8 0 0 1 14.2-3.6" />
+      <path d="M18.6 2.8v3.6H15" />
+      <path d="M20 14.5a8 8 0 0 1-14.2 3.6" />
+      <path d="M5.4 21.2v-3.6H9" />
+      <circle cx="12" cy="12" r="2.4" />
+    </svg>
+  );
+}
+
+function BoltIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden fill="currentColor" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round">
+      <path d="M13.5 2.5 5.5 13.5h5.2l-1.2 8 8-11h-5.2z" />
+    </svg>
+  );
+}
+
