@@ -172,3 +172,20 @@ test('"+ add" under an effect layer (speed lines over a panel) still opens with 
     vi.useRealTimers();
   }
 });
+
+test('"+ add" on a selected PINNED frame still opens the picker with one tap', async () => {
+  vi.useFakeTimers();
+  try {
+    const frame: PageLayout = { background: 'paper-cream', elements: [
+      { type: 'frame', id: 'f1', x: 0.1, y: 0.1, w: 0.4, h: 0.3, rotation: 0, z: 1, frameStyle: 'panel', pinned: true, mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } },
+    ] };
+    const onFrameAddMedia = vi.fn();
+    render(<EditCanvas layout={frame} media={new Map()} selectedId="f1" onSelect={() => {}} onCommit={() => {}} onFrameAddMedia={onFrameAddMedia} />);
+    const add = document.querySelector('.slot-empty')!;
+    act(() => { add.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true })); });
+    act(() => { add.dispatchEvent(new MouseEvent('pointerup', { bubbles: true })); vi.runAllTimers(); });
+    expect(onFrameAddMedia).toHaveBeenCalledWith('f1');
+  } finally {
+    vi.useRealTimers();
+  }
+});

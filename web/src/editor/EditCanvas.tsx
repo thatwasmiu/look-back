@@ -111,7 +111,10 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
     const add = (e.target as Element).closest('.slot-empty')
       ?? (overEffect ? document.elementsFromPoint?.(e.clientX, e.clientY).find((n) => n.classList.contains('slot-empty')) : undefined);
     const frameId = add?.closest('[data-el]')?.getAttribute('data-el');
-    if (add && frameId && frameId !== selectedId && onFrameAddMedia) {
+    // A selected, unpinned frame's tap comes through Moveable's click instead; a pinned one has no Moveable gesture
+    // (dragging is off), so its tap is handled here like an unselected frame's.
+    const pinnedFrame = !!layout.elements.find((x) => x.id === frameId)?.pinned;
+    if (add && frameId && (frameId !== selectedId || pinnedFrame) && onFrameAddMedia) {
       const x0 = e.clientX, y0 = e.clientY;
       const up = (u: PointerEvent) => {
         window.removeEventListener('pointercancel', cancel);
