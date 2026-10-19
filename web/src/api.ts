@@ -61,6 +61,10 @@ export const api = {
   deleteLocation: (id: string) => req<void>('DELETE', `/manage/locations/${id}`),
   dropLocation: (id: string, confirmName: string) => req<{ dropped: number }>('POST', `/manage/locations/${id}/drop`, { confirmName }),
   moveMedia: (mediaIds: string[], to: string) => req<{ queued: number }>('POST', '/manage/move', { mediaIds, to }),
+  driveStatus: () => req<DriveStatus>('GET', '/manage/drive'),
+  setDriveSchedule: (schedule: DriveSchedule) => req<{ schedule: DriveSchedule }>('PATCH', '/manage/drive', { schedule }),
+  runDriveBackup: () => req<{ queued: true }>('POST', '/manage/drive/run'),
+  disconnectDrive: () => req<void>('DELETE', '/manage/drive'),
 };
 
 // Hidden /manage page: storage use and every media file (server/src/manage.ts).
@@ -77,5 +81,11 @@ export type StorageLocation = {
 };
 export type NewLocation = {
   name: string; endpoint: string; region?: string; bucket: string; accessKeyId: string; secretAccessKey: string; capBytes?: number | null;
+};
+export type DriveSchedule = 'weekly' | 'daily' | 'off';
+export type DriveStatus = {
+  configured: boolean; connected: boolean; email: string | null; schedule: DriveSchedule;
+  status: 'idle' | 'running' | 'ok' | 'incomplete' | 'error' | 'needs-reconnect'; message: string | null;
+  startedAt: string | null; finishedAt: string | null; bytesSent: number | null; lastBytes: number | null; nextRun: string | null;
 };
 

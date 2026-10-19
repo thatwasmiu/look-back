@@ -446,4 +446,8 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .move-bar { position: relative; display: inline-flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
 .move-targets { display: inline-flex; flex-wrap: wrap; gap: .3rem; }
 .manage-name small.error { color: #a33a2a; opacity: 1; }
+.drive-status { font-weight: bold; }
+.drive-status.drive-ok { color: #3f7a3f; }
+.drive-status.drive-incomplete { color: #a0731a; }
+.drive-status.drive-error, .drive-status.drive-needs-reconnect { color: #a33a2a; }
 
