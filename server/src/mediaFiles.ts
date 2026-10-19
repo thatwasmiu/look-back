@@ -21,6 +21,19 @@ export async function dirBytes(dir: string): Promise<number> {
   return n;
 }
 
+// Every file of a local media as bucket-style keys (`<id>/<rel path>`) with sizes.
+export async function listLocalFiles(mediaDir: string, id: string): Promise<{ key: string; size: number }[]> {
+  const out: { key: string; size: number }[] = [];
+  const walk = async (dir: string, rel: string) => {
+    for (const e of await readdir(dir, { withFileTypes: true }).catch(() => [])) {
+      if (e.isDirectory()) await walk(join(dir, e.name), `${rel}${e.name}/`);
+      else out.push({ key: `${id}/${rel}${e.name}`, size: (await stat(join(dir, e.name))).size });
+    }
+  };
+  await walk(absPath(mediaDir, id), '');
+  return out;
+}
+
 export type GoneMedia = { id: string; storageId: string | null };
 
 // The DB side of deleting media (inside the caller's transaction): empty the frames that show them, clear album

@@ -1,6 +1,7 @@
 import { loadConfig } from './config.js';
 import { createPool, waitForDb } from './db.js';
-import { createQueue, JOB_PROCESS_MEDIA, type ProcessMediaJob } from './queue.js';
+import { createQueue, JOB_MOVE_MEDIA, JOB_PROCESS_MEDIA, type MoveMediaJob, type ProcessMediaJob } from './queue.js';
+import { moveMedia } from './moveMedia.js';
 import { runProcessMedia } from './processing/run.js';
 import { cleanupAbandonedUploads } from './uploads.js';
 import { runPendingDeletes } from './mediaFiles.js';
@@ -12,6 +13,9 @@ const boss = await createQueue(config.databaseUrl);
 
 await boss.work<ProcessMediaJob>(JOB_PROCESS_MEDIA, { batchSize: 1 }, async ([job]) => {
   await runProcessMedia(job.data, pool, config);
+});
+await boss.work<MoveMediaJob>(JOB_MOVE_MEDIA, { batchSize: 1 }, async ([job]) => {
+  await moveMedia(pool, config, job.data);
 });
 
 const cleanup = () => cleanupAbandonedUploads(pool, config.uploadDir).catch((e) => console.error('upload cleanup', e));

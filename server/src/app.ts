@@ -17,7 +17,7 @@ export async function buildApp(config: Config, pool: pg.Pool, boss: PgBoss): Pro
   app.get('/api/health', async () => ({ ok: true }));
   registerAlbums(app, pool, config, boss);
   registerShare(app, pool, config);
-  registerManage(app, pool, config);
+  registerManage(app, pool, config, boss);
   registerLocations(app, pool, config);
   registerPages(app, pool);
   registerMedia(app, pool, config);
