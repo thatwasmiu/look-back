@@ -11,10 +11,15 @@ const encKey = (key: string) => key.split('/').map(encodeURIComponent).join('/')
 const unXml = (s: string) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
 const tag = (xml: string, name: string) => xml.match(new RegExp(`<${name}>([\\s\\S]*?)</${name}>`))?.[1];
 
+// Carries the bucket's HTTP status, so callers can tell a missing object (404) from a broken bucket.
+export class BucketError extends Error {
+  constructor(message: string, readonly status: number) { super(message); }
+}
+
 async function fail(what: string, res: Response): Promise<never> {
   const body = await res.text().catch(() => '');
   const detail = [tag(body, 'Code'), tag(body, 'Message')].filter(Boolean).join(': ');
-  throw new Error(`${what}: ${res.status}${detail ? ` ${unXml(detail)}` : ''}`);
+  throw new BucketError(`${what}: ${res.status}${detail ? ` ${unXml(detail)}` : ''}`, res.status);
 }
 
 export function bucketClient(b: BucketConfig) {

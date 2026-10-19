@@ -6,7 +6,7 @@ import { MediaUnavailable } from './MediaUnavailable';
 
 type Props = { media: MediaDTO; active: boolean; crop?: Crop; autoPlay?: boolean; trim?: { start: number; end: number } };
 
-// Poster until tapped; then HLS (native on Safari, hls.js elsewhere, loaded lazily).
+// Poster until tapped; then HLS (hls.js, loaded lazily; the browser's own player where hls.js can't run).
 // autoPlay (album view): starts by itself while its page is shown — muted and looping, since browsers only allow
 // silent autoplay; the native controls unmute it. A tap on the poster still starts it with sound.
 // trim: play only start..end — it starts at `start`, and at `end` loops (autoplay) or stops back at `start`.
@@ -30,21 +30,23 @@ export function VideoPlayer({ media, active, crop = { x: 0.5, y: 0.5, scale: 1 }
     let cancelled = false;
     video.muted = silent;
     const play = () => { video.play().catch(() => {}); };
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    // hls.js wherever it can run (it follows segment redirects to a storage bucket); the browser's own HLS player
+    // only where it can't (older iPhones) — built-in players refuse cross-site segment redirects.
+    const native = () => {
+      if (!video.canPlayType('application/vnd.apple.mpegurl')) { setFailed(true); return; }
       video.src = url;
       play();
-    } else {
-      import('hls.js').then(({ default: Hls }) => {
-        if (cancelled) return;
-        if (!Hls.isSupported()) { setFailed(true); return; }
-        const h = new Hls();
-        hls = h;
-        h.on(Hls.Events.ERROR, (_e, data) => { if (data.fatal) setFailed(true); });
-        h.loadSource(url);
-        h.attachMedia(video);
-        play();
-      }, () => { if (!cancelled) setFailed(true); });
-    }
+    };
+    import('hls.js').then(({ default: Hls }) => {
+      if (cancelled) return;
+      if (!Hls.isSupported()) { native(); return; }
+      const h = new Hls();
+      hls = h;
+      h.on(Hls.Events.ERROR, (_e, data) => { if (data.fatal) setFailed(true); });
+      h.loadSource(url);
+      h.attachMedia(video);
+      play();
+    }, () => { if (!cancelled) native(); });
     return () => {
       cancelled = true;
       video.pause();

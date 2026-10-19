@@ -5,12 +5,12 @@ import type { MediaDTO } from '@scrapbook/shared';
 import { VideoPlayer } from '../src/render/VideoPlayer';
 
 const hls = vi.hoisted(() => ({
-  loadSource: vi.fn(), attachMedia: vi.fn(), destroy: vi.fn(),
+  loadSource: vi.fn(), attachMedia: vi.fn(), destroy: vi.fn(), supported: true,
   onError: null as null | ((e: string, data: { fatal: boolean }) => void),
 }));
 vi.mock('hls.js', () => ({
   default: class {
-    static isSupported = () => true;
+    static isSupported = () => hls.supported;
     static Events = { ERROR: 'hlsError' };
     loadSource = hls.loadSource;
     attachMedia = hls.attachMedia;
@@ -106,4 +106,17 @@ test('trim: starts at the clip start; autoplay loops back at the end, a tapped p
   v2.dispatchEvent(new Event('timeupdate'));
   expect(v2.currentTime).toBe(2);
   expect(pause).toHaveBeenCalled();
+});
+
+test("the browser's own HLS player is used only where hls.js can't run", async () => {
+  hls.supported = false;
+  const can = vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('maybe');
+  try {
+    const r = render(<VideoPlayer media={video} active autoPlay />);
+    await waitFor(() => expect(r.container.querySelector('video')!.getAttribute('src')).toBe('/media/v1/hls/master.m3u8'));
+    expect(hls.loadSource).not.toHaveBeenCalled();
+  } finally {
+    hls.supported = true;
+    can.mockRestore();
+  }
 });

@@ -43,7 +43,7 @@ describe.skipIf(!s3Available)('serving files that live in a bucket', () => {
     expect((await t.app.inject({ method: 'GET', url: `/media/${a.id}/display.webp` })).statusCode).toBe(401);
   });
 
-  it('HLS playlists are rewritten: sub-playlists stay relative, segments become presigned URLs', async () => {
+  it('HLS playlists are served from the app with relative links; each segment redirects on its own', async () => {
     const s = await setup('srv-d');
     const master0 = Buffer.from('#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\n0.m3u8\n');
     await s.c.put(`${s.id}/hls/master.m3u8`, master0, master0.length);
@@ -52,11 +52,16 @@ describe.skipIf(!s3Available)('serving files that live in a bucket', () => {
     await s.c.put(`${s.id}/hls/0_0001.ts`, Buffer.from('seg'), 3);
     const master = await owner('GET', `/media/${s.id}/hls/master.m3u8`);
     expect(master.headers['content-type']).toContain('application/vnd.apple.mpegurl');
-    expect(master.body).toContain('\n0.m3u8\n');
-    const v = await owner('GET', `/media/${s.id}/hls/0.m3u8`);
-    const seg = v.body.split('\n').find((l) => l.includes('0_0001.ts'))!;
-    expect(seg).toMatch(/^https?:\/\/.*X-Amz-Signature=/);
-    expect(await (await fetch(seg)).text()).toBe('seg');
+    expect(master.body).toBe(master0.toString());
+    expect((await owner('GET', `/media/${s.id}/hls/0.m3u8`)).body).toContain('\n0_0001.ts\n');
+    const seg = await owner('GET', `/media/${s.id}/hls/0_0001.ts`);
+    expect(seg.statusCode).toBe(302);
+    expect(await (await fetch(seg.headers.location as string)).text()).toBe('seg');
+
+    // A playlist that isn't there is a 404 for that file only — the location stays usable.
+    expect((await owner('GET', `/media/${s.id}/hls/missing.m3u8`)).statusCode).toBe(404);
+    expect((await t.pool.query('select check_status from storage_locations where id = $1', [s.loc])).rows[0].check_status).toBe('ok');
+    expect((await owner('GET', `/media/${s.id}/hls/0.m3u8`)).statusCode).toBe(200);
   });
 
   it('broken location → 503; a local media missing on disk → 404', async () => {

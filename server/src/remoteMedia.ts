@@ -2,12 +2,12 @@ import type { FastifyInstance } from 'fastify';
 import type pg from 'pg';
 import type { Config } from './config.js';
 import { loadBucket, markLocation } from './locations.js';
-import { bucketClient } from './objectStore.js';
+import { BucketError, bucketClient } from './objectStore.js';
 import { SHARE_COOKIE, shareAllowsMedia } from './share.js';
 
 // /media/<id>/<file> for files that live in a bucket. nginx serves files on the VPS disk itself and hands only disk
 // misses to this route. Access is checked here again (owner session or a share link for that album), then the
-// browser is sent to a short-lived presigned URL; HLS playlists are rewritten so their segments are presigned too.
+// browser is sent to a short-lived presigned URL; HLS playlists are served from here so segments come back through it.
 const PRESIGN_SECONDS = 600;
 const UUID = /^[0-9a-f-]{36}$/;
 
@@ -29,24 +29,16 @@ export function registerRemoteMedia(app: FastifyInstance, pool: pg.Pool, config:
     if (!key.endsWith('.m3u8')) {
       return reply.header('cache-control', `private, max-age=${PRESIGN_SECONDS / 2}`).redirect(await c.presign(key, PRESIGN_SECONDS), 302);
     }
-    let text: string;
+    // Playlists are passed through from here (same origin) instead of redirected: their relative segment links then
+    // come back through /media and get their own redirect. Absolute cross-origin segment URLs break the browsers'
+    // native HLS players, and a redirected playlist would resolve its segments against the bucket, unsigned.
     try {
-      text = await (await c.get(key)).text();
+      const text = await (await c.get(key)).text();
+      return reply.type('application/vnd.apple.mpegurl').header('cache-control', 'no-store').send(text);
     } catch (e) {
+      if (e instanceof BucketError && e.status === 404) return reply.code(404).send(); // just that file is missing
       await markLocation(pool, m.storage_id, (e instanceof Error ? e.message : String(e)).slice(0, 300));
       return reply.code(503).send();
     }
-    const dir = key.slice(0, key.lastIndexOf('/') + 1);
-    const sign = (ref: string) => (ref.endsWith('.m3u8') || /^https?:/.test(ref) ? ref : c.presign(dir + ref, PRESIGN_SECONDS));
-    const lines = await Promise.all(text.split('\n').map(async (line) => {
-      const l = line.trim();
-      if (!l) return line;
-      if (l.startsWith('#')) { // EXT-X-MAP / EXT-X-MEDIA URIs
-        const m2 = /URI="([^"]+)"/.exec(l);
-        return m2 ? l.replace(m2[0], `URI="${await sign(m2[1])}"`) : line;
-      }
-      return sign(l);
-    }));
-    return reply.type('application/vnd.apple.mpegurl').header('cache-control', 'no-store').send(lines.join('\n'));
   });
 }
