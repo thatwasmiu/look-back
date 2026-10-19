@@ -26,6 +26,7 @@ export async function testApp(overrides: Partial<Config> = {}) {
     trustProxy: false,
     googleClientId: '', googleClientSecret: '',
     googleOauthBase: 'http://127.0.0.1:9', googleAuthBase: 'http://127.0.0.1:9', googleApiBase: 'http://127.0.0.1:9',
+    geminiBase: 'http://127.0.0.1:9',
     ...overrides,
   };
   const pool = createPool(config.databaseUrl);

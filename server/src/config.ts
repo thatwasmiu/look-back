@@ -17,6 +17,7 @@ export type Config = {
   googleOauthBase: string;
   googleAuthBase: string;
   googleApiBase: string;
+  geminiBase: string; // AI album; overridable only for tests
 };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -41,5 +42,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     googleOauthBase: env.GOOGLE_OAUTH_BASE ?? 'https://oauth2.googleapis.com',
     googleAuthBase: env.GOOGLE_AUTH_BASE ?? 'https://accounts.google.com',
     googleApiBase: env.GOOGLE_API_BASE ?? 'https://www.googleapis.com',
+    geminiBase: env.GEMINI_BASE ?? 'https://generativelanguage.googleapis.com',
   };
 }

@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import type pg from 'pg';
 import type PgBoss from 'pg-boss';
+import { registerAiRoutes } from './aiRoutes.js';
 import { registerAlbums } from './albums.js';
 import { registerAuth } from './auth.js';
 import type { Config } from './config.js';
@@ -23,6 +24,7 @@ export async function buildApp(config: Config, pool: pg.Pool, boss: PgBoss): Pro
   registerLocations(app, pool, config);
   registerRemoteMedia(app, pool, config);
   registerDriveRoutes(app, pool, config, boss);
+  registerAiRoutes(app, pool, config);
   registerPages(app, pool);
   registerMedia(app, pool, config);
   registerUploads(app, config, pool, boss);
