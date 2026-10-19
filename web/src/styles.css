@@ -512,4 +512,8 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
   .camera-zoom { left: 22px; right: 7.5rem; bottom: .8rem; }
   .camera-hint { bottom: 3.6rem; left: calc(50% - 3rem); }
 }
+.ai-prompt { display: grid; gap: .25rem; }
+.ai-prompt textarea { width: 100%; box-sizing: border-box; font: inherit; padding: .5rem .6rem; border-radius: 10px; border: 1px solid #d8c9b0; resize: vertical; }
+.ai-prompt small { justify-self: end; opacity: .65; }
+.ai-prompt p { margin: 0; }
 

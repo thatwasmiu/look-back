@@ -183,3 +183,64 @@ test('Copy puts the share link on the clipboard, closes the dialog and says so',
   expect(screen.queryByRole('dialog', { name: 'Share album' })).toBeNull();
   expect((await screen.findByRole('status')).textContent).toBe('Đã chép link');
 });
+
+// ✨ AI: settings are fetched when the card is picked; Create sends the description to /api/ai/album.
+function serveAi(hasKey: boolean, create: () => Promise<Response> | Response = () => json(201, { id: 'a1', title: 'Đi làm', mode: 'manga' })) {
+  const calls: { method: string; url: string; body: any }[] = [];
+  setup(vi.fn(async (url: string, init?: RequestInit) => {
+    const method = init?.method ?? 'GET';
+    calls.push({ method, url, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+    if (url === '/api/albums') return json(200, []);
+    if (url === '/api/manage/ai') return json(200, { hasKey, last4: hasKey ? 'abcd' : null, model: 'm' });
+    if (url === '/api/ai/album') return create();
+    return json(404, {});
+  }));
+  return calls;
+}
+
+test('✨ AI card in both modes; without a key it points to /manage and Create stays off', async () => {
+  serveAi(false);
+  await userEvent.click(await screen.findByRole('button', { name: 'New album' }));
+  expect(screen.getByRole('radio', { name: /✨ AI/ })).toBeTruthy();
+  await userEvent.click(screen.getByRole('radio', { name: 'Manga' }));
+  await userEvent.click(screen.getByRole('radio', { name: /✨ AI/ }));
+  expect(await screen.findByText(/Thêm Gemini key trong \/manage/)).toBeTruthy();
+  await userEvent.type(screen.getByLabelText('Mô tả album'), 'abc');
+  expect((screen.getByRole('button', { name: 'Create' }) as HTMLButtonElement).disabled).toBe(true);
+});
+
+test('✨ AI sends the description, mode and direction once, then opens the editor', async () => {
+  let release!: (r: Response) => void;
+  const calls = serveAi(true, () => new Promise<Response>((ok) => { release = ok; }));
+  await userEvent.click(await screen.findByRole('button', { name: 'New album' }));
+  await userEvent.click(screen.getByRole('radio', { name: 'Manga' }));
+  await userEvent.click(screen.getByRole('radio', { name: 'Right → left' }));
+  await userEvent.click(screen.getByRole('radio', { name: /✨ AI/ }));
+  const box = screen.getByLabelText('Mô tả album') as HTMLTextAreaElement;
+  expect(box.maxLength).toBe(200);
+  expect(screen.getByText('0/200')).toBeTruthy();
+  await userEvent.type(box, '1 ngày đi làm');
+  expect(screen.getByText('13/200')).toBeTruthy();
+  const create = await screen.findByRole('button', { name: 'Create' });
+  await waitFor(() => expect((create as HTMLButtonElement).disabled).toBe(false));
+  await userEvent.click(create);
+  const busy = await screen.findByRole('button', { name: 'AI đang dựng album…' });
+  expect((busy as HTMLButtonElement).disabled).toBe(true);
+  await userEvent.click(busy);
+  expect(calls.filter((c) => c.url === '/api/ai/album')).toHaveLength(1);
+  expect(calls.find((c) => c.url === '/api/ai/album')!.body).toEqual({ prompt: '1 ngày đi làm', mode: 'manga', readingDirection: 'rtl' });
+  release(json(201, { id: 'a1', title: 'Đi làm', mode: 'manga' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+});
+
+test('✨ AI shows the server error', async () => {
+  serveAi(true, () => json(502, { error: 'Hết lượt miễn phí của Gemini, thử lại sau.' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'New album' }));
+  await userEvent.click(screen.getByRole('radio', { name: /✨ AI/ }));
+  await userEvent.type(screen.getByLabelText('Mô tả album'), 'sinh nhật');
+  await userEvent.type(screen.getByLabelText('Album title'), 'Của tôi');
+  const create = screen.getByRole('button', { name: 'Create' });
+  await waitFor(() => expect((create as HTMLButtonElement).disabled).toBe(false));
+  await userEvent.click(create);
+  expect(await screen.findByText('Hết lượt miễn phí của Gemini, thử lại sau.')).toBeTruthy();
+});

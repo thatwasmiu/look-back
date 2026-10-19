@@ -1,5 +1,5 @@
 import { useEffect, useState, type CSSProperties, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import type { AlbumMode, AlbumSummary, ReadingDirection } from '@scrapbook/shared';
 import { api, ApiError } from '../api';
 import { exampleAlbum, exampleCover } from '../example/lookBack';
@@ -23,7 +23,18 @@ export default function AlbumList() {
   const [albums, setAlbums] = useState<AlbumSummary[] | null>(null);
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState('');
-  const [from, setFrom] = useState(''); // '' empty album · 'tpl:<id>' built-in template · 'album:<id>' copy that album's design
+  const [from, setFrom] = useState(''); // '' empty album · 'tpl:<id>' built-in template · 'album:<id>' copy that album's design · 'ai'
+  // ✨ AI: a short description; Gemini picks the pages and writes the text (server/src/aiAlbum.ts). Whether a key
+  // is set is asked only when the card is picked; null = not known yet.
+  const [prompt, setPrompt] = useState('');
+  const [aiKey, setAiKey] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+  const isAi = from === 'ai';
+  const pickFrom = (v: string) => {
+    setFrom(v);
+    if (v === 'ai' && aiKey === null) api.aiSettings().then((x) => setAiKey(x.hasKey), () => setAiKey(false));
+  };
+  const navigate = useNavigate();
   // Album mode, fixed at creation. Manga albums also get a reading direction; built-in templates are scrapbook.
   const [mode, setMode] = useState<AlbumMode>('scrapbook');
   const [direction, setDirection] = useState<ReadingDirection>('ltr');
@@ -87,7 +98,7 @@ export default function AlbumList() {
   };
   useEffect(load, []);
 
-  const closeCreate = () => { setCreating(false); setTitle(''); setFrom(''); setMode('scrapbook'); setDirection('ltr'); setCreateError(''); };
+  const closeCreate = () => { setCreating(false); setTitle(''); setFrom(''); setMode('scrapbook'); setDirection('ltr'); setCreateError(''); setPrompt(''); setAiKey(null); };
   useEffect(() => {
     if (!creating) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeCreate(); };
@@ -97,6 +108,7 @@ export default function AlbumList() {
 
   async function create(e: FormEvent) {
     e.preventDefault();
+    if (isAi) return void createWithAi();
     if (!title.trim()) return;
     try {
       const [kind, id] = from.split(':');
@@ -109,6 +121,23 @@ export default function AlbumList() {
       closeCreate();
     } catch (err) {
       if (!(err instanceof ApiError && err.status === 401)) setCreateError("Không tạo được album");
+    }
+  }
+
+  async function createWithAi() {
+    if (busy || !prompt.trim() || !aiKey) return;
+    setBusy(true);
+    setCreateError('');
+    try {
+      const a = await api.createAiAlbum({
+        prompt: prompt.trim(), mode, ...(mode === 'manga' ? { readingDirection: direction } : {}), ...(title.trim() ? { title: title.trim() } : {}),
+      });
+      closeCreate();
+      navigate(`/albums/${a.id}/edit`);
+    } catch (err) {
+      if (!(err instanceof ApiError && err.status === 401)) setCreateError(err instanceof ApiError && err.status !== 500 ? err.message : 'Không tạo được album');
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -154,7 +183,7 @@ export default function AlbumList() {
           <form onSubmit={create} className="modal" role="dialog" aria-modal="true" aria-labelledby="new-album-h">
             <button type="button" className="modal-close" aria-label="Close" onClick={closeCreate}>×</button>
             <h2 id="new-album-h">New album</h2>
-            <input aria-label="Album title" placeholder="e.g. Tà Xùa 2026" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
+            <input aria-label="Album title" placeholder={isAi ? 'Để trống: AI đặt tên' : 'e.g. Tà Xùa 2026'} value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
             {/* Picker cards: template icon is one of the app's own stickers; an album shows its cover. */}
             <div className="mode-switch" role="radiogroup" aria-label="Mode">
               {(['scrapbook', 'manga'] as const).map((m) => (
@@ -171,10 +200,10 @@ export default function AlbumList() {
             <div className="start-from" role="radiogroup" aria-label="Template">
               <span className="start-label">Template</span>
               <div className="start-grid">
-                {[{ value: '', name: 'Empty album', icon: 'sparkle' }, ...albumTemplates.filter((t) => (t.mode ?? 'scrapbook') === mode).map((t) => ({ value: `tpl:${t.id}`, name: t.name, icon: t.icon }))].map((o) => {
+                {[{ value: '', name: 'Empty album', icon: 'sparkle' }, { value: 'ai', name: '✨ AI', icon: 'bubble' }, ...albumTemplates.filter((t) => (t.mode ?? 'scrapbook') === mode).map((t) => ({ value: `tpl:${t.id}`, name: t.name, icon: t.icon }))].map((o) => {
                   const Icon = stickers[o.icon]?.Svg;
                   return (
-                    <button key={o.value} type="button" role="radio" aria-checked={from === o.value} className="start-card" onClick={() => setFrom(o.value)}>
+                    <button key={o.value} type="button" role="radio" aria-checked={from === o.value} className="start-card" onClick={() => pickFrom(o.value)}>
                       <span className="start-icon el-sticker">{Icon && <Icon />}</span>{o.name}
                     </button>
                   );
@@ -191,10 +220,18 @@ export default function AlbumList() {
                 </div>
               </>}
             </div>
+            {isAi && (
+              <div className="ai-prompt">
+                <textarea aria-label="Mô tả album" maxLength={200} rows={3} value={prompt} onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="Ví dụ: 1 ngày đi làm — đi đường, thang máy, chấm vân tay, họp, về nhà" />
+                <small>{prompt.length}/200</small>
+                {aiKey === false && <p className="manage-hint">Thêm Gemini key trong /manage để dùng AI.</p>}
+              </div>
+            )}
             {createError && <p role="alert" className="error">{createError}</p>}
             <div className="modal-actions">
               <button type="button" className="secondary" onClick={closeCreate}>Cancel</button>
-              <button type="submit" disabled={!title.trim()}>Create</button>
+              <button type="submit" disabled={isAi ? busy || !prompt.trim() || !aiKey : !title.trim()}>{busy ? 'AI đang dựng album…' : 'Create'}</button>
             </div>
           </form>
         </div>

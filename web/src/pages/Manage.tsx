@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, type ManageInfo, type ManagedFile, type StorageLocation } from '../api';
 import { fmtBytes } from '../manage/fmtBytes';
+import { AiSettings } from '../manage/AiSettings';
 import { DriveBackup } from '../manage/DriveBackup';
 import { Locations } from '../manage/Locations';
 import { MoveBar } from '../manage/MoveBar';
@@ -95,6 +96,8 @@ export default function Manage() {
       <Locations locations={locations} disk={info.disk} vpsBytes={filesBytes} vpsFiles={onVps.length} reload={() => void load()} />
 
       <DriveBackup />
+
+      <AiSettings />
 
       <section className="manage-card">
         <h2>Backup</h2>

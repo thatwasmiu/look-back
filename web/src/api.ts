@@ -1,4 +1,4 @@
-import type { AlbumBundle, AlbumDesign, ReadingDirection, AlbumDTO, BackgroundColor, BackgroundEffect, AlbumSummary, MediaDTO, PageDTO, PageLayout } from '@scrapbook/shared';
+import type { AlbumBundle, AlbumDesign, AlbumMode, ReadingDirection, AlbumDTO, BackgroundColor, BackgroundEffect, AlbumSummary, MediaDTO, PageDTO, PageLayout } from '@scrapbook/shared';
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -65,7 +65,15 @@ export const api = {
   setDriveSchedule: (schedule: DriveSchedule) => req<{ schedule: DriveSchedule }>('PATCH', '/manage/drive', { schedule }),
   runDriveBackup: () => req<{ queued: true }>('POST', '/manage/drive/run'),
   disconnectDrive: () => req<void>('DELETE', '/manage/drive'),
+  aiSettings: () => req<AiSettingsDTO>('GET', '/manage/ai'),
+  saveAiSettings: (b: { key?: string; model?: string }) => req<AiSettingsDTO>('PUT', '/manage/ai', b),
+  removeAiKey: () => req<AiSettingsDTO>('DELETE', '/manage/ai/key'),
+  testAi: () => req<{ ok: boolean; error?: string }>('POST', '/manage/ai/test'),
+  createAiAlbum: (b: { prompt: string; mode: AlbumMode; readingDirection?: ReadingDirection; title?: string }) => req<AlbumDTO>('POST', '/ai/album', b),
 };
+
+// /manage "AI (Gemini)": the key itself never comes back, only its last 4 chars.
+export type AiSettingsDTO = { hasKey: boolean; last4: string | null; model: string };
 
 // Hidden /manage page: storage use and every media file (server/src/manage.ts).
 export type ManagedFile = {
