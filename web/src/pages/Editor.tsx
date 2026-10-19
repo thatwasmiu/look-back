@@ -13,7 +13,7 @@ import { useAutosave } from '../editor/useAutosave';
 import { MediaTray, thumbOf } from '../editor/MediaTray';
 import { mediaUrl } from '../mediaUrl';
 import { ACCEPT, pollUntilSettled, useUpload } from '../editor/useUpload';
-import { FrameCamera } from '../editor/FrameCamera';
+import { FrameCamera, frameWindowShape, type WindowShape } from '../editor/FrameCamera';
 import { dropLocalPreview, LocalPreview } from '../localPreview';
 
 export type EditorApi = Pick<typeof realApi,
@@ -269,7 +269,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   // With nothing uploaded yet it goes straight to the file dialog — except on phones, where the menu also offers the
   // cameras.
   const [frameMenu, setFrameMenu] = useState<string | null>(null);
-  const [cameraFrame, setCameraFrame] = useState<FrameEl | null>(null); // "Chụp theo khung" open for this frame
+  const [cameraFrame, setCameraFrame] = useState<{ frame: FrameEl; shape: WindowShape | null } | null>(null); // "Chụp theo khung" open for this frame
   // camera: the phone-only "Take photo/video" (same input with capture, which opens the camera directly).
   const cameraPick = useRef<HTMLInputElement | null>(null);
   const uploadToFrame = (frameId: string, camera = false) => {
@@ -478,8 +478,8 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
           onDelete={deleteMedia} onSetCover={setCover} />
         {/* Portal: inside .edit-main's stacking context the tools would paint over the backdrop. */}
         {cameraFrame && createPortal(
-          <FrameCamera frame={cameraFrame} onClose={() => setCameraFrame(null)}
-            onCapture={(file) => { upload.add([file], cameraFrame.id); setCameraFrame(null); }} />,
+          <FrameCamera frame={cameraFrame.frame} windowShape={cameraFrame.shape} onClose={() => setCameraFrame(null)}
+            onCapture={(file) => { upload.add([file], cameraFrame.frame.id); setCameraFrame(null); }} />,
           document.body,
         )}
         {frameMenu && createPortal(
@@ -491,7 +491,10 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
               <div className="frame-menu-grid">
                 <button type="button" className="frame-menu-upload frame-menu-camera" onClick={() => {
                   const f = layout.elements.find((e) => e.id === frameMenu);
-                  if (f?.type === 'frame') setCameraFrame(f);
+                  if (f?.type === 'frame') {
+                    const win = document.querySelector<HTMLElement>(`.edit-page [data-frame-id="${f.id}"] .frame-window`);
+                    setCameraFrame({ frame: f, shape: frameWindowShape(win) });
+                  }
                   setFrameMenu(null);
                 }}>🎯<span>Chụp theo khung</span></button>
                 <button type="button" className="frame-menu-upload frame-menu-camera" onClick={() => { uploadToFrame(frameMenu, true); setFrameMenu(null); }}>📷<span>Take photo/video</span></button>

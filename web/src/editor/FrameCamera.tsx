@@ -8,14 +8,35 @@ import type { FrameEl } from '@scrapbook/shared';
 type Mode = 'photo' | 'video';
 type Facing = 'environment' | 'user';
 
-// Width / height of the frame on the page (pages are 3:4).
+// The photo area of a frame as drawn on the page (polaroids, film, mats… pad it, so it isn't the frame's own
+// proportions): width / height and its corner rounding as percentages, so the camera window is the same shape at
+// any size. null when the element isn't laid out.
+export type WindowShape = { aspect: number; radius: string };
+export function frameWindowShape(el: HTMLElement | null): WindowShape | null {
+  if (!el?.offsetWidth || !el.offsetHeight) return null;
+  const w = el.offsetWidth, h = el.offsetHeight;
+  const cs = getComputedStyle(el);
+  const keys = ['borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomRightRadius', 'borderBottomLeftRadius'] as const;
+  const corners = keys.map((k) => cs[k] || cs.borderRadius || '0px');
+  const pct = (v: string, size: number) => (v.endsWith('%') ? v : `${Math.round((parseFloat(v) || 0) / size * 10000) / 100}%`);
+  const hs = corners.map((c) => pct(c.trim().split(/\s+/)[0], w));
+  const vs = corners.map((c) => { const [a, b = a] = c.trim().split(/\s+/); return pct(b, h); });
+  const same = (xs: string[]) => xs.every((x) => x === xs[0]);
+  let radius: string;
+  if ([...hs, ...vs].every((x) => parseFloat(x) === 0)) radius = '0px';
+  else if (same(hs) && same(vs)) radius = hs[0] === vs[0] ? hs[0] : `${hs[0]} / ${vs[0]}`;
+  else radius = `${hs.join(' ')} / ${vs.join(' ')}`;
+  return { aspect: w / h, radius };
+}
+
+// Width / height of the frame on the page (pages are 3:4) — fallback when the photo area can't be measured.
 export const frameAspect = (f: FrameEl) => (f.w * 3) / (f.h * 4);
 const shapeOf = (f: FrameEl) => (f.frameStyle === 'circle' ? 'circle' : f.frameStyle === 'heart' ? 'heart' : f.shape ? 'panel' : 'rect');
 const HI_RES = { width: { ideal: 3840 }, height: { ideal: 2160 } };
 const VIDEO_TYPES = ['video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
 const HEART = 'M50 88C10 60 0 38 0 24 0 10 11 0 25 0c11 0 20 6 25 15C55 6 64 0 75 0c14 0 25 10 25 24 0 14-10 36-50 64z';
 
-export function FrameCamera({ frame, onCapture, onClose }: { frame: FrameEl; onCapture(file: File): void; onClose(): void }) {
+export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame: FrameEl; windowShape?: WindowShape | null; onCapture(file: File): void; onClose(): void }) {
   const [mode, setMode] = useState<Mode>('photo');
   const [facing, setFacing] = useState<Facing>('environment');
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +53,7 @@ export function FrameCamera({ frame, onCapture, onClose }: { frame: FrameEl; onC
   const pointers = useRef(new Map<number, number>()); // pointerId → x, for pinch
   const pinch = useRef<{ d: number; z: number } | null>(null);
   const recorder = useRef<MediaRecorder | null>(null);
-  const aspect = frameAspect(frame);
+  const aspect = windowShape?.aspect ?? frameAspect(frame);
   const maskId = `cam-mask-${useId().replace(/:/g, '')}`;
   const shapeEl = (fill: string) => (frame.frameStyle === 'heart'
     ? <path d={HEART} transform="scale(1 1.11)" fill={fill} />
@@ -142,7 +163,7 @@ export function FrameCamera({ frame, onCapture, onClose }: { frame: FrameEl; onC
     <div className="camera" role="dialog" aria-label="Chụp theo khung"
       onPointerDown={onPointer} onPointerMove={onPointer} onPointerUp={onPointer} onPointerCancel={onPointer}>
       <video ref={videoRef} className="camera-feed" style={{ transform: feedTransform }} autoPlay playsInline muted />
-      <div ref={windowRef} className={`camera-window shape-${shape}`} style={{ aspectRatio: String(aspect), '--aspect': aspect } as React.CSSProperties}>
+      <div ref={windowRef} className={`camera-window shape-${shape}`} style={{ aspectRatio: String(aspect), '--aspect': aspect, ...(windowShape && shape !== 'heart' && shape !== 'panel' && { borderRadius: windowShape.radius }) } as React.CSSProperties}>
         {/* little stickers on the corners of the frame */}
         {(['tl', 'tr', 'bl', 'br'] as const).map((c, i) => <span key={c} className={`camera-deco deco-${c}`} aria-hidden>{i % 2 ? '♥' : '✿'}</span>)}
         {(shape === 'heart' || shape === 'panel') && (

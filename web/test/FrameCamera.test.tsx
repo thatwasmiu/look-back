@@ -146,3 +146,27 @@ test('flash (torch) toggles only where the camera has one', async () => {
   await screen.findByRole('slider', { name: 'Zoom' });
   expect(screen.queryByRole('button', { name: '⚡ Đèn' })).toBeNull();
 });
+
+test('frameWindowShape measures the photo area: its proportions and corner rounding (as percentages)', async () => {
+  const { frameWindowShape } = await import('../src/editor/FrameCamera');
+  const el = document.createElement('div');
+  Object.defineProperty(el, 'offsetWidth', { value: 200 });
+  Object.defineProperty(el, 'offsetHeight', { value: 100 });
+  el.style.borderRadius = '20px';
+  document.body.appendChild(el);
+  expect(frameWindowShape(el)).toEqual({ aspect: 2, radius: '10% / 20%' }); // 20px on a 200×100 area
+  el.style.borderRadius = '50%';
+  expect(frameWindowShape(el)!.radius).toBe('50%');
+  el.style.borderRadius = '0px';
+  expect(frameWindowShape(el)!.radius).toBe('0px');
+  el.remove();
+  const empty = document.createElement('div');
+  expect(frameWindowShape(empty)).toBeNull(); // not laid out: caller falls back to the frame's own proportions
+});
+
+test('the camera window takes the measured photo area: proportions and rounding, no extra rounding', () => {
+  render(<FrameCamera frame={frame()} windowShape={{ aspect: 0.8, radius: '5% / 4%' }} onCapture={() => {}} onClose={() => {}} />);
+  const w = document.querySelector('.camera-window') as HTMLElement;
+  expect(w.style.aspectRatio).toBe('0.8');
+  expect(w.style.borderRadius).toBe('5% / 4%');
+});
