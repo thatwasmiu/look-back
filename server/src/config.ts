@@ -11,6 +11,12 @@ export type Config = {
   ffmpegPreset: string;
   cookieSecure: boolean;
   trustProxy: boolean;
+  // Google Drive backup (optional): OAuth client; the *Base URLs are overridable only for tests.
+  googleClientId: string;
+  googleClientSecret: string;
+  googleOauthBase: string;
+  googleAuthBase: string;
+  googleApiBase: string;
 };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -30,5 +36,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     ffmpegPreset: env.FFMPEG_PRESET ?? 'veryfast',
     cookieSecure: env.COOKIE_SECURE !== 'false',
     trustProxy: env.TRUST_PROXY === 'true',
+    googleClientId: env.GOOGLE_CLIENT_ID ?? '',
+    googleClientSecret: env.GOOGLE_CLIENT_SECRET ?? '',
+    googleOauthBase: env.GOOGLE_OAUTH_BASE ?? 'https://oauth2.googleapis.com',
+    googleAuthBase: env.GOOGLE_AUTH_BASE ?? 'https://accounts.google.com',
+    googleApiBase: env.GOOGLE_API_BASE ?? 'https://www.googleapis.com',
   };
 }

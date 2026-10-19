@@ -24,11 +24,13 @@ export async function testApp(overrides: Partial<Config> = {}) {
     ffmpegPreset: 'veryfast',
     cookieSecure: false,
     trustProxy: false,
+    googleClientId: '', googleClientSecret: '',
+    googleOauthBase: 'http://127.0.0.1:9', googleAuthBase: 'http://127.0.0.1:9', googleApiBase: 'http://127.0.0.1:9',
     ...overrides,
   };
   const pool = createPool(config.databaseUrl);
   await migrate(pool);
-  await pool.query('truncate albums, pages, media, pending_deletes, storage_locations cascade');
+  await pool.query('truncate albums, pages, media, pending_deletes, storage_locations, drive_backup cascade');
   const boss = await createQueue(config.databaseUrl);
   await boss.purgeQueue(JOB_PROCESS_MEDIA);
   const app = await buildApp(config, pool, boss);
