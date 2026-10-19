@@ -10,6 +10,11 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+  # S3-compatible server for the storage-location tests (server/test/objectStore.test.ts and friends).
+  # (versitygw: MinIO's images are no longer pullable.) Data lives in the container only.
+  s3:
+    image: versity/versitygw:v1.8.0
+    entrypoint: ["sh", "-c", "mkdir -p /data && exec versitygw --access s3test --secret s3test-secret posix /data"]
   dev:
     build:
       context: .
@@ -20,11 +25,15 @@ services:
       - node_modules:/app/node_modules
     environment:
       DATABASE_URL: postgres://scrapbook:scrapbook@db:5432/scrapbook
+      S3_TEST_ENDPOINT: http://s3:7070
+      S3_TEST_KEY: s3test
+      S3_TEST_SECRET: s3test-secret
     ports:
       - "5173:5173"
       - "3000:3000"
     depends_on:
       - db
+      - s3
 volumes:
   pgdata:
   node_modules:

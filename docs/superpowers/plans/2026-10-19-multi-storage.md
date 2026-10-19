@@ -6,7 +6,7 @@
 
 **Architecture:** A `storage_locations` table plus `media.storage_id` (null = VPS). A small S3 client (aws4fetch, UNSIGNED-PAYLOAD streaming) does put/get/list/delete/presign. nginx still serves local files; on a disk miss it hands `/media/...` to the api, which checks access and 302s to a presigned bucket URL (HLS playlists are rewritten). Moves and bucket deletions run in the worker; backup becomes a Node tar stream (tar-stream) that also pulls bucket files.
 
-**Tech Stack:** Fastify 5, pg, pg-boss 10, Node 22 (`crypto` AES-256-GCM + HKDF), `aws4fetch`, `tar-stream`, React 18 + Vite, nginx, MinIO (dev/test only).
+**Tech Stack:** Fastify 5, pg, pg-boss 10, Node 22 (`crypto` AES-256-GCM + HKDF), `aws4fetch`, `tar-stream`, React 18 + Vite, nginx, versitygw `v1.8.0` as the S3 test server (dev/test only; MinIO images are no longer pullable — compose service `s3`, env `S3_TEST_ENDPOINT=http://s3:7070`, keys `s3test` / `s3test-secret`).
 
 **Spec:** `docs/superpowers/specs/2026-10-19-multi-storage-design.md`
 
@@ -54,7 +54,7 @@
 - [ ] **Step 4: Run** `npx vitest run` (whole server suite; migration applies) → all PASS.
 - [ ] **Step 5: Commit** `feat(server): storage locations schema and secret encryption`.
 
-### Task 2: S3 client + MinIO for tests
+### Task 2: S3 client + S3 test server (done: versitygw instead of MinIO)
 
 **Files:**
 - Create: `server/src/objectStore.ts`, `server/test/objectStore.test.ts`, `server/test/s3.ts` (test helper)
