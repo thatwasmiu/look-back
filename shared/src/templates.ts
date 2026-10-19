@@ -1,7 +1,15 @@
 import type { FrameEl, PageElement, PageLayout, TapeEl, TextEl } from './layout'
 import { mangaTemplates } from './mangaTemplates'
+import { STICKER_IDS } from './stickerIds'
 
-export type Template = { id: string; name: string; layout: PageLayout }
+// ai: what the AI album generator may do with the page. about: one line on what the page is for. texts: extra text
+// boxes it may fill (bubbles, narration, sfx aligned with the panels) after the layout's own text elements.
+// stickers: extra sticker spots after the layout's own stickers. A template without `ai` is never offered to it.
+export type SlotStyle = 'plain' | 'speech' | 'shout' | 'thought' | 'narration' | 'sfx'
+type SlotBox = [x: number, y: number, w: number, h: number, rotation?: number]
+export type TextSlot = { box: SlotBox; style: SlotStyle; max: number; tail?: TextEl['tail'] }
+export type TemplateAi = { about: string; texts?: TextSlot[]; stickers?: SlotBox[] }
+export type Template = { id: string; name: string; layout: PageLayout; ai?: TemplateAi }
 
 // Geometry is page-relative (page is 3:4). A polaroid's padding is 4% / 4% / 14% of its width, so for a frame
 // of page-width w the photo window is landscape 4:3 at h = 0.6525w, square at h = 0.825w, portrait 3:4 at h = 1.055w.
@@ -164,3 +172,58 @@ export function instantiateTemplate(id: string, newId: () => string): PageLayout
   for (const e of layout.elements) e.id = newId()
   return layout
 }
+
+// ---- AI album: the text slots and sticker spots of a template, and a page filled from the AI's answer.
+const TITLE_MAX = 30, TEXT_MAX = 60
+const layoutTextMax = (e: TextEl) => (e.font === 'patrick-hand' && e.size < 0.05 ? TEXT_MAX : TITLE_MAX)
+
+export function textSlots(t: Template): { style: SlotStyle; max: number }[] {
+  const own = t.layout.elements.flatMap((e) => (e.type === 'text' ? [{ style: e.textStyle ?? 'plain', max: layoutTextMax(e) }] : []))
+  return [...own, ...(t.ai?.texts ?? []).map(({ style, max }) => ({ style, max }))]
+}
+
+export const stickerSpotCount = (t: Template): number =>
+  t.layout.elements.filter((e) => e.type === 'sticker').length + (t.ai?.stickers?.length ?? 0)
+
+// Lettering by style, as the built-in manga album templates draw it.
+function slotText(slot: TextSlot, text: string, id: string): TextEl {
+  const [x, y, w, h, rotation = 0] = slot.box
+  const sfx = slot.style === 'sfx'
+  return {
+    type: 'text', id, x, y, w, h, rotation, z: 7, text, textStyle: slot.style,
+    font: sfx ? 'bangers' : 'patrick-hand', color: sfx ? '#ffffff' : slot.style === 'plain' ? '#4a3b2c' : '#111111',
+    size: sfx ? 0.075 : slot.style === 'narration' ? 0.028 : slot.style === 'plain' ? 0.04 : 0.032,
+    ...(slot.style === 'speech' || slot.style === 'thought' ? { tail: slot.tail ?? 'bl' } : {}),
+  }
+}
+
+// Texts fill the slots in order (cut to the slot's max); a slot with no text is left out, never kept as a
+// placeholder. Stickers replace the layout's stickers in order, then fill the extra spots; unknown ids are skipped.
+export function fillTemplate(id: string, texts: string[], stickers: string[], newId: () => string): PageLayout {
+  const t = findTemplate(id)
+  if (!t) throw new Error(`unknown template: ${id}`)
+  const layout = instantiateTemplate(id, newId)
+  const slots = textSlots(t)
+  const clean = (i: number) => (texts[i] ?? '').trim().slice(0, slots[i]?.max ?? 0)
+  const known = (i: number) => (STICKER_IDS.has(stickers[i]) ? stickers[i] : null)
+  let ti = 0, si = 0
+  const elements: PageElement[] = []
+  for (const e of layout.elements) {
+    if (e.type === 'text') {
+      const text = clean(ti++)
+      if (text) elements.push({ ...e, text })
+    } else if (e.type === 'sticker') {
+      elements.push({ ...e, stickerId: known(si++) ?? e.stickerId })
+    } else elements.push(e)
+  }
+  for (const slot of t.ai?.texts ?? []) {
+    const text = clean(ti++)
+    if (text) elements.push(slotText(slot, text, newId()))
+  }
+  for (const [x, y, w, h, rotation = 0] of t.ai?.stickers ?? []) {
+    const stickerId = known(si++)
+    if (stickerId) elements.push({ type: 'sticker', id: newId(), x, y, w, h, rotation, z: 8, stickerId })
+  }
+  return { ...layout, elements }
+}
+

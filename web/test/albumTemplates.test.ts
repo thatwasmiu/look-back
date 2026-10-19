@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
-import { albumDesignSchema } from '@scrapbook/shared';
+import { albumDesignSchema, STICKERS } from '@scrapbook/shared';
+import { stickers } from '../src/render/decor';
 import { albumTemplates } from '../src/example/albumTemplates';
 
 test('every built-in album template produces a valid design', () => {
@@ -31,4 +32,8 @@ test('"2 3 con mực" also comes as a manga template, with its ocean look and te
   const els = d.pages.flatMap((p) => p.elements);
   expect(els.some((e) => e.type === 'text' && e.text === '2 3 con mực')).toBe(true);
   expect(els.some((e) => e.type === 'sticker' && e.stickerId === 'octopus')).toBe(true);
+});
+
+test('sticker ids match the drawings', () => {
+  expect(Object.keys(stickers).sort()).toEqual(STICKERS.map((s) => s.id).sort());
 });
