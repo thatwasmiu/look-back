@@ -1,11 +1,10 @@
 import { randomBytes } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
 import sharp from 'sharp';
 import type { FastifyInstance } from 'fastify';
 import type pg from 'pg';
 import { loadBundle, uuidParams } from './albums.js';
 import type { Config } from './config.js';
-import { absPath } from './storage.js';
+import { readMediaFile } from './mediaFiles.js';
 
 // Read-only share links: a secret per-album code (32 random bytes). Anyone holding it can view that album —
 // nothing else. Revoking clears it; sharing again makes a new code, so old copies stay dead.
@@ -71,7 +70,7 @@ ${tags.map(([k, v]) => `<meta property="${k}" content="${esc(v)}">`).join('\n')}
     const key = v?.display ?? v?.poster ?? v?.thumb;
     if (!key) return reply.redirect('/brand/og.jpg');
     try {
-      const jpg = await sharp(await readFile(absPath(config.mediaDir, key))).resize(1200, 630, { fit: 'cover' }).jpeg({ quality: 82 }).toBuffer();
+      const jpg = await sharp(await readMediaFile(pool, config, key)).resize(1200, 630, { fit: 'cover' }).jpeg({ quality: 82 }).toBuffer();
       return reply.type('image/jpeg').header('cache-control', 'public, max-age=3600').send(jpg);
     } catch {
       return reply.redirect('/brand/og.jpg'); // file missing or unreadable: the app's own picture

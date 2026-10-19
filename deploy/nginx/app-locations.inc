@@ -59,7 +59,9 @@ location /api/uploads {
 # Media straight from disk, gated by the api: the owner's session, or a share link for that album.
 location /media/ {
   auth_request /_auth;
-  alias /data/media/;
+  root /data; # /media/<file> = /data/media/<file>
+  # Not on the VPS disk: the file may live in a storage bucket — the api checks access again and redirects.
+  try_files $uri @remote_media;
   # nginx's stock mime.types already maps these; restated so HLS never depends on the base image.
   include /etc/nginx/mime.types;
   types {
@@ -67,6 +69,9 @@ location /media/ {
     video/mp2t ts;
   }
   add_header Cache-Control $immutable_cc always;
+}
+location @remote_media {
+  proxy_pass http://$api;
 }
 location = /_auth {
   internal;
