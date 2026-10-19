@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { mangaTemplates, pageLayoutSchema, templates, type AlbumBundle, type ReadingDirection, type BackgroundColor, type BackgroundEffect, type MediaDTO, type PageDTO, type PageElement, type PageLayout } from '@scrapbook/shared';
 import { api as realApi, ApiError } from '../api';
 import { PageRenderer } from '../render/PageRenderer';
@@ -61,7 +61,9 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   const [cropId, setCropId] = useState<string | null>(null);
   const [shapeId, setShapeId] = useState<string | null>(null);
   const [pages, setPages] = useState<PageDTO[]>(bundle.pages);
-  const [cur, setCur] = useState(0);
+  // ?page=N (1-based): Edit in the viewer opens the page being viewed.
+  const [params] = useSearchParams();
+  const [cur, setCur] = useState(() => Math.min(Math.max(0, (Number(params.get('page')) || 1) - 1), Math.max(0, bundle.pages.length - 1)));
   const page = pages[cur] as PageDTO | undefined;
   const [hist, setHist] = useState(() => initHistory(page?.layout ?? EMPTY));
   const [selectedId, setSelectedId] = useState<string | null>(null);

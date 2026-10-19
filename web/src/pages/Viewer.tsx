@@ -72,7 +72,7 @@ export function Book({ bundle, shared = false }: { bundle: AlbumBundle; shared?:
         <h1>{album.title}</h1>
         {musicSrc && <Music src={musicSrc} />}
         {total > 0 && <span className="counter">{visible.map((i) => i + 1).join('–')} / {total}</span>}
-        {!shared && album.id !== EXAMPLE_ALBUM_ID && <Link className="btn" to={`/albums/${album.id}/edit`}>Edit</Link>}
+        {!shared && album.id !== EXAMPLE_ALBUM_ID && <Link className="btn" to={`/albums/${album.id}/edit?page=${(visible[0] ?? 0) + 1}`}>Edit</Link>}
       </header>
       {total === 0 ? <p className="empty">Chưa có trang nào.</p> : (
         <div className="stage">

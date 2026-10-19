@@ -576,3 +576,8 @@ test('manga: Shape, Ink and Tone sit together in one panel group', () => {
   expect(group.classList.contains('row')).toBe(true);
   for (const name of ['Shape', 'Ink', 'Tone']) expect(screen.getByRole('button', { name }).parentElement).toBe(group);
 });
+
+test('?page=2 (Edit from the viewer) opens on that page', () => {
+  render(<MemoryRouter initialEntries={['/albums/a1/edit?page=2']} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={bundle} api={okApi()} /></MemoryRouter>);
+  expect(screen.getByRole('button', { name: 'Page 2' }).getAttribute('aria-current')).toBe('true');
+});

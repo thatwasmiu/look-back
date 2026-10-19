@@ -37,7 +37,10 @@ test('load error shows retry, retry loads the album', async () => {
   setup(vi.fn().mockResolvedValueOnce(json(500, { error: 'boom' })).mockResolvedValueOnce(json(200, bundle)));
   await userEvent.click(await screen.findByRole('button', { name: 'Retry' }));
   expect(await screen.findByText('1 / 5')).toBeTruthy();
-  expect(screen.getByRole('link', { name: 'Edit' }).getAttribute('href')).toBe('/albums/a1/edit');
+  expect(screen.getByRole('link', { name: 'Edit' }).getAttribute('href')).toBe('/albums/a1/edit?page=1');
+  await userEvent.keyboard('{ArrowRight}'); // Edit opens the page being viewed
+  expect(await screen.findByText('2 / 5')).toBeTruthy();
+  expect(screen.getByRole('link', { name: 'Edit' }).getAttribute('href')).toBe('/albums/a1/edit?page=2');
 });
 
 test('flip keeps the neighbour page mounted and only toggles it visible', async () => {
