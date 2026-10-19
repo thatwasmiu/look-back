@@ -76,8 +76,9 @@ place; this is not replication or backup.
 - nginx keeps serving `/media/...` from disk behind the same `auth_request` as today. **If the file isn't on disk**
   (`try_files` miss), nginx hands the request to the api, which looks up the media's location and answers with a
   **302 to a short-lived presigned URL** (a few minutes) on the bucket. Files on the VPS are untouched by this.
-- HLS: for a remote video the api serves the `.m3u8` playlists itself, rewritten so every segment/sub-playlist line is
-  a presigned URL (segments then load straight from the bucket).
+- HLS (as built): for a remote video the api passes the `.m3u8` playlists through unchanged (same origin); their
+  relative segment links come back through `/media` and each gets its own presigned redirect. Rewriting segments to
+  absolute bucket URLs broke browsers' built-in HLS players; the app's player now prefers hls.js wherever it runs.
 - If the location is broken (check failed recently, signing impossible, or the bucket answers an error), the client
   ends up with a failed image/video load → the frame shows the **crying placeholder**. In `BlurImage` and
   `VideoPlayer`, a load error shows the placeholder instead of an empty blur / "không phát được video" chip
