@@ -114,6 +114,14 @@ moves files between the VPS and buckets (background job: copy → verify → swi
 full backup (`.tar` with database rows and every file, including bucket files). A restore command rebuilds everything
 on the VPS.
 
+### AI album (`New album → ✨ AI`)
+
+The owner types up to 200 characters. The server asks Google Gemini (Flash, free tier; key and model set in
+/manage, key encrypted, never returned) for a JSON plan: 4–10 pages chosen from the built-in page templates, text
+for each template's text slots, sticker ids, background colour and effect. The AI never places anything: the server
+fills the templates (`fillTemplate`), validates the design and creates the album like a built-in template. Frames
+stay empty for the owner's photos.
+
 ## 5. Cross-cutting concerns
 
 | Concern | Approach |

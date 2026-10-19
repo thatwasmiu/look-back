@@ -45,7 +45,7 @@ export function registerAiRoutes(app: FastifyInstance, pool: pg.Pool, config: Co
     const s = await loadAiSettings(pool, config);
     if (!s.key) return { ok: false, error: NO_KEY };
     try {
-      await generateJson(config, s.key, s.model, 'Reply with {"ok": true}.', { type: 'object', properties: { ok: { type: 'boolean' } } });
+      await generateJson(config, s.key, s.model, 'Reply with {"ok": true}.', { type: 'OBJECT', properties: { ok: { type: 'BOOLEAN' } } });
       return { ok: true };
     } catch (e) {
       return { ok: false, error: aiErrorMessage(e) };

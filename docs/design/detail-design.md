@@ -76,6 +76,9 @@ docs/        guides, designs, specs, plans
 **pending_deletes** — `id`, `storage_id → storage_locations (cascade)`, `prefix` (`<mediaId>/`), `attempts`,
 `last_error`, `created_at`. Bucket objects still to delete.
 
+**ai_settings** — one row: `key_enc` (Gemini API key, AES-256-GCM as §6.3), `key_last4`, `model` (null = default
+in `gemini.ts`). Not in backups.
+
 **schema_migrations** — applied migration file names. pg-boss keeps its own schema.
 
 ### 2.2 Page layout (`shared/src/layout.ts`)
@@ -135,6 +138,8 @@ Owner session required for every `/api` route except the public ones marked ●.
 | GET /api/manage/backup | manage | streamed `.tar` backup |
 | GET/POST /api/manage/locations · PATCH/DELETE …/:id | locations | list (no secrets) · add (after bucket check) · rename/cap/re-key · delete when empty |
 | POST /api/manage/locations/:id/check · …/drop | locations | re-check health · forget a dead location (typed name) |
+| GET/PUT /api/manage/ai · DELETE …/ai/key · POST …/ai/test | aiRoutes | Gemini settings `{hasKey, last4, model}` (key write-only) · test call |
+| POST /api/ai/album | aiRoutes | `{prompt ≤200, mode, readingDirection?, title?}` → Gemini → design → created through POST /api/albums; 400 no key, 502 Gemini error |
 | GET /media/:mediaId/* | remoteMedia | bucket media: 302 to presigned URL (playlists passed through); 401/404/503 |
 
 Errors are `{ error: string }`; user-facing ones are Vietnamese.
@@ -262,6 +267,19 @@ bucket.
 - `restore.js <backup.tar>`: extract with `tar`, migrate, truncate albums/pages/media/pending_deletes/storage_locations,
   insert rows (media `storage_id=null`; locations `secret_enc=null`, `check_status='needs-keys'`), replace the
   contents of `MEDIA_DIR` with the archive's `media/`. Everything ends up on the VPS.
+
+### 6.6 AI album (`aiAlbum.ts`, `gemini.ts`, `shared/src/templates.ts`)
+
+- Every page template except `blank` has `ai: { about, texts?, stickers? }`. Its text slots are the layout's own text
+  elements (in order) followed by `ai.texts` (box, style, max length); its sticker spots are the layout's stickers
+  followed by `ai.stickers`. Sticker ids the AI may use: `shared/src/stickerIds.ts` (must equal web's drawings).
+- `buildPrompt` lists the mode's templates (id, about, slots), stickers and colours, with the description fenced as
+  content. `answerSchema` is Gemini's `responseSchema` (enums for template/sticker/colour/effect ids, 4–10 pages).
+- `generateJson`: `POST {geminiBase}/v1beta/models/{model}:generateContent`, key in `x-goog-api-key`, 60 s timeout.
+  Errors → `bad-key` (400 API_KEY_INVALID/401/403), `quota` (429), `busy` (503), `timeout`, `unusable`, `http`,
+  each with a Vietnamese message.
+- `toDesign`: drops pages with unknown/other-mode templates, keeps ≤10, needs ≥4; unknown colour/effect → defaults;
+  `fillTemplate` cuts text to the slot max, removes unfilled slots, skips unknown stickers; `albumDesignSchema` parse.
 
 ## 7. Configuration
 

@@ -209,6 +209,14 @@ export default function AlbumList() {
                   );
                 })}
               </div>
+              {isAi && (
+                <div className="ai-prompt">
+                  <textarea aria-label="Mô tả album" maxLength={200} rows={3} value={prompt} onChange={(e) => setPrompt(e.target.value)}
+                    placeholder="Ví dụ: 1 ngày đi làm — đi đường, thang máy, chấm vân tay, họp, về nhà" />
+                  <small>{prompt.length}/200</small>
+                  {aiKey === false && <p className="manage-hint">Thêm Gemini key trong /manage để dùng AI.</p>}
+                </div>
+              )}
               {!!sameMode.length && <>
                 <span className="start-label">Chép thiết kế của album (không kèm ảnh)</span>
                 <div className="start-grid">
@@ -220,14 +228,6 @@ export default function AlbumList() {
                 </div>
               </>}
             </div>
-            {isAi && (
-              <div className="ai-prompt">
-                <textarea aria-label="Mô tả album" maxLength={200} rows={3} value={prompt} onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Ví dụ: 1 ngày đi làm — đi đường, thang máy, chấm vân tay, họp, về nhà" />
-                <small>{prompt.length}/200</small>
-                {aiKey === false && <p className="manage-hint">Thêm Gemini key trong /manage để dùng AI.</p>}
-              </div>
-            )}
             {createError && <p role="alert" className="error">{createError}</p>}
             <div className="modal-actions">
               <button type="button" className="secondary" onClick={closeCreate}>Cancel</button>

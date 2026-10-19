@@ -13,21 +13,21 @@ const MIN_PAGES = 4, MAX_PAGES = 10;
 export const aiTemplates = (mode: AlbumMode): Template[] => (mode === 'manga' ? mangaTemplates : templates).filter((t) => t.ai);
 
 export function answerSchema(mode: AlbumMode): object {
-  const str = (e?: readonly string[]) => ({ type: 'string', ...(e ? { enum: [...e] } : {}) });
+  const str = (e?: readonly string[]) => ({ type: 'STRING', ...(e ? { enum: [...e] } : {}) });
   return {
-    type: 'object',
+    type: 'OBJECT',
     properties: {
       title: str(),
       backgroundColor: str(BACKGROUND_COLORS),
       backgroundEffect: str(BACKGROUND_EFFECTS),
       pages: {
-        type: 'array', minItems: MIN_PAGES, maxItems: MAX_PAGES,
+        type: 'ARRAY', minItems: MIN_PAGES, maxItems: MAX_PAGES,
         items: {
-          type: 'object',
+          type: 'OBJECT',
           properties: {
             template: str(aiTemplates(mode).map((t) => t.id)),
-            texts: { type: 'array', items: str() },
-            stickers: { type: 'array', items: str(STICKERS.map((s) => s.id)) },
+            texts: { type: 'ARRAY', items: str() },
+            stickers: { type: 'ARRAY', items: str(STICKERS.map((s) => s.id)) },
           },
           required: ['template', 'texts', 'stickers'],
         },
