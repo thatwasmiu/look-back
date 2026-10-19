@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, type ManageInfo, type ManagedFile } from '../api';
+import { api, type ManageInfo, type ManagedFile, type StorageLocation } from '../api';
+import { fmtBytes } from '../manage/fmtBytes';
+import { Locations } from '../manage/Locations';
+import { MoveBar } from '../manage/MoveBar';
 import { mediaUrl } from '../mediaUrl';
 
-// Hidden owner page (/manage, linked from nowhere): storage use, every media file, clean-up and a full backup.
-export const fmtBytes = (n: number) => {
-  const u = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let i = 0;
-  while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
-  return `${n.toFixed(i && n < 10 ? 1 : 0)} ${u[i]}`;
-};
+// Hidden owner page (/manage, linked from nowhere; its own lazy-loaded chunk): storage use, storage locations, every
+// media file with clean-up and moving between locations, and a full backup.
+export { fmtBytes };
 
 type Filter = 'all' | 'unused' | 'failed';
 const isFailed = (f: ManagedFile) => f.status === 'failed';
@@ -21,9 +20,20 @@ export default function Manage() {
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [locations, setLocations] = useState<StorageLocation[]>([]);
+  const [where, setWhere] = useState<string>('all'); // 'all' | 'local' | a location id
 
-  const load = useCallback(() => api.manage().then((i) => { setInfo(i); setError(null); }, () => setError('Không tải được dữ liệu.')), []);
+  const load = useCallback(() => Promise.all([api.manage(), api.locations()])
+    .then(([i, l]) => { setInfo(i); setLocations(l); setError(null); }, () => setError('Không tải được dữ liệu.')), []);
   useEffect(() => { void load(); }, [load]);
+  // While files are moving, refresh every 2 s to show progress.
+  const moving = info?.files.filter((f) => f.movingTo).length ?? 0;
+  useEffect(() => {
+    if (!moving) return;
+    const t = setInterval(() => void load(), 2000);
+    return () => clearInterval(t);
+  }, [moving, load]);
+  const locName = (id: string | null) => (id === null || id === 'local' ? 'VPS' : locations.find((l) => l.id === id)?.name ?? '?');
 
   const albums = useMemo(() => {
     const m = new Map<string, { title: string; files: number; bytes: number }>();
@@ -36,7 +46,8 @@ export default function Manage() {
   }, [info]);
   const shown = useMemo(() => (info?.files ?? [])
     .filter((f) => filter === 'all' || (filter === 'failed' ? isFailed(f) : !f.used))
-    .sort((a, b) => b.bytes - a.bytes), [info, filter]);
+    .filter((f) => where === 'all' || (f.location ?? 'local') === where)
+    .sort((a, b) => b.bytes - a.bytes), [info, filter, where]);
 
   if (error) return <main className="manage"><p className="error">{error} <button type="button" onClick={() => void load()}>Retry</button></p></main>;
   if (!info) return <main className="manage"><p>Đang tải…</p></main>;
@@ -44,7 +55,8 @@ export default function Manage() {
   const selected = info.files.filter((f) => picked.has(f.id));
   const selectedBytes = selected.reduce((n, f) => n + f.bytes, 0);
   const usedCount = selected.filter((f) => f.used).length;
-  const filesBytes = info.files.reduce((n, f) => n + f.bytes, 0);
+  const onVps = info.files.filter((f) => !f.location);
+  const filesBytes = onVps.reduce((n, f) => n + f.bytes, 0);
   const diskUsed = info.disk.total - info.disk.free;
   const toggle = (id: string) => setPicked((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
@@ -79,6 +91,8 @@ export default function Manage() {
         </table>
       </section>
 
+      <Locations locations={locations} disk={info.disk} vpsBytes={filesBytes} vpsFiles={onVps.length} reload={() => void load()} />
+
       <section className="manage-card">
         <h2>Backup</h2>
         <p>Tải về một file <code>.tar</code> chứa toàn bộ album, trang và mọi ảnh/video/nhạc gốc (≈ {fmtBytes(info.mediaBytes)}).
@@ -93,7 +107,15 @@ export default function Manage() {
             <button key={k} type="button" role="radio" aria-checked={filter === k} onClick={() => { setFilter(k); setPicked(new Set()); }}>{label}</button>
           ))}
         </div>
+        <label className="manage-where">Nơi lưu{' '}
+          <select value={where} onChange={(e) => { setWhere(e.target.value); setPicked(new Set()); }}>
+            <option value="all">Mọi nơi</option>
+            <option value="local">VPS</option>
+            {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+          </select>
+        </label>
         <p className="manage-hint">“Không dùng” = không nằm trong trang nào, không phải ảnh bìa hay nhạc nền.</p>
+        {moving > 0 && <p role="status">Đang chuyển {moving} file…</p>}
         {shown.length > 0 && (
           <div className="manage-actions">
             <label><input type="checkbox" checked={shown.every((f) => picked.has(f.id))}
@@ -101,6 +123,7 @@ export default function Manage() {
             <button type="button" className="danger" disabled={!selected.length || !!busy} onClick={() => setConfirm(true)}>
               Xóa {selected.length ? `${selected.length} file (${fmtBytes(selectedBytes)})` : ''}
             </button>
+            <MoveBar selected={selected} locations={locations} onMoved={() => { setPicked(new Set()); void load(); }} />
             {busy && <span role="status">{busy}</span>}
           </div>
         )}
@@ -121,7 +144,9 @@ export default function Manage() {
                   <span className="manage-thumb">{f.thumb ? <img src={mediaUrl(f.thumb)} alt="" loading="lazy" /> : <span>{f.kind === 'audio' ? '♪' : f.kind === 'video' ? '▶' : '—'}</span>}</span>
                   <span className="manage-name">
                     <b>{f.name ?? f.id.slice(0, 8)}</b>
-                    <small>{f.albumTitle} · {f.kind} · {new Date(f.createdAt).toLocaleDateString('vi-VN')}{isFailed(f) ? ' · lỗi' : ''}{f.used ? '' : ' · không dùng'}</small>
+                    <small>{f.albumTitle} · {f.kind} · {new Date(f.createdAt).toLocaleDateString('vi-VN')}{isFailed(f) ? ' · lỗi' : ''}{f.used ? '' : ' · không dùng'} · {locName(f.location)}
+                      {f.movingTo && <> · đang chuyển → {locName(f.movingTo)}</>}</small>
+                    {f.moveError && <small className="error">Chuyển lỗi: {f.moveError}</small>}
                   </span>
                   <span className="manage-size">{fmtBytes(f.bytes)}</span>
                 </label>

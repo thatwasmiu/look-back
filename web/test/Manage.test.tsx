@@ -9,7 +9,7 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 const file = (id: string, bytes: number, used: boolean, status = 'ready') => ({
   id, albumId: 'a1', albumTitle: 'Đà Lạt', kind: 'image' as const, status, name: `${id}.jpg`, error: null,
-  createdAt: '2026-10-19T00:00:00Z', bytes, used, thumb: null,
+  createdAt: '2026-10-19T00:00:00Z', bytes, used, thumb: null, location: null, movingTo: null, moveError: null,
 });
 const info: ManageInfo = {
   disk: { total: 100 * 2 ** 30, free: 60 * 2 ** 30 }, mediaBytes: 7 * 2 ** 20, dbBytes: 2 ** 20,
@@ -28,6 +28,7 @@ test('/manage: storage, backup link, unused files by default; deleting asks firs
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
     calls.push(`${init?.method ?? 'GET'} ${url}`);
     if (init?.method === 'DELETE') return new Response(null, { status: 204 });
+    if (url === '/api/manage/locations') return new Response('[]', { status: 200 });
     return new Response(JSON.stringify(info), { status: 200 });
   }));
   render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><Manage /></MemoryRouter>);

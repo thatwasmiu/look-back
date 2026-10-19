@@ -9,7 +9,6 @@ import Editor from './pages/Editor';
 import SharedAlbum from './pages/SharedAlbum';
 import Guide from './pages/Guide';
 import PrintAlbum from './pages/PrintAlbum';
-import Manage from './pages/Manage';
 
 // Dev-only renderer/viewer showcases; import.meta.env.DEV is false in builds, so they're tree-shaken out.
 const Preview = import.meta.env.DEV ? lazy(() => import('./dev/Preview')) : null;
@@ -28,6 +27,9 @@ function Gate() {
   return state === 'ok' ? <Outlet /> : <Navigate to="/login" replace />;
 }
 
+// The hidden /manage page is its own chunk: album viewers (and installed apps) never download it.
+const Manage = lazy(() => import('./pages/Manage'));
+
 export default function App() {
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
@@ -44,7 +46,7 @@ export default function App() {
           <Route path="/albums/:id" element={<Viewer />} />
           <Route path="/albums/:id/edit" element={<Editor />} />
           <Route path="/albums/:id/print" element={<PrintAlbum />} />
-          <Route path="/manage" element={<Manage />} /> {/* hidden: linked from nowhere */}
+          <Route path="/manage" element={<Suspense><Manage /></Suspense>} /> {/* hidden: linked from nowhere */}
         </Route>
       </Routes>
       <UpdateNotice />

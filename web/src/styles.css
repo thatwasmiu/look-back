@@ -436,3 +436,14 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 
 .manage .btn { display: inline-block; padding: .5rem 1rem; border-radius: 8px; background: var(--accent); color: #fff; text-decoration: none; }
 .manage-bar a { color: var(--ink); }
+.loc-actions { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .3rem; }
+.loc-actions button { font-size: .8rem; padding: .2rem .5rem; }
+.loc-form { display: grid; gap: .4rem; margin: .6rem 0; }
+.loc-form label { display: grid; gap: .15rem; font-size: .85rem; }
+.cors-rule { display: block; font-size: .75rem; word-break: break-all; background: var(--paper-dark); padding: .4rem; border-radius: 6px; user-select: all; }
+.manage-table td.error { color: #a33a2a; }
+.manage-where { display: inline-block; margin: .5rem 0; font-size: .9rem; }
+.move-bar { position: relative; display: inline-flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.move-targets { display: inline-flex; flex-wrap: wrap; gap: .3rem; }
+.manage-name small.error { color: #a33a2a; opacity: 1; }
+

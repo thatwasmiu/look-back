@@ -53,12 +53,29 @@ export const api = {
   getMedia: (id: string) => req<MediaDTO>('GET', `/media/${id}`),
   deleteMedia: (id: string) => req<void>('DELETE', `/media/${id}`),
   manage: () => req<ManageInfo>('GET', '/manage'),
+  locations: () => req<StorageLocation[]>('GET', '/manage/locations'),
+  addLocation: (body: NewLocation) => req<StorageLocation>('POST', '/manage/locations', body),
+  updateLocation: (id: string, body: Partial<Pick<NewLocation, 'name' | 'accessKeyId' | 'secretAccessKey' | 'capBytes'>>) =>
+    req<StorageLocation>('PATCH', `/manage/locations/${id}`, body),
+  checkLocation: (id: string) => req<StorageLocation>('POST', `/manage/locations/${id}/check`),
+  deleteLocation: (id: string) => req<void>('DELETE', `/manage/locations/${id}`),
+  dropLocation: (id: string, confirmName: string) => req<{ dropped: number }>('POST', `/manage/locations/${id}/drop`, { confirmName }),
+  moveMedia: (mediaIds: string[], to: string) => req<{ queued: number }>('POST', '/manage/move', { mediaIds, to }),
 };
 
 // Hidden /manage page: storage use and every media file (server/src/manage.ts).
 export type ManagedFile = {
   id: string; albumId: string; albumTitle: string; kind: 'image' | 'video' | 'audio'; status: string;
   name: string | null; error: string | null; createdAt: string; bytes: number; used: boolean; thumb: string | null;
+  location: string | null; movingTo: string | null; moveError: string | null; // location: null = the VPS disk
 };
 export type ManageInfo = { disk: { total: number; free: number }; mediaBytes: number; dbBytes: number; files: ManagedFile[] };
+export type StorageLocation = {
+  id: string; name: string; kind: 's3'; endpoint: string; region: string; bucket: string; accessKeyId: string;
+  capBytes: number | null; status: 'ok' | 'error' | 'needs-keys'; statusMessage: string | null; checkedAt: string | null;
+  files: number; bytes: number; pendingDeletes: number;
+};
+export type NewLocation = {
+  name: string; endpoint: string; region?: string; bucket: string; accessKeyId: string; secretAccessKey: string; capBytes?: number | null;
+};
 
