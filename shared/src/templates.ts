@@ -293,7 +293,8 @@ export function fillTemplate(id: string, texts: string[], stickers: string[], ne
   if (!t) throw new Error(`unknown template: ${id}`)
   const layout = instantiateTemplate(id, newId)
   const slots = textSlots(t)
-  const clean = (i: number) => (texts[i] ?? '').trim().slice(0, slots[i]?.max ?? 0)
+  // Cut by characters, not UTF-16 units: half an emoji is not valid text (Postgres rejects it).
+  const clean = (i: number) => Array.from((texts[i] ?? '').trim()).slice(0, slots[i]?.max ?? 0).join('')
   const known = (i: number) => (STICKER_IDS.has(stickers[i]) ? stickers[i] : null)
   let ti = 0, si = 0
   const elements: PageElement[] = []

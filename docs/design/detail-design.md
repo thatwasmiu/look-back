@@ -275,8 +275,9 @@ bucket.
   followed by `ai.stickers`. Sticker ids the AI may use: `shared/src/stickerIds.ts` (must equal web's drawings).
 - `buildPrompt` lists the mode's templates (id, about, slots), stickers and colours, with the description fenced as
   content. `answerSchema` is Gemini's `responseSchema` (enums for template/sticker/colour/effect ids, 4–10 pages).
-- `generateJson`: `POST {geminiBase}/v1beta/models/{model}:generateContent`, key in `x-goog-api-key`, 60 s timeout.
-  Errors → `bad-key` (400 API_KEY_INVALID/401/403), `quota` (429), `busy` (503), `timeout`, `unusable`, `http`,
+- `generateJson`: `POST {geminiBase}/v1beta/models/{model}:generateContent`, key in `x-goog-api-key`, 45 s timeout (nginx
+  gives `/api/ai/` 90 s).
+  Errors → `bad-key` (400 API_KEY_INVALID/401/403), `no-model` (404), `quota` (429), `busy` (503), `timeout`, `unusable`, `http`,
   each with a Vietnamese message.
 - `toDesign`: drops pages with unknown/other-mode templates, keeps ≤10, needs ≥4; unknown colour/effect → defaults;
   `fillTemplate` cuts text to the slot max, removes unfilled slots, skips unknown stickers; `albumDesignSchema` parse.

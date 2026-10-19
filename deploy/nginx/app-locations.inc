@@ -39,6 +39,14 @@ location /api/ {
   proxy_pass http://$api;
 }
 
+# AI album: Gemini may take up to 45 s (server timeout); give it room so the browser never gets a 504 for an album
+# that is then created anyway.
+location /api/ai/ {
+  client_max_body_size 1m;
+  proxy_read_timeout 90s;
+  proxy_pass http://$api;
+}
+
 # Backup download (/manage): a long tar stream made on the fly — pass it straight through, no buffering or timeout.
 location = /api/manage/backup {
   proxy_buffering off;

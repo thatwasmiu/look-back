@@ -6,6 +6,7 @@ import { testApp } from './helpers.js';
 const g = await startFakeGemini();
 const t = await testApp({ geminiBase: g.base });
 const cookie = await t.login();
+await t.pool.query('delete from ai_settings'); // a run cut short may have left a key or model behind
 afterAll(async () => {
   await t.app.close();
   await t.pool.end();
@@ -37,6 +38,7 @@ describe('AI settings in /manage', () => {
     expect((await owner('PUT', '/api/manage/ai', { model: 'gemini-9.9-flash' })).json()).toMatchObject({ model: 'gemini-9.9-flash' });
     expect((await owner('PUT', '/api/manage/ai', { model: 'x y' })).statusCode).toBe(400);
     expect((await owner('PUT', '/api/manage/ai', { key: 'short' })).statusCode).toBe(400);
+    expect((await owner('PUT', '/api/manage/ai', { key: 'AIzaSyTESTKEY​0123456789abcd' })).statusCode).toBe(400);
     await owner('PUT', '/api/manage/ai', { model: DEFAULT_MODEL });
   });
 

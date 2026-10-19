@@ -23,6 +23,13 @@ describe('fillTemplate', () => {
     expect(t.length).toBeLessThanOrEqual(slot.max)
   })
 
+  it('never cuts an emoji in half', () => {
+    const [slot] = textSlots(templates.find((t) => t.id === 'cover')!)
+    const [t] = texts(fillTemplate('cover', ['a'.repeat(slot.max - 1) + '🎂🎂'], [], id))
+    expect(t).toBe('a'.repeat(slot.max - 1) + '🎂')
+    expect(JSON.stringify(t)).not.toMatch(/\ud83/)
+  })
+
   it('replaces sticker ids and drops unknown ones', () => {
     // cover has one layout sticker ('flower')
     const known = fillTemplate('cover', ['x'], ['heart'], id).elements.filter((e) => e.type === 'sticker')

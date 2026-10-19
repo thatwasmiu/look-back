@@ -244,3 +244,17 @@ test('✨ AI shows the server error', async () => {
   await userEvent.click(create);
   expect(await screen.findByText('Hết lượt miễn phí của Gemini, thử lại sau.')).toBeTruthy();
 });
+
+test('✨ AI: the dialog cannot be closed while the album is being generated', async () => {
+  serveAi(true, () => new Promise<Response>(() => {}));
+  await userEvent.click(await screen.findByRole('button', { name: 'New album' }));
+  await userEvent.click(screen.getByRole('radio', { name: /✨ AI/ }));
+  await userEvent.type(screen.getByLabelText('Mô tả album'), 'abc');
+  const create = screen.getByRole('button', { name: 'Create' });
+  await waitFor(() => expect((create as HTMLButtonElement).disabled).toBe(false));
+  await userEvent.click(create);
+  await screen.findByRole('button', { name: 'AI đang dựng album…' });
+  await userEvent.keyboard('{Escape}');
+  await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  expect(screen.getByRole('dialog', { name: 'New album' })).toBeTruthy();
+});

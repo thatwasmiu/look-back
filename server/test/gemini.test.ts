@@ -29,6 +29,8 @@ describe('Gemini client', () => {
     expect(await kind(call())).toBe('quota');
     g.reply({ status: 503, body: { error: { code: 503 } } });
     expect(await kind(call())).toBe('busy');
+    g.reply({ status: 404, body: { error: { code: 404 } } });
+    expect(await kind(call())).toBe('no-model');
     g.reply({ status: 500, body: {} });
     expect(await kind(call())).toBe('http');
     g.reply({ text: 'not json' });
@@ -44,5 +46,6 @@ describe('Gemini client', () => {
     expect(aiErrorMessage(new GeminiError('bad-key', 'x'))).toBe('Key Gemini không hợp lệ.');
     expect(aiErrorMessage(new GeminiError('unusable', 'x'))).toBe('AI trả lời không dùng được, thử lại.');
     expect(aiErrorMessage(new Error('boom'))).toBe('Gọi Gemini lỗi.');
+    expect(aiErrorMessage(new GeminiError('no-model', 'x'))).toBe('Không có model này — kiểm tra tên model trong /manage.');
   });
 });

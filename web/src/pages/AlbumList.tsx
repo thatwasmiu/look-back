@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { AlbumMode, AlbumSummary, ReadingDirection } from '@scrapbook/shared';
 import { api, ApiError } from '../api';
@@ -29,6 +29,7 @@ export default function AlbumList() {
   const [prompt, setPrompt] = useState('');
   const [aiKey, setAiKey] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
   const isAi = from === 'ai';
   const pickFrom = (v: string) => {
     setFrom(v);
@@ -98,7 +99,8 @@ export default function AlbumList() {
   };
   useEffect(load, []);
 
-  const closeCreate = () => { setCreating(false); setTitle(''); setFrom(''); setMode('scrapbook'); setDirection('ltr'); setCreateError(''); setPrompt(''); setAiKey(null); };
+  // Not while the AI is generating: the album would still appear (and open) after the dialog was gone.
+  const closeCreate = () => { if (busyRef.current) return; setCreating(false); setTitle(''); setFrom(''); setMode('scrapbook'); setDirection('ltr'); setCreateError(''); setPrompt(''); setAiKey(null); };
   useEffect(() => {
     if (!creating) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeCreate(); };
@@ -127,16 +129,19 @@ export default function AlbumList() {
   async function createWithAi() {
     if (busy || !prompt.trim() || !aiKey) return;
     setBusy(true);
+    busyRef.current = true;
     setCreateError('');
     try {
       const a = await api.createAiAlbum({
         prompt: prompt.trim(), mode, ...(mode === 'manga' ? { readingDirection: direction } : {}), ...(title.trim() ? { title: title.trim() } : {}),
       });
+      busyRef.current = false;
       closeCreate();
       navigate(`/albums/${a.id}/edit`);
     } catch (err) {
       if (!(err instanceof ApiError && err.status === 401)) setCreateError(err instanceof ApiError && err.status !== 500 ? err.message : 'Không tạo được album');
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   }
