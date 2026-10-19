@@ -13,6 +13,7 @@ import { useAutosave } from '../editor/useAutosave';
 import { MediaTray, thumbOf } from '../editor/MediaTray';
 import { mediaUrl } from '../mediaUrl';
 import { ACCEPT, pollUntilSettled, useUpload } from '../editor/useUpload';
+import { dropLocalPreview, LocalPreview } from '../localPreview';
 
 export type EditorApi = Pick<typeof realApi,
   'addPage' | 'savePage' | 'deletePage' | 'reorderPages' | 'getMedia' | 'deleteMedia' | 'updateAlbum'>;
@@ -199,7 +200,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
       while (p.running < POLLS && p.queue.length) {
         const next = p.queue.shift()!;
         p.running++;
-        pollUntilSettled(next, get).catch(() => {}).finally(() => { p.running--; pump(); });
+        pollUntilSettled(next, get).catch(() => {}).finally(() => dropLocalPreview(next)).finally(() => { p.running--; pump(); });
       }
     };
     pump();
@@ -480,7 +481,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
                   return (
                     <button type="button" key={m.id} aria-label={`Use ${m.kind} ${m.id.slice(0, 8)}`}
                       onClick={() => { putInFrame(m.id, frameMenu); setFrameMenu(null); }}>
-                      {src ? <img src={mediaUrl(src)} alt="" /> : <span>{m.status}…</span>}
+                      {src ? <img src={mediaUrl(src)} alt="" /> : <><LocalPreview id={m.id} /><span className="chip">{m.status}…</span></>}
                       {m.kind === 'video' && <span className="play-badge" aria-hidden>▶</span>}
                     </button>
                   );

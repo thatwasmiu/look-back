@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import Uppy from '@uppy/core';
 import Tus from '@uppy/tus';
 import type { MediaDTO } from '@scrapbook/shared';
+import { setLocalPreview } from '../localPreview';
 
 export const ACCEPT = 'image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm';
 
@@ -63,7 +64,9 @@ function getUppy(): Uppy {
   const announce = (fileId: string, mediaId: string | null) => {
     if (!mediaId || created.has(fileId)) return;
     created.add(fileId);
-    const meta = u.getFile(fileId)?.meta as { albumId?: string; targetFrameId?: string } | undefined;
+    const file = u.getFile(fileId);
+    if (file?.data instanceof Blob) setLocalPreview(mediaId, file.data);
+    const meta = file?.meta as { albumId?: string; targetFrameId?: string } | undefined;
     const target = meta?.targetFrameId;
     const editor = meta?.albumId ? editors.get(meta.albumId) : undefined;
     const placed = editor ? editor.current(mediaId, target) : false;

@@ -2,6 +2,7 @@ import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import type { MediaDTO } from '@scrapbook/shared';
 import { mediaUrl } from '../mediaUrl';
 import { ACCEPT, type UploadItem } from './useUpload';
+import { LocalPreview } from '../localPreview';
 
 type Props = {
   media: MediaDTO[]; items: UploadItem[]; coverMediaId: string | null;
@@ -93,7 +94,7 @@ export function MediaTray({ media, items, coverMediaId, onUpload, onRetry, onPic
                 style={!src && m.blurDataUrl ? { backgroundImage: `url("${m.blurDataUrl}")` } : undefined}
                 onPointerDown={(e) => startDrag(e, m)}
                 onClick={() => { if (!dragged.current) onPick(m.id); }}>
-                {src && <img src={mediaUrl(src)} alt="" draggable={false} />}
+                {src ? <img src={mediaUrl(src)} alt="" draggable={false} /> : <LocalPreview id={m.id} />}
                 {m.kind === 'video' && <span className="tray-video" aria-hidden>▶</span>}
                 {chip[m.status] && <span className={m.status === 'failed' ? 'chip chip-error' : 'chip'}>{chip[m.status]}</span>}
                 {m.id === coverMediaId && <span className="tray-cover">cover</span>}

@@ -101,3 +101,17 @@ test('album background effect renders particles; none renders nothing', async ()
     unmount();
   }
 });
+
+test('a processing photo shows the picked file (local preview) under the chip until it settles', async () => {
+  const { setLocalPreview, dropLocalPreview } = await import('../src/localPreview');
+  URL.createObjectURL ??= () => 'blob:x';
+  URL.revokeObjectURL ??= () => {};
+  setLocalPreview('m9', new Blob(['x'], { type: 'image/jpeg' }));
+  const { container, unmount } = setup([frame('m9')], [media('m9', { status: 'processing', variants: null })], 'edit');
+  expect(container.querySelector('img.local-preview')).not.toBeNull();
+  expect(screen.getByText('đang xử lý…')).toBeTruthy();
+  unmount();
+  dropLocalPreview('m9');
+  const again = setup([frame('m9')], [media('m9', { status: 'processing', variants: null })], 'edit');
+  expect(again.container.querySelector('.local-preview')).toBeNull();
+});

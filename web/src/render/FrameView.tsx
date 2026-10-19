@@ -4,6 +4,7 @@ import { mediaUrl } from '../mediaUrl';
 import { BlurImage } from './BlurImage';
 import { VideoPlayer } from './VideoPlayer';
 import { PanelFrame } from '../manga/render';
+import { LocalPreview } from '../localPreview';
 
 // Deckle edge for 'torn' frames: deterministic jitter so every render (and every frame) matches.
 const TORN_CLIP = (() => {
@@ -49,6 +50,7 @@ function content(el: FrameEl, m: MediaDTO | undefined, mode: 'view' | 'edit', ac
   return (
     <>
       {poster(m, objectPosition, el.crop.scale)}
+      <LocalPreview id={m.id} objectPosition={objectPosition} />
       <span className={m.status === 'failed' ? 'chip chip-error' : 'chip'}>{chip}</span>
     </>
   );
