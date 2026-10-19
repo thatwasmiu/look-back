@@ -13,8 +13,17 @@ const cqVars = {
   },
 };
 
-export default defineConfig({
-  plugins: [react()],
+// Build version (build time, UTC): compiled in as __APP_VERSION__ and written to /version.json, so an open app can
+// tell a newer build is on the server (src/UpdateNotice.tsx).
+const version = new Date().toISOString().slice(0, 16).replace(/\D/g, '');
+
+export default defineConfig(({ command }) => ({
+  plugins: [react(), {
+    name: 'app-version',
+    apply: 'build',
+    generateBundle() { this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ version }) }); },
+  }],
+  define: { __APP_VERSION__: JSON.stringify(command === 'build' ? version : 'dev') },
   css: { postcss: { plugins: [cqVars] } },
   server: {
     proxy: {
@@ -27,4 +36,4 @@ export default defineConfig({
     },
   },
   test: { environment: 'jsdom' },
-});
+}));

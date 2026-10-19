@@ -95,12 +95,20 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
     if (cropId) finishCrop();
     const id = (e.target as Element).closest('[data-el]')?.getAttribute('data-el') ?? null;
     if (id !== editingId) setEditingId(null);
-    // "+ add" on a frame that isn't selected yet: one tap opens the picker (no select-then-tap-again).
-    // Opened after the tap ends, like the selected case below, so the file dialog can't strand a gesture.
-    if (id && id !== selectedId && onFrameAddMedia && (e.target as Element).closest('.slot-empty')) {
-      const up = (u: Event) => {
+    // "+ add" of an empty frame: one tap opens the picker (no select-then-tap-again) — also when an effect layer
+    // (speed lines, focus lines…) lies over it, since effects usually cover whole panels. Opened after the tap
+    // ends (a short tap, still on the button) so the file dialog can't strand a gesture.
+    const overEffect = layout.elements.find((x) => x.id === id)?.type === 'effect';
+    const add = (e.target as Element).closest('.slot-empty')
+      ?? (overEffect ? document.elementsFromPoint?.(e.clientX, e.clientY).find((n) => n.classList.contains('slot-empty')) : undefined);
+    const frameId = add?.closest('[data-el]')?.getAttribute('data-el');
+    if (add && frameId && frameId !== selectedId && onFrameAddMedia) {
+      const x0 = e.clientX, y0 = e.clientY;
+      const up = (u: PointerEvent) => {
         window.removeEventListener('pointercancel', cancel);
-        if ((u.target as Element | null)?.closest?.('.slot-empty')) { onSelect(null); setTimeout(() => onFrameAddMedia(id), 0); }
+        const r = add.getBoundingClientRect();
+        const onIt = u.clientX >= r.left && u.clientX <= r.right && u.clientY >= r.top && u.clientY <= r.bottom;
+        if (Math.hypot(u.clientX - x0, u.clientY - y0) < 10 && (onIt || !r.width)) { onSelect(null); setTimeout(() => onFrameAddMedia(frameId), 0); }
       };
       const cancel = () => window.removeEventListener('pointerup', up);
       window.addEventListener('pointerup', up, { once: true });

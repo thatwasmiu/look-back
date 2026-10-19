@@ -152,3 +152,23 @@ test('one tap on "+ add" of an unselected frame opens the picker (no select firs
     vi.useRealTimers();
   }
 });
+
+test('"+ add" under an effect layer (speed lines over a panel) still opens with one tap', async () => {
+  vi.useFakeTimers();
+  try {
+    const layout: PageLayout = { background: 'paper-cream', elements: [
+      { type: 'frame', id: 'f1', x: 0.1, y: 0.1, w: 0.4, h: 0.3, rotation: 0, z: 1, frameStyle: 'panel', mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } },
+      { type: 'effect', id: 'e1', x: 0, y: 0, w: 1, h: 1, rotation: 0, z: 2, effect: 'speed-lines' },
+    ] };
+    const onFrameAddMedia = vi.fn();
+    render(<EditCanvas layout={layout} media={new Map()} selectedId={null} onSelect={() => {}} onCommit={() => {}} onFrameAddMedia={onFrameAddMedia} />);
+    const add = document.querySelector('.slot-empty')!;
+    const fx = document.querySelector('[data-el="e1"]')!;
+    document.elementsFromPoint = () => [fx, add];
+    act(() => { fx.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true })); });
+    act(() => { fx.dispatchEvent(new MouseEvent('pointerup', { bubbles: true })); vi.runAllTimers(); });
+    expect(onFrameAddMedia).toHaveBeenCalledWith('f1');
+  } finally {
+    vi.useRealTimers();
+  }
+});

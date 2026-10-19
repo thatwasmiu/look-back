@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { UpdateNotice } from './UpdateNotice';
 import { api } from './api';
 import Login from './pages/Login';
 import AlbumList from './pages/AlbumList';
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="/albums/:id/edit" element={<Editor />} />
         </Route>
       </Routes>
+      <UpdateNotice />
     </BrowserRouter>
   );
 }
