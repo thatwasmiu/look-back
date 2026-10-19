@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
 import { testApp } from './helpers';
 import { runProcessMedia } from '../src/processing/run';
+import { dirBytes } from '../src/mediaFiles';
 
 const fx = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
 
@@ -37,6 +38,8 @@ describe('runProcessMedia', () => {
     expect([r.width, r.height]).toEqual([300, 400]);
     expect(r.variants.original).toBe(`${id}/original.jpg`);
     expect(r.blur_data_url).toMatch(/^data:image\/webp/);
+    expect(Number(r.bytes)).toBe(await dirBytes(join(t.config.mediaDir, id))); // processing records its size
+    expect(Number(r.bytes)).toBeGreaterThan(0);
     expect(existsSync(uploadPath)).toBe(false);
     expect(existsSync(uploadPath + '.json')).toBe(false);
   });

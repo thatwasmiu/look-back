@@ -2,6 +2,7 @@ import { rm } from 'node:fs/promises';
 import type pg from 'pg';
 import type { Config } from '../config.js';
 import type { ProcessMediaJob } from '../queue.js';
+import { dirBytes } from '../mediaFiles.js';
 import { absPath } from '../storage.js';
 import { processAudio } from './audio.js';
 import { processImage } from './image.js';
@@ -28,8 +29,8 @@ export async function runProcessMedia(job: ProcessMediaJob, pool: pg.Pool, confi
         : kind === 'audio' ? await processAudio(uploadPath, mediaId, config.mediaDir)
         : await processImage(uploadPath, mediaId, config.mediaDir, ext);
       const u = await pool.query(
-        `update media set status='ready', width=$2, height=$3, duration_sec=$4, blur_data_url=$5, variants=$6, error=null where id=$1 and status='processing'`,
-        [mediaId, r.width, r.height, r.durationSec, r.blurDataUrl, JSON.stringify(r.variants)]);
+        `update media set status='ready', width=$2, height=$3, duration_sec=$4, blur_data_url=$5, variants=$6, bytes=$7, error=null where id=$1 and status='processing'`,
+        [mediaId, r.width, r.height, r.durationSec, r.blurDataUrl, JSON.stringify(r.variants), await dirBytes(mediaPath)]);
       if (u.rowCount === 0) await rm(mediaPath, { recursive: true, force: true }); // deleted while processing
     } catch (e) {
       const msg = (e instanceof Error ? e.message : String(e)).slice(0, 500) || 'processing failed';

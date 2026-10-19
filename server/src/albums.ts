@@ -11,7 +11,8 @@ import {
   type AlbumBundle, type AlbumDTO, type PageLayout, type AlbumSummary, type BackgroundColor, type BackgroundEffect,
 } from '@scrapbook/shared';
 import type { Config } from './config.js';
-import { removeMediaDirs, toMediaDTO } from './media.js';
+import { toMediaDTO } from './media.js';
+import { removeMediaFiles, type GoneMedia } from './mediaFiles.js';
 import { toPageDTO } from './pages.js';
 import { JOB_PROCESS_MEDIA, type ProcessMediaJob } from './queue.js';
 
@@ -165,10 +166,10 @@ export function registerAlbums(app: FastifyInstance, pool: pg.Pool, config: Conf
 
   app.delete<{ Params: { id: string } }>('/api/albums/:id', { schema: uuidParams }, async (req, reply) => {
     const c = await pool.connect();
-    let mediaIds: string[];
+    let gone: GoneMedia[];
     try {
       await c.query('begin');
-      mediaIds = (await c.query('select id from media where album_id = $1', [req.params.id])).rows.map((r) => r.id);
+      gone = (await c.query('select id, storage_id from media where album_id = $1', [req.params.id])).rows.map((r) => ({ id: r.id, storageId: r.storage_id }));
       const d = await c.query('delete from albums where id = $1', [req.params.id]);
       await c.query('commit');
       if (!d.rowCount) return reply.code(404).send({ error: 'not found' });
@@ -178,7 +179,7 @@ export function registerAlbums(app: FastifyInstance, pool: pg.Pool, config: Conf
     } finally {
       c.release();
     }
-    await removeMediaDirs(app, config, mediaIds);
+    await removeMediaFiles(pool, config, gone);
     return reply.code(204).send();
   });
 

@@ -1,25 +1,14 @@
 import { spawn } from 'node:child_process';
-import { mkdtemp, readdir, rm, stat, statfs, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, statfs, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import type pg from 'pg';
 import type { Config } from './config.js';
+import { dirBytes } from './mediaFiles.js';
 
 // Owner tools behind the hidden /manage page (the session guard covers every /api route here):
 // storage use, every media file with its size and whether anything uses it, and a full backup download.
-
-// Bytes under a directory (0 if it doesn't exist). ponytail: walks the tree on each request; fine for a personal
-// library of thousands of files, cache it if it ever gets slow.
-export async function dirBytes(dir: string): Promise<number> {
-  const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
-  let n = 0;
-  for (const e of entries) {
-    const p = join(dir, e.name);
-    n += e.isDirectory() ? await dirBytes(p) : (await stat(p).catch(() => ({ size: 0 }))).size;
-  }
-  return n;
-}
 
 // Media a page frame, an album cover or an album's music points at.
 const USED_SQL = `

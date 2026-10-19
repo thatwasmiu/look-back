@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type pg from 'pg';
 import { uuidParams } from './albums.js';
 import type { Config } from './config.js';
+import { deleteMediaRows } from './mediaFiles.js';
 import { checkBucket, type BucketConfig } from './objectStore.js';
 import { decryptSecret, encryptSecret } from './secrets.js';
 
@@ -106,5 +107,29 @@ export function registerLocations(app: FastifyInstance, pool: pg.Pool, config: C
     if (row.files > 0 || row.pending > 0) return reply.code(409).send({ error: 'Nơi lưu còn file — hãy chuyển file đi trước.' });
     await pool.query('delete from storage_locations where id = $1', [row.id]);
     return reply.code(204).send();
+  });
+
+  // A location that is gone for good: forget it and every media stored there (their frames empty out, covers and
+  // music clear). Nothing is sent to the bucket. The caller must type the location's name.
+  app.post<{ Params: { id: string }; Body: { confirmName?: string } }>('/api/manage/locations/:id/drop', {
+    schema: { ...uuidParams, body: { type: 'object', required: ['confirmName'], properties: { confirmName: { type: 'string' } } } },
+  }, async (req, reply) => {
+    const row = await one(req.params.id);
+    if (!row) return reply.code(404).send({ error: 'not found' });
+    if (req.body.confirmName !== row.name) return reply.code(400).send({ error: 'Tên xác nhận không khớp.' });
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      const ids = (await c.query('select id from media where storage_id = $1', [row.id])).rows.map((r) => r.id);
+      const gone = await deleteMediaRows(c, ids);
+      await c.query('delete from storage_locations where id = $1', [row.id]); // queued deletes go with it (cascade)
+      await c.query('commit');
+      return { dropped: gone.length };
+    } catch (e) {
+      await c.query('rollback').catch(() => {});
+      throw e;
+    } finally {
+      c.release();
+    }
   });
 }
