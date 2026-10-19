@@ -27,7 +27,16 @@ async function networkFirst(req, cache, key = req) {
 async function cacheFirst(req) {
   const hit = await caches.match(req, { cacheName: FILES });
   if (hit) return hit;
-  const res = await fetch(req);
+  let res;
+  if (new URL(req.url).pathname.startsWith('/media/')) {
+    // A file kept in a storage bucket arrives through a redirect to the bucket: ask for a CORS-readable response so
+    // it can be cached for offline. A bucket without CORS still shows the photo (plain fetch), just not offline.
+    try {
+      res = await fetch(new Request(req.url, { mode: 'cors', credentials: 'same-origin' }));
+    } catch {
+      return fetch(req);
+    }
+  } else res = await fetch(req);
   put(FILES, req, res.clone());
   return res;
 }

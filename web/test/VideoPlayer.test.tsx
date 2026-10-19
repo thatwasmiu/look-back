@@ -61,7 +61,7 @@ test('fatal hls error falls back to poster with a chip', async () => {
   act(() => hls.onError!('hlsError', { fatal: false }));
   expect(r.container.querySelector('video')).toBeTruthy();
   act(() => hls.onError!('hlsError', { fatal: true }));
-  expect(await screen.findByText("không phát được video")).toBeTruthy();
+  expect(await screen.findByText("Ảnh tạm thời không tải được")).toBeTruthy(); // the crying placeholder
   expect(hls.destroy).toHaveBeenCalledTimes(1);
   expect(r.container.querySelector('video')).toBeNull();
 });

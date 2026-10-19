@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Crop, MediaDTO } from '@scrapbook/shared';
 import { mediaUrl } from '../mediaUrl';
 import { BlurImage } from './BlurImage';
+import { MediaUnavailable } from './MediaUnavailable';
 
 type Props = { media: MediaDTO; active: boolean; crop?: Crop; autoPlay?: boolean; trim?: { start: number; end: number } };
 
@@ -9,7 +10,7 @@ type Props = { media: MediaDTO; active: boolean; crop?: Crop; autoPlay?: boolean
 // autoPlay (album view): starts by itself while its page is shown — muted and looping, since browsers only allow
 // silent autoplay; the native controls unmute it. A tap on the poster still starts it with sound.
 // trim: play only start..end — it starts at `start`, and at `end` loops (autoplay) or stops back at `start`.
-// Any fatal playback error drops back to the poster with a "can't play video" chip.
+// Any fatal playback error shows the crying placeholder (MediaUnavailable).
 export function VideoPlayer({ media, active, crop = { x: 0.5, y: 0.5, scale: 1 }, autoPlay = false, trim }: Props) {
   const [started, setStarted] = useState(false);
   const [silent, setSilent] = useState(false); // started by autoplay
@@ -77,7 +78,7 @@ export function VideoPlayer({ media, active, crop = { x: 0.5, y: 0.5, scale: 1 }
   const cover = poster
     ? <BlurImage blurDataUrl={media.blurDataUrl} src={poster} objectPosition={objectPosition} scale={crop.scale} />
     : <div className="slot-paper" />;
-  if (failed) return <>{cover}<span className="chip chip-error">không phát được video</span></>;
+  if (failed) return <MediaUnavailable />;
   return (
     <button type="button" className="video-poster" aria-label="Play video" onClick={() => { setSilent(false); setStarted(true); }}>
       {cover}

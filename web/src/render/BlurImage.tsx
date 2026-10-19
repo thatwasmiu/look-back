@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { MediaUnavailable } from './MediaUnavailable';
 
 type Props = { blurDataUrl: string | null; src: string; srcAvif?: string; alt?: string; objectPosition: string; scale: number };
 
 // Blur layer is a CSS background, so it can never render a broken-image icon.
-// The sharp <picture> fades in on load and is dropped entirely on error.
+// The sharp <picture> fades in on load; if it can't load (file gone, its storage bucket down) the frame shows the
+// crying placeholder instead.
 export function BlurImage({ blurDataUrl, src, srcAvif, alt = '', objectPosition, scale }: Props) {
   const [loaded, setLoaded] = useState<string | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
@@ -16,7 +18,7 @@ export function BlurImage({ blurDataUrl, src, srcAvif, alt = '', objectPosition,
         <div className="blur-layer" aria-hidden
           style={{ backgroundImage: `url("${blurDataUrl}")`, backgroundPosition: objectPosition, transform, transformOrigin }} />
       )}
-      {failed !== src && (
+      {failed === src ? <MediaUnavailable /> : (
         <picture>
           {srcAvif && <source type="image/avif" srcSet={srcAvif} />}
           <img src={src} alt={alt} draggable={false} decoding="async"
