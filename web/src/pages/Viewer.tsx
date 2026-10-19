@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import type { AlbumBundle } from '@scrapbook/shared';
 import { api, ApiError } from '../api';
 import { mediaUrl } from '../mediaUrl';
@@ -42,7 +42,8 @@ export function Book({ bundle, shared = false }: { bundle: AlbumBundle; shared?:
   const media = useMemo(() => new Map(bundle.media.map((m) => [m.id, m])), [bundle.media]);
   const spread = useSpread();
   const rtl = album.readingDirection === 'rtl';
-  const { index, visible, turn, go, swipe } = useFlip(total, spread, rtl);
+  const [params] = useSearchParams(); // ?page=N (1-based), from the editor's Done
+  const { index, visible, turn, go, swipe } = useFlip(total, spread, rtl, (Number(params.get('page')) || 1) - 1);
   const slot = (i: number) => slotOf(i, spread, rtl);
   const forwardOnScreen = turn ? (turn.dir > 0) !== rtl : false; // a forward flip sweeps leftwards in ltr, rightwards in rtl
   const music = album.musicMediaId ? media.get(album.musicMediaId) : undefined;
@@ -72,6 +73,7 @@ export function Book({ bundle, shared = false }: { bundle: AlbumBundle; shared?:
         <h1>{album.title}</h1>
         {musicSrc && <Music src={musicSrc} />}
         {total > 0 && <span className="counter">{visible.map((i) => i + 1).join('–')} / {total}</span>}
+        {!shared && album.id !== EXAMPLE_ALBUM_ID && <Link className="btn secondary" to={`/albums/${album.id}/print`} title="In hoặc lưu thành PDF">PDF</Link>}
         {!shared && album.id !== EXAMPLE_ALBUM_ID && <Link className="btn" to={`/albums/${album.id}/edit?page=${(visible[0] ?? 0) + 1}`}>Edit</Link>}
       </header>
       {total === 0 ? <p className="empty">Chưa có trang nào.</p> : (

@@ -4,7 +4,7 @@ import Moveable from 'react-moveable';
 import type { FrameEl, MediaDTO, PageElement, PageLayout, TextEl } from '@scrapbook/shared';
 import { PageRenderer } from '../render/PageRenderer';
 import { ShapeOverlay, type Shape } from '../manga/ShapeOverlay';
-import { fontFamily } from '../render/decor';
+import { textCss } from '../render/textStyle';
 import { assignMedia, updateElement } from './layoutOps';
 
 type Props = {
@@ -15,14 +15,16 @@ type Props = {
   cropId?: string | null; onCrop?(frameId: string | null): void; // frame in crop mode (pan/zoom the photo inside it)
   shapeId?: string | null; onShape?(frameId: string | null): void; // manga panel in shape mode (move its corners)
   zoom?: number; // 1 = page fits the stage
+  snap?: boolean; // snap to the page's edges/centre and other items while dragging or resizing
 };
 type Crop = FrameEl['crop'];
+const SNAP_DIRS = { left: true, right: true, top: true, bottom: true, center: true, middle: true };
 
 const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
 
 // Selected element gets react-moveable handles. During a gesture only a transient layout changes (live preview);
 // the gesture end commits it once. Moveable reports CSS px relative to the page box; page units = px / box size.
-export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFrameAddMedia, cropId = null, onCrop, shapeId = null, onShape, zoom = 1 }: Props) {
+export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFrameAddMedia, cropId = null, onCrop, shapeId = null, onShape, zoom = 1, snap = false }: Props) {
   const pageRef = useRef<HTMLDivElement>(null);
   const moveableRef = useRef<Moveable>(null);
   const [live, setLive] = useState<PageLayout | null>(null);
@@ -57,6 +59,13 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
   const target = selected && editingId !== selected.id && cropId !== selected.id && shapeId !== selected.id
     ? [...pageRef.current?.querySelectorAll<HTMLElement>('[data-el]') ?? []].find((n) => n.dataset.el === selected.id) ?? null : null;
 
+  // Snap targets: the page itself (edges and centre lines), frames/panels and text. Stickers, tape and effect
+  // layers are left out: there are many of them and they'd make dragging sticky. Dragging only (resize and pinch
+  // stay free), with a small threshold so placing anywhere stays easy.
+  const guides = snap && target ? [
+    pageRef.current!.querySelector<HTMLElement>('.page')!,
+    ...[...pageRef.current!.querySelectorAll<HTMLElement>('.el-frame, .el-text')].filter((n) => n !== target),
+  ] : [];
   const size = () => {
     const r = pageRef.current!.querySelector('.page')!.getBoundingClientRect();
     return { W: r.width, H: r.height };
@@ -147,7 +156,10 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
     : el.id === editingId && el.type === 'text'
     ? <TextEditor el={el} onDone={(text) => {
       setEditingId(null);
-      if (text !== el.text) onCommit(updateElement(layout, el.id, { text: text.slice(0, 500) }));
+      if (text === el.text) return;
+      const t = text.slice(0, 500);
+      const h = fitBubble(el, t, pageRef.current?.querySelector(`[data-el="${el.id}"] .manga-words`));
+      onCommit(updateElement(layout, el.id, h > el.h ? { text: t, h } : { text: t }));
     }} />
     : null;
 
@@ -158,6 +170,8 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
       <PageRenderer layout={shown} media={media} mode="edit" renderOverlay={renderOverlay} />
       <Moveable ref={moveableRef} target={target} className="editor-moveable" zoom={coarse ? 1.7 : 1}
         draggable={!pinned} resizable={!pinned} rotatable={!pinned} pinchable={pinned ? false : ['resizable', 'rotatable']} origin={false}
+        snappable={snap && !pinned ? ['draggable'] : false} snapThreshold={5} elementGuidelines={guides} isDisplaySnapDigit={false}
+        snapDirections={SNAP_DIRS} elementSnapDirections={SNAP_DIRS}
         renderDirections={pinned ? [] : ['nw', 'ne', 'sw', 'se']} keepRatio={selected?.type === 'sticker' || (selected?.type === 'frame' && ['circle', 'heart'].includes(selected.frameStyle))} rotationPosition="top"
         onDragStart={begin}
         onDrag={(e) => { if (released(e)) return; const { W, H } = size(); preview({ x: e.left / W, y: e.top / H }); }}
@@ -195,13 +209,31 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
   );
 }
 
+// Bubbles and narration boxes grow (never shrink) to fit what was typed: the new words are measured at the box's
+// full width in a hidden copy of the drawn words. A speech/thought ellipse or a shout burst only has room in its middle.
+const ROOM: Partial<Record<NonNullable<TextEl['textStyle']>, number>> = { speech: 0.62, thought: 0.62, shout: 0.5, narration: 0.9 };
+function fitBubble(el: TextEl, text: string, words: Element | null | undefined): number {
+  const room = el.textStyle && ROOM[el.textStyle];
+  const box = words?.parentElement;
+  if (!room || !(words instanceof HTMLElement) || !box?.offsetHeight) return el.h;
+  const probe = words.cloneNode() as HTMLElement;
+  // Full bubble width (the drawn words shrink to their old text); the 8% side padding still applies.
+  Object.assign(probe.style, { position: 'absolute', left: '0', top: '0', visibility: 'hidden', boxSizing: 'border-box', width: '100%' });
+  probe.textContent = text;
+  box.appendChild(probe);
+  const need = probe.offsetHeight;
+  probe.remove();
+  const have = box.offsetHeight * room;
+  return need > have ? Math.min(0.9, Math.round(el.h * (need / have) * 1000) / 1000) : el.h;
+}
+
 // Inline editor laid over the text element (the rendered text is hidden under it via .editing CSS).
 function TextEditor({ el, onDone }: { el: TextEl; onDone(text: string): void }) {
   return (
     <div className="text text-editing" contentEditable suppressContentEditableWarning spellCheck={false}
       ref={(n) => { if (n && document.activeElement !== n) { n.focus(); document.getSelection()?.selectAllChildren(n); } }}
       // White sound-effect lettering has an outline when drawn; while typing it would be invisible on white paper.
-      style={{ fontFamily: fontFamily[el.font], color: el.textStyle === 'sfx' ? '#111111' : el.color, fontSize: `calc(${el.size * 100} * var(--cqh))` }}
+      style={{ ...textCss(el, el.textStyle === 'sfx' ? '#111111' : el.color), ...(el.textStyle === 'sfx' && { WebkitTextStroke: 'initial' }) }}
       onBlur={(e) => onDone(e.currentTarget.innerText.replace(/\n$/, ''))}
       onKeyDown={(e) => { if (e.key === 'Escape') e.currentTarget.blur(); }}>
       {el.text}

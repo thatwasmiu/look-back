@@ -86,6 +86,9 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   // The page strip folds away like the Photos tray; on phones it starts folded (same breakpoint as the CSS).
   const [pagesOpen, setPagesOpen] = useState(() => !(typeof matchMedia === 'function' && matchMedia('(pointer: coarse), (max-width: 699px)').matches));
   const [zoom, setZoom] = useState(1);
+  // Snap guides: on by default, remembered on this device.
+  const [snap, setSnapState] = useState(() => { try { return localStorage.getItem('lb.snap') !== 'off'; } catch { return true; } });
+  const setSnap = (on: boolean) => { setSnapState(on); try { localStorage.setItem('lb.snap', on ? 'on' : 'off'); } catch { /* private mode */ } };
   const [title, setTitle] = useState(bundle.album.title);
   const [renaming, setRenaming] = useState(false);
   const renameCancelled = useRef(false);
@@ -330,7 +333,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   });
   const leave = (e: MouseEvent) => {
     e.preventDefault();
-    void run('rời màn trang trí', async () => { if (await saved()) navigate(`/albums/${albumId}`); });
+    void run('rời màn trang trí', async () => { if (await saved()) navigate(`/albums/${albumId}?page=${cur + 1}`); });
   };
   const move = (from: number, to: number) => run('sắp xếp trang', async () => {
     if (from === to || to < 0 || to >= pages.length) return;
@@ -412,7 +415,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   return (
     <main className={`editor desk-${bgColor}${busy ? ' busy' : ''}${panelsHidden ? ' panels-hidden' : ''}`} aria-busy={busy}>
       <header className="editor-bar">
-        <Link to={`/albums/${albumId}`} onClick={leave}>← Done</Link>
+        <Link to={`/albums/${albumId}?page=${cur + 1}`} onClick={leave}>← Done</Link>
         <h1>
           {renaming ? (
             <input className="title-input" aria-label="Album name" defaultValue={title} maxLength={200} autoFocus
@@ -443,7 +446,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
         <Toolbar layout={layout} selected={selected} commit={commit}
           undo={() => setHist(undo)} redo={() => setHist(redo)} canUndo={hist.past.length > 0} canRedo={hist.future.length > 0}
           status={status} save={() => void flush().then((ok) => ok && setOpError(null))}
-          crop={() => setCropId(selectedId)} editShape={() => setShapeId(selectedId)} zoom={zoom} setZoom={setZoom} bgEffect={bgEffect} setBgEffect={setBgEffect} bgColor={bgColor} setBgColor={setBgColor}
+          crop={() => setCropId(selectedId)} editShape={() => setShapeId(selectedId)} zoom={zoom} setZoom={setZoom} snap={snap} setSnap={setSnap} frameMedia={selected?.type === 'frame' && selected.mediaId ? media.get(selected.mediaId) ?? null : null} bgEffect={bgEffect} setBgEffect={setBgEffect} bgColor={bgColor} setBgColor={setBgColor}
           mode={mode} readingDirection={readingDirection} setReadingDirection={setReadingDirection}
           music={musicId ? media.get(musicId) ?? null : null} onMusicFile={(f) => upload.add([f], MUSIC)} onMusicRemove={removeMusic} />
       )}
@@ -453,7 +456,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
         <div className="stage-wrap" onPointerDown={(e) => { if (e.target === e.currentTarget || e.target === stageRef.current) setSelectedId(null); }}>
           <div className="edit-stage" ref={stageRef}>
             {page ? <EditCanvas layout={layout} media={media} selectedId={selectedId} onSelect={setSelectedId} onCommit={commit}
-              onFrameAddMedia={addToFrame} cropId={cropId} onCrop={setCropId} shapeId={shapeId} onShape={setShapeId} zoom={zoom} />
+              onFrameAddMedia={addToFrame} cropId={cropId} onCrop={setCropId} shapeId={shapeId} onShape={setShapeId} zoom={zoom} snap={snap} />
               : <p className="empty">Chưa có trang nào — thêm trang ở dưới.</p>}
           </div>
           {page && cur > 0 && (

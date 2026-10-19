@@ -20,8 +20,9 @@ export type Turn = { from: number[]; dir: 1 | -1 };
 
 // Page index + the outgoing pages of the turn in progress (null when idle or with reduced motion).
 // rtl: right-to-left reading (manga) — the physical inputs mirror: ← / swipe right / left edge go forward.
-export function useFlip(total: number, spread: boolean, rtl = false) {
-  const [index, setIndex] = useState(0);
+// startPage: the page to open on (Done in the editor comes back to the page that was being edited).
+export function useFlip(total: number, spread: boolean, rtl = false, startPage = 0) {
+  const [index, setIndex] = useState(() => Math.min(Math.max(0, startPage), Math.max(0, total - 1)));
   const [turn, setTurn] = useState<Turn | null>(null);
   const timer = useRef<number>();
   const visible = visiblePages(index, total, spread);

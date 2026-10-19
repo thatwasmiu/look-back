@@ -7,6 +7,7 @@ import { mediaUrl } from '../mediaUrl';
 import { MangaButtons, MangaPanelTools, MangaPickerContent, MangaTextTools, type MangaPicker } from '../manga/MangaTools';
 import { addElement, assignMedia, bringForward, duplicate, newEffect, newFrame, newSticker, newTape, newText, removeElement, sendBackward, setFrameStyle, updateElement } from './layoutOps';
 import type { SaveStatus } from './useAutosave';
+import { TrimPanel } from './TrimPanel';
 
 type Props = {
   layout: PageLayout; selected: PageElement | null;
@@ -16,6 +17,8 @@ type Props = {
   crop?(): void;
   editShape?(): void; // manga panel → shape mode (move its corners) // selected filled frame → crop mode (double-tap alone is unreliable on phones)
   zoom: number; setZoom(z: number): void;
+  snap?: boolean; setSnap?(on: boolean): void; // snap guides while dragging/resizing
+  frameMedia?: MediaDTO | null; // the selected frame's photo/video (Trim for videos)
   bgEffect: BackgroundEffect; setBgEffect(e: BackgroundEffect): void;
   bgColor: BackgroundColor; setBgColor(c: BackgroundColor): void;
   music?: MediaDTO | null; onMusicFile?(f: File): void; onMusicRemove?(): void; // album background music
@@ -38,9 +41,9 @@ const statusLabel: Record<SaveStatus, string> = { saved: 'Saved', saving: 'Savin
 
 // Laptop: a bar above the page. Phone (coarse pointer or < 700px, see CSS): a sheet pinned to the bottom,
 // pickers open above it.
-export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo, status, save, crop, zoom, setZoom, bgEffect, setBgEffect, bgColor, setBgColor, editShape, music = null, onMusicFile, onMusicRemove, mode = 'scrapbook', readingDirection = 'ltr', setReadingDirection }: Props) {
+export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo, status, save, crop, zoom, setZoom, snap, setSnap, frameMedia = null, bgEffect, setBgEffect, bgColor, setBgColor, editShape, music = null, onMusicFile, onMusicRemove, mode = 'scrapbook', readingDirection = 'ltr', setReadingDirection }: Props) {
   const manga = mode === 'manga';
-  const [picker, setPicker] = useState<'frame' | 'frameStyle' | 'sticker' | 'tape' | 'bg' | 'effect' | 'albumFx' | 'font' | MangaPicker | null>(null);
+  const [picker, setPicker] = useState<'frame' | 'frameStyle' | 'sticker' | 'tape' | 'bg' | 'effect' | 'albumFx' | 'font' | 'trim' | MangaPicker | null>(null);
   const toggle = (p: typeof picker) => setPicker((cur) => (cur === p ? null : p));
   const ref = useRef<HTMLDivElement>(null);
   // Music preview while editing: the <audio> lives outside the picker, so it keeps playing once the picker closes.
@@ -61,6 +64,7 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
   const sel = selected?.id;
   const text = selected?.type === 'text' ? selected : null;
   const frame = selected?.type === 'frame' ? selected : null;
+  const video = frame && frameMedia?.kind === 'video' && frameMedia.status === 'ready' && frameMedia.id === frame.mediaId ? frameMedia : null;
   const pickFrame = (s: FrameEl['frameStyle']) => {
     if (picker === 'frameStyle' && frame) { commit(setFrameStyle(layout, frame.id, s)); setPicker(null); } else add(newFrame(s));
   };
@@ -122,6 +126,9 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
           {picker === 'tape' && tapeStyles.map((t) => (
             <button key={t} type="button" className="swatch tape-swatch" aria-label={`${t} tape`} onClick={() => add(newTape(t))}><Tape tapeStyle={t} /></button>
           ))}
+          {picker === 'trim' && frame && video && (
+            <TrimPanel media={video} trim={frame.trim} onChange={(trim) => commit(updateElement(layout, frame.id, { trim }), undefined, `trim:${frame.id}`)} />
+          )}
           {picker === 'font' && text && <>
             {(manga ? MANGA_FONTS : SCRAPBOOK_FONTS).map((f) => (
               <button key={f} type="button" className="font-option" aria-pressed={text.font === f} style={{ fontFamily: fontFamily[f] }} onClick={() => setText({ font: f })}>Aa</button>
@@ -132,6 +139,19 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
               <span aria-label="Text size">{Math.round(text.size * 1000)}</span>
               <button type="button" aria-label="Bigger text" disabled={text.size >= 0.25} onClick={() => setText({ size: Math.min(0.3, +(text.size * 1.15).toFixed(4)) }, `size:${text.id}`)}>A+</button>
             </span>
+            <span className="font-size font-align" role="group" aria-label="Alignment">
+              {(['left', 'center', 'right'] as const).map((a) => (
+                <button key={a} type="button" aria-label={`Align ${a}`} aria-pressed={(text.align ?? (text.textStyle === 'narration' ? 'left' : 'center')) === a}
+                  onClick={() => setText({ align: a })}><AlignIcon align={a} /></button>
+              ))}
+            </span>
+            {/* Line spacing: steps of 0.1 × the font size; quick taps are one undo step. */}
+            <span className="font-size">
+              <button type="button" aria-label="Less line spacing" onClick={() => setText({ lineHeight: Math.max(0.6, +(lineHeightOf(text) - 0.1).toFixed(2)) }, `lh:${text.id}`)}>↕−</button>
+              <span aria-label="Line spacing">{lineHeightOf(text).toFixed(1)}</span>
+              <button type="button" aria-label="More line spacing" onClick={() => setText({ lineHeight: Math.min(3, +(lineHeightOf(text) + 0.1).toFixed(2)) }, `lh:${text.id}`)}>↕+</button>
+            </span>
+            <button type="button" className="outline-toggle" aria-pressed={!!text.outline} onClick={() => setText({ outline: !text.outline })}>Outline</button>
             {inks.map((c) => (
               <button key={c} type="button" className="ink" aria-label={`ink ${c}`} aria-pressed={text.color === c} style={{ background: c }} onClick={() => setText({ color: c })} />
             ))}
@@ -165,6 +185,7 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
           </button>
         )}
         {crop && selected?.type === 'frame' && selected.mediaId && <button type="button" onClick={crop}>Crop</button>}
+        {video && <button type="button" aria-expanded={picker === 'trim'} onClick={() => toggle('trim')}>✂ Trim</button>}
         {frame?.mediaId && <button type="button" onClick={() => commit(assignMedia(layout, frame.id, null))}>Remove photo</button>}
         {frame?.frameStyle === 'panel' && <MangaPanelTools panel={frame} layout={layout} commit={commit} editShape={editShape} />}
         {manga && text && <MangaTextTools text={text} layout={layout} commit={commit} />}
@@ -196,8 +217,21 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
           <button type="button" aria-label={`Fit page (zoom ${Math.round(zoom * 100)}%)`} title="Fit page" onClick={() => setZoom(1)}>{Math.round(zoom * 100)}%</button>
           <button type="button" aria-label="Zoom in" title="Zoom in (Ctrl + wheel)" disabled={zoom >= ZOOMS[ZOOMS.length - 1]} onClick={() => setZoom(stepZoom(zoom, 1))}>+</button>
         </span>
+        {setSnap && <button type="button" aria-pressed={!!snap} title="Snap to the page centre/edges and other items while dragging" onClick={() => setSnap(!snap)}>Snap</button>}
         <span className={`status status-${status}`} role="status">{statusLabel[status]}</span>
       </div>
     </div>
+  );
+}
+
+// Line spacing in effect when none is set: plain text is drawn tight (1.05), bubbles at the browser's normal.
+const lineHeightOf = (t: TextEl) => t.lineHeight ?? (t.textStyle && t.textStyle !== 'plain' ? 1.2 : 1.05);
+
+function AlignIcon({ align }: { align: 'left' | 'center' | 'right' }) {
+  const x = (w: number) => (align === 'left' ? 2 : align === 'right' ? 18 - w : 10 - w / 2);
+  return (
+    <svg viewBox="0 0 20 16" width="18" height="14" aria-hidden>
+      {[16, 10, 14, 8].map((w, i) => <rect key={i} x={x(w)} y={1 + i * 4} width={w} height="2" rx="1" fill="currentColor" />)}
+    </svg>
   );
 }

@@ -42,7 +42,7 @@ function content(el: FrameEl, m: MediaDTO | undefined, mode: 'view' | 'edit', ac
       srcAvif={v.displayAvif && mediaUrl(v.displayAvif)} objectPosition={objectPosition} scale={el.crop.scale} />;
   }
   if (m.status === 'ready' && m.kind === 'video' && v?.hls) {
-    if (mode === 'view') return <VideoPlayer media={m} active={active} crop={el.crop} autoPlay />;
+    if (mode === 'view') return <VideoPlayer media={m} active={active} crop={el.crop} trim={el.trim} autoPlay />;
     return <>{poster(m, objectPosition, el.crop.scale)}<span className="play-badge" aria-hidden>▶</span></>;
   }
   // Not ready: blur (and a video poster if the worker made one) — never the display image.

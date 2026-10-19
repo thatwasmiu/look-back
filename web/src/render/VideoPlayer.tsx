@@ -3,13 +3,14 @@ import type { Crop, MediaDTO } from '@scrapbook/shared';
 import { mediaUrl } from '../mediaUrl';
 import { BlurImage } from './BlurImage';
 
-type Props = { media: MediaDTO; active: boolean; crop?: Crop; autoPlay?: boolean };
+type Props = { media: MediaDTO; active: boolean; crop?: Crop; autoPlay?: boolean; trim?: { start: number; end: number } };
 
 // Poster until tapped; then HLS (native on Safari, hls.js elsewhere, loaded lazily).
 // autoPlay (album view): starts by itself while its page is shown — muted and looping, since browsers only allow
 // silent autoplay; the native controls unmute it. A tap on the poster still starts it with sound.
+// trim: play only start..end — it starts at `start`, and at `end` loops (autoplay) or stops back at `start`.
 // Any fatal playback error drops back to the poster with a "can't play video" chip.
-export function VideoPlayer({ media, active, crop = { x: 0.5, y: 0.5, scale: 1 }, autoPlay = false }: Props) {
+export function VideoPlayer({ media, active, crop = { x: 0.5, y: 0.5, scale: 1 }, autoPlay = false, trim }: Props) {
   const [started, setStarted] = useState(false);
   const [silent, setSilent] = useState(false); // started by autoplay
   const [failed, setFailed] = useState(false);
@@ -50,9 +51,28 @@ export function VideoPlayer({ media, active, crop = { x: 0.5, y: 0.5, scale: 1 }
     };
   }, [started, hlsKey]); // `silent` is set together with `started`, so it needs no dependency of its own
 
+  // Trim: jump to the start once the video can seek (and whenever the start moves, e.g. in the Trim panel),
+  // and keep playback inside the range.
+  const tStart = trim?.start, tEnd = trim?.end;
+  useEffect(() => {
+    const video = ref.current;
+    if (!started || !video || tStart === undefined || tEnd === undefined) return;
+    const toStart = () => { video.currentTime = tStart; };
+    const onTime = () => {
+      const past = video.currentTime >= tEnd;
+      if (!past && video.currentTime >= tStart - 0.5) return;
+      toStart();
+      if (past && !silent) video.pause(); // played with sound: stop at the end of the clip
+    };
+    if (video.readyState >= 1) toStart();
+    video.addEventListener('loadedmetadata', toStart);
+    video.addEventListener('timeupdate', onTime);
+    return () => { video.removeEventListener('loadedmetadata', toStart); video.removeEventListener('timeupdate', onTime); };
+  }, [started, tStart, tEnd, silent]);
+
   if (started) {
     // ponytail: pan (object-position) only while playing; zoom would scale native controls out of the frame.
-    return <video ref={ref} className="video" poster={poster} style={{ objectPosition }} playsInline controls loop={silent} onError={() => setFailed(true)} />;
+    return <video ref={ref} className="video" poster={poster} style={{ objectPosition }} playsInline controls loop={silent && !trim} onError={() => setFailed(true)} />;
   }
   const cover = poster
     ? <BlurImage blurDataUrl={media.blurDataUrl} src={poster} objectPosition={objectPosition} scale={crop.scale} />

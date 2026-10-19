@@ -84,3 +84,26 @@ test('autoPlay waits while the page is hidden, and stops when it is hidden again
   r.rerender(<VideoPlayer media={video} active={false} autoPlay />);
   expect(r.container.querySelector('video')).toBeNull();
 });
+
+test('trim: starts at the clip start; autoplay loops back at the end, a tapped play stops there', async () => {
+  const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause');
+  const r = render(<VideoPlayer media={video} active autoPlay trim={{ start: 2, end: 4 }} />);
+  const v = r.container.querySelector('video')!;
+  Object.defineProperty(v, 'readyState', { value: 1, configurable: true });
+  v.dispatchEvent(new Event('loadedmetadata'));
+  expect(v.currentTime).toBe(2);
+  expect(v.loop).toBe(false); // the clip loops itself, not the whole file
+  v.currentTime = 4.1;
+  v.dispatchEvent(new Event('timeupdate'));
+  expect(v.currentTime).toBe(2);
+  expect(pause).not.toHaveBeenCalled(); // muted autoplay keeps looping the clip
+  cleanup();
+
+  const r2 = render(<VideoPlayer media={video} active trim={{ start: 2, end: 4 }} />);
+  await userEvent.click(screen.getByRole('button', { name: 'Play video' }));
+  const v2 = r2.container.querySelector('video')!;
+  v2.currentTime = 4.2;
+  v2.dispatchEvent(new Event('timeupdate'));
+  expect(v2.currentTime).toBe(2);
+  expect(pause).toHaveBeenCalled();
+});

@@ -44,6 +44,8 @@ const frameSchema = z.object({
   border: z.enum(['none', 'thin', 'normal']).optional(),
   ink: z.boolean().optional(),
   tone: z.boolean().optional(),
+  // Video: play only this part (seconds). Non-destructive — the file itself is untouched.
+  trim: z.object({ start: z.number().min(0), end: z.number().positive() }).refine((t) => t.start < t.end, 'trim start must be before its end').optional(),
 })
 // Page effects play inside their own box; album background effects play behind the whole book.
 export const PAGE_EFFECTS = ['sparkles', 'hearts', 'petals', 'confetti', 'bokeh', 'light-leak', 'bubbles'] as const
@@ -72,6 +74,9 @@ const textSchema = z.object({
   // Manga: speech / shout / thought bubble, narration box, sound-effect lettering ('plain' = ordinary text).
   textStyle: z.enum(['plain', 'speech', 'shout', 'thought', 'narration', 'sfx']).optional(),
   tail: z.enum(['bl', 'br', 'tl', 'tr', 'none']).optional(), // bubble tail corner
+  align: z.enum(['left', 'center', 'right']).optional(),
+  lineHeight: z.number().min(0.6).max(3).optional(), // line spacing, × font size
+  outline: z.boolean().optional(), // contrasting stroke around the letters
 })
 
 export const pageElementSchema = z.discriminatedUnion('type', [frameSchema, tapeSchema, stickerSchema, textSchema, effectSchema])

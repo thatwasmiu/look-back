@@ -24,10 +24,10 @@ const bundle: AlbumBundle = {
   pages: Array.from({ length: 5 }, (_, i) => ({ id: `p${i}`, albumId: 'a1', position: i, layout: { background: 'paper-cream', elements: [] } })),
   media: [],
 };
-const setup = (fetchMock: ReturnType<typeof vi.fn>) => {
+const setup = (fetchMock: ReturnType<typeof vi.fn>, url = '/albums/a1') => {
   vi.stubGlobal('fetch', fetchMock);
   return render(
-    <MemoryRouter initialEntries={['/albums/a1']} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <MemoryRouter initialEntries={[url]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes><Route path="/albums/:id" element={<Viewer />} /></Routes>
     </MemoryRouter>,
   );
@@ -41,6 +41,7 @@ test('load error shows retry, retry loads the album', async () => {
   await userEvent.keyboard('{ArrowRight}'); // Edit opens the page being viewed
   expect(await screen.findByText('2 / 5')).toBeTruthy();
   expect(screen.getByRole('link', { name: 'Edit' }).getAttribute('href')).toBe('/albums/a1/edit?page=2');
+  expect(screen.getByRole('link', { name: 'PDF' }).getAttribute('href')).toBe('/albums/a1/print');
 });
 
 test('flip keeps the neighbour page mounted and only toggles it visible', async () => {
@@ -155,4 +156,9 @@ test('right-to-left spreads: the cover sits alone on the left, then the earlier 
   expect(screen.getByText('2–3 / 5')).toBeTruthy();
   expect(container.querySelector('[data-page="1"]')!.className).toContain('right');
   expect(container.querySelector('[data-page="2"]')!.className).toContain('left');
+});
+
+test('?page=3 (Done in the editor) opens the viewer on that page', async () => {
+  setup(vi.fn().mockResolvedValue(json(200, bundle)), '/albums/a1?page=3');
+  expect(await screen.findByText('3 / 5')).toBeTruthy();
 });

@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import type { MediaDTO, PageElement, PageLayout } from '@scrapbook/shared';
 import { FrameView } from './FrameView';
-import { Tape, fontFamily, stickers } from './decor';
+import { Tape, stickers } from './decor';
+import { textCss } from './textStyle';
 import { EffectView } from './effects';
 import './render.css';
 import { MangaText, isMangaText } from '../manga/render';
@@ -40,7 +41,7 @@ function element(el: PageElement, media: Map<string, MediaDTO>, mode: 'view' | '
     }
     case 'text':
       if (isMangaText(el)) return <MangaText el={el} />;
-      return <div className="text" style={{ fontFamily: fontFamily[el.font], color: el.color, fontSize: `calc(${el.size * 100} * var(--cqh))` }}>{el.text}</div>;
+      return <div className="text" style={textCss(el)}>{el.text}</div>;
     case 'effect': return <EffectView effect={el.effect} />;
   }
 }

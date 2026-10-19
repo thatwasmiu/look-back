@@ -2,7 +2,7 @@
 // textStyle). Everything is drawn with plain CSS shapes — generic manga conventions, nothing from a real manga.
 import type { CSSProperties, ReactNode } from 'react';
 import type { FrameEl, TextEl } from '@scrapbook/shared';
-import { fontFamily } from '../render/decor';
+import { textCss } from '../render/textStyle';
 import './manga.css';
 
 const pct = (v: number) => `${Math.round(v * 1000) / 10}%`;
@@ -25,7 +25,7 @@ export function PanelFrame({ el, children }: { el: FrameEl; children: ReactNode 
 export const isMangaText = (el: TextEl) => !!el.textStyle && el.textStyle !== 'plain';
 
 export function MangaText({ el }: { el: TextEl }) {
-  const style: CSSProperties = { fontFamily: fontFamily[el.font], color: el.color, fontSize: `calc(${el.size * 100} * var(--cqh))` };
+  const style: CSSProperties = textCss(el);
   const s = el.textStyle!;
   if (s === 'shout') {
     // Spiky burst: black burst behind a slightly smaller white one = an outline that follows the spikes.

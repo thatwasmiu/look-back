@@ -3,7 +3,7 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import type { AlbumBundle, PageElement } from '@scrapbook/shared';
+import type { AlbumBundle, MediaDTO, PageElement } from '@scrapbook/shared';
 import { EditorView, type EditorApi } from '../src/pages/Editor';
 
 afterEach(cleanup);
@@ -406,6 +406,23 @@ test('with text selected, Font opens one panel for typeface, size and color', as
   expect(fontSize()).toBe(before);
 });
 
+test('Font panel: align, line spacing and outline restyle the text', async () => {
+  const user = userEvent.setup();
+  const { container } = setup(okApi());
+  await user.click(screen.getByRole('button', { name: 'Text' }));
+  await user.click(screen.getByRole('button', { name: 'Font' }));
+  const style = () => container.querySelector<HTMLElement>('.edit-page .el-text .text')!.style;
+  await user.click(screen.getByRole('button', { name: 'Align right' }));
+  expect(style().textAlign).toBe('right');
+  expect(screen.getByRole('button', { name: 'Align right' }).getAttribute('aria-pressed')).toBe('true');
+  await user.click(screen.getByRole('button', { name: 'More line spacing' }));
+  expect(style().lineHeight).toBe('1.15');
+  expect(screen.getByLabelText('Line spacing').textContent).toBe('1.1');
+  await user.click(screen.getByRole('button', { name: 'Outline' }));
+  expect(style().getPropertyValue('-webkit-text-stroke') || style().webkitTextStroke).toContain('#');
+  expect(screen.getByRole('button', { name: 'Outline' }).getAttribute('aria-pressed')).toBe('true');
+});
+
 test('Background → Music shows the track by file name; Play previews it and keeps playing with the picker closed', async () => {
   const user = userEvent.setup();
   const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(function (this: HTMLMediaElement) {
@@ -580,4 +597,35 @@ test('manga: Shape, Ink and Tone sit together in one panel group', () => {
 test('?page=2 (Edit from the viewer) opens on that page', () => {
   render(<MemoryRouter initialEntries={['/albums/a1/edit?page=2']} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={bundle} api={okApi()} /></MemoryRouter>);
   expect(screen.getByRole('button', { name: 'Page 2' }).getAttribute('aria-current')).toBe('true');
+  expect(screen.getByRole('link', { name: '← Done' }).getAttribute('href')).toBe('/albums/a1?page=2'); // back to this page
+});
+
+test('Snap is on by default and the choice is remembered on this device', async () => {
+  const user = userEvent.setup();
+  localStorage.removeItem('lb.snap');
+  setup(okApi());
+  const snapBtn = () => screen.getByRole('button', { name: 'Snap' });
+  expect(snapBtn().getAttribute('aria-pressed')).toBe('true');
+  await user.click(snapBtn());
+  expect(snapBtn().getAttribute('aria-pressed')).toBe('false');
+  expect(localStorage.getItem('lb.snap')).toBe('off');
+  localStorage.removeItem('lb.snap');
+});
+
+test('✂ Trim on a frame with a video saves the clip range; Full video clears it', async () => {
+  const user = userEvent.setup();
+  const v: MediaDTO = { id: 'v1', albumId: 'a1', kind: 'video', status: 'ready', width: 640, height: 480, durationSec: 10, blurDataUrl: null, error: null,
+    variants: { poster: 'v1/poster.webp', hls: 'v1/hls/master.m3u8', original: 'v1/original.mp4' } };
+  const b: AlbumBundle = { ...bundle, media: [v], pages: [{ ...bundle.pages[0], layout: { background: 'paper-cream', elements: [
+    { type: 'frame', id: 'f1', x: 0.1, y: 0.1, w: 0.5, h: 0.4, rotation: 0, z: 1, frameStyle: 'polaroid', mediaId: 'v1', crop: { x: 0.5, y: 0.5, scale: 1 } },
+  ] } }, bundle.pages[1]] };
+  const { container } = render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={b} api={okApi()} /></MemoryRouter>);
+  fireEvent.pointerDown(container.querySelector('[data-el="f1"]')!);
+  await user.click(screen.getByRole('button', { name: '✂ Trim' }));
+  fireEvent.change(screen.getByLabelText('Trim start'), { target: { value: '3' } });
+  fireEvent.change(screen.getByLabelText('Trim end'), { target: { value: '7.5' } });
+  expect(screen.getByText(/Start 0:03.0/)).toBeTruthy();
+  expect(screen.getByText(/End 0:07.5/)).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: 'Full video' }));
+  expect(screen.getByText(/End 0:10.0/)).toBeTruthy();
 });
