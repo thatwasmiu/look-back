@@ -21,3 +21,12 @@ it('done reports bytes equal to the stream length and no missing files', async (
 it('backup file name uses the UTC date', () => {
   expect(backupFileName(new Date('2026-10-19T10:00:00Z'))).toBe('lookback-backup-2026-10-19.tar');
 });
+
+it('a reader that starts late still gets every byte (the stream waits for its reader)', async () => {
+  const { stream, done } = buildBackup(t.pool, t.config);
+  await new Promise((r) => setTimeout(r, 300)); // e.g. an upload session being opened first
+  let n = 0;
+  for await (const c of stream) n += (c as Buffer).length;
+  expect(n).toBe((await done).bytes);
+  expect(n).toBeGreaterThan(1024);
+});

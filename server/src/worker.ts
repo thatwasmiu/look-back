@@ -1,7 +1,8 @@
 import { loadConfig } from './config.js';
 import { createPool, waitForDb } from './db.js';
-import { createQueue, JOB_MOVE_MEDIA, JOB_PROCESS_MEDIA, type MoveMediaJob, type ProcessMediaJob } from './queue.js';
+import { createQueue, JOB_DRIVE_BACKUP, JOB_MOVE_MEDIA, JOB_PROCESS_MEDIA, type MoveMediaJob, type ProcessMediaJob } from './queue.js';
 import { moveMedia } from './moveMedia.js';
+import { runDriveBackup } from './driveBackup.js';
 import { runProcessMedia } from './processing/run.js';
 import { cleanupAbandonedUploads } from './uploads.js';
 import { runPendingDeletes } from './mediaFiles.js';
@@ -16,6 +17,10 @@ await boss.work<ProcessMediaJob>(JOB_PROCESS_MEDIA, { batchSize: 1 }, async ([jo
 });
 await boss.work<MoveMediaJob>(JOB_MOVE_MEDIA, { batchSize: 1 }, async ([job]) => {
   await moveMedia(pool, config, job.data);
+});
+// Google Drive backup (cron schedule from /manage, or "Backup ngay").
+await boss.work(JOB_DRIVE_BACKUP, { batchSize: 1 }, async () => {
+  await runDriveBackup(pool, config);
 });
 
 const cleanup = () => cleanupAbandonedUploads(pool, config.uploadDir).catch((e) => console.error('upload cleanup', e));

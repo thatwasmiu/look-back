@@ -1,6 +1,6 @@
 import { createReadStream } from 'node:fs';
 import { readdir } from 'node:fs/promises';
-import { PassThrough, Readable } from 'node:stream';
+import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type pg from 'pg';
 import tar from 'tar-stream';
@@ -22,10 +22,10 @@ export const backupFileName = (d = new Date()) => `lookback-backup-${d.toISOStri
 
 export function buildBackup(pool: pg.Pool, config: Config): { stream: Readable; done: Promise<{ bytes: number; missing: string[] }> } {
   const pack = tar.pack();
-  const out = new PassThrough();
   let bytes = 0;
   const missing: string[] = [];
-  out.on('data', (c: Buffer) => { bytes += c.length; });
+  // Counts what passes through without taking the stream out of paused mode (a 'data' listener would).
+  const out = new Transform({ transform(c: Buffer, _e, cb) { bytes += c.length; cb(null, c); } });
   const done = new Promise<{ bytes: number; missing: string[] }>((resolve, reject) => {
     out.on('end', () => resolve({ bytes, missing }));
     out.on('error', reject);
