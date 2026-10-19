@@ -25,7 +25,8 @@ async function req<T>(method: string, path: string, body?: unknown, quiet = fals
 
 export const api = {
   login: (password: string) => req<void>('POST', '/auth/login', { password }, true),
-  logout: () => req<void>('POST', '/auth/logout'),
+  // Also drops the offline copies of albums and photos (public/sw.js).
+  logout: () => req<void>('POST', '/auth/logout').then(() => { navigator.serviceWorker?.controller?.postMessage('clear'); }),
   // false only on 401; network/5xx errors propagate so callers can tell "logged out" from "server down".
   check: () =>
     req<void>('GET', '/auth/check', undefined, true).then(

@@ -25,6 +25,10 @@ location = /manifest.webmanifest {
   default_type application/manifest+json;
   add_header Cache-Control "no-cache" always;
 }
+# Service worker: browsers check it for updates; never let a cache hold an old one.
+location = /sw.js {
+  add_header Cache-Control "no-cache" always;
+}
 location /assets/ {
   try_files $uri =404;
   add_header Cache-Control $assets_cc always;

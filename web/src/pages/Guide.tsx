@@ -67,6 +67,7 @@ const sections: Section[] = [
   {
     id: 'phone', title: '8. Trên điện thoại', features: [
       { h: 'Thanh công cụ dưới đáy', img: 'phone', p: ['Công cụ nằm ở đáy màn hình cho dễ bấm; các bảng chọn mở lên phía trên.', '**Hide tools** ẩn bớt Photos, Pages và công cụ để nhìn trang rộng hơn; **Show tools** để hiện lại.'] },
+      { h: 'Xem khi không có mạng', p: ['Album và trang nào đã mở khi có mạng thì lúc mất mạng vẫn mở lại xem được (cả danh sách album), trong trình duyệt lẫn app đã cài.', 'Khi offline chỉ xem được: không tải ảnh lên, không lưu chỉnh sửa. Video và nhạc nền cần có mạng.'] },
     ],
   },
   {
