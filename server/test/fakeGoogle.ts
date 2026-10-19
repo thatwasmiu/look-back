@@ -11,6 +11,10 @@ export async function startFakeGoogle() {
   const revoked = new Set<string>();
   let failNext: string | null = null;
   let puts = 0;
+  let failDeletes = 0; // next N deletes answer 500
+  let expireOnFinish = false; // access tokens stop working once an upload completes (like a 1 h expiry)
+  const expired = new Set<string>();
+  let tokenN = 0;
 
   const body = (req: IncomingMessage) => new Promise<Buffer>((ok) => {
     const parts: Buffer[] = [];
@@ -29,7 +33,7 @@ export async function startFakeGoogle() {
       if (f.get('grant_type') === 'authorization_code') return json(res, 200, { access_token: 'at', refresh_token: `rt-${f.get('code')}`, expires_in: 3600 });
       const rt = f.get('refresh_token')!;
       if (revoked.has(rt)) return json(res, 400, { error: 'invalid_grant', error_description: 'Token has been expired or revoked.' });
-      return json(res, 200, { access_token: `at-${rt}`, expires_in: 3600 });
+      return json(res, 200, { access_token: `at-${rt}-${++tokenN}`, expires_in: 3600 });
     }
     if (p === '/revoke') { revoked.add(url.searchParams.get('token') ?? ''); return json(res, 200, {}); }
     if (p === '/oauth2/v3/userinfo') return json(res, 200, { email: 'owner@example.com' });
@@ -53,7 +57,8 @@ export async function startFakeGoogle() {
       if (m[3] === '*') { res.writeHead(308, { range: `bytes=0-${m[2]}` }).end(); return; }
       const id = randomUUID();
       files.set(id, { name: s.name, parents: s.parents, data: Buffer.concat(s.chunks), trashed: false, mimeType: 'application/x-tar' });
-      return json(res, 200, { id, name: s.name });
+      if (expireOnFinish) for (let n = 1; n <= tokenN; n++) expired.add(String(n));
+      return json(res, 200, { id, name: s.name, size: String(files.get(id)!.data.length) });
     }
     if (p === '/drive/v3/files' && req.method === 'POST') {
       const meta = JSON.parse(raw.toString());
@@ -70,11 +75,16 @@ export async function startFakeGoogle() {
         && (!folder || f.mimeType === 'application/vnd.google-apps.folder'));
       return json(res, 200, { files: list.map(([id, f]) => ({ id, name: f.name })) });
     }
+    const auth = String(req.headers.authorization ?? '');
+    if (p.startsWith('/drive/') && expired.has(auth.split('-').pop()!)) return json(res, 401, { error: { code: 401, message: 'Invalid Credentials', errors: [{ reason: 'authError' }] } });
     const fm = /^\/drive\/v3\/files\/([^/]+)$/.exec(p);
     if (fm) {
       const f = files.get(fm[1]);
       if (!f) return json(res, 404, { error: { code: 404, message: 'File not found', errors: [{ reason: 'notFound' }] } });
-      if (req.method === 'DELETE') { files.delete(fm[1]); res.writeHead(204).end(); return; }
+      if (req.method === 'DELETE') {
+        if (failDeletes > 0) { failDeletes--; return json(res, 500, { error: { code: 500, message: 'backendError', errors: [{ reason: 'backendError' }] } }); }
+        files.delete(fm[1]); res.writeHead(204).end(); return;
+      }
       return json(res, 200, { id: fm[1], name: f.name, size: String(f.data.length), trashed: f.trashed });
     }
     json(res, 404, { error: { message: `fake: no route ${req.method} ${p}` } });
@@ -86,6 +96,8 @@ export async function startFakeGoogle() {
     revokeToken: (t: string) => { revoked.add(t); },
     failNextChunkWith: (reason: string) => { failNext = reason; },
     puts: () => puts,
+    failNextDeletes: (n: number) => { failDeletes = n; },
+    expireTokensWhenUploadFinishes: (on: boolean) => { expireOnFinish = on; },
     close: () => new Promise<void>((ok) => server.close(() => ok())),
   };
 }

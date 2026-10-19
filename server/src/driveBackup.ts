@@ -36,18 +36,35 @@ export async function runDriveBackup(pool: pg.Pool, config: Config): Promise<voi
     let saved = 0;
     const up = await uploadFile(config, tok, folder, backupFileName(), backup.stream, (b) => {
       sent = b;
-      if (Date.now() - saved > 5000) { saved = Date.now(); void pool.query('update drive_backup set bytes_sent = $1 where id = 1', [b]); }
+      if (Date.now() - saved > 5000) { saved = Date.now(); pool.query('update drive_backup set bytes_sent = $1 where id = 1', [b]).catch(() => {}); }
     });
     newId = up.id;
     const { bytes, missing } = await backup.done;
     if (up.size !== bytes) throw new Error('Bản backup trên Drive không khớp kích thước.');
+    newId = null; // verified: from here on nothing may delete it
 
-    const others = (await listFolder(config, tok, folder)).filter((f) => f.id !== up.id && BACKUP_FILE.test(f.name));
+    // Cleanup of older backups. Best effort: a failure leaves an extra file for the next run to remove, never fails the
+    // run (and never touches the new backup). A long upload may have outlived the access token (1 h): get a new one.
+    let cleanupFailed = false;
+    const clean = async (keep: (f: { id: string }) => boolean) => {
+      try {
+        const fresh = await accessToken(config, decryptSecret(r.refresh_enc, config.sessionSecret));
+        for (const f of (await listFolder(config, fresh, folder)).filter((x) => x.id !== up.id && BACKUP_FILE.test(x.name) && !keep(x))) {
+          await deleteFile(config, fresh, f.id);
+        }
+      } catch {
+        cleanupFailed = true;
+      }
+    };
     if (!missing.length) {
-      for (const f of others) await deleteFile(config, tok, f.id);
-      await finish('ok', null, ', bytes_sent = $3, last_bytes = $3, last_file_id = $4, complete_file_id = $4', [bytes, up.id]);
+      await clean(() => false);
+      await finish('ok', cleanupFailed ? 'Chưa xoá được bản cũ — sẽ thử lại ở lần backup sau.' : null,
+        ', bytes_sent = $3, last_bytes = $3, last_file_id = $4, complete_file_id = $4', [bytes, up.id]);
     } else {
-      for (const f of others) if (f.id !== r.complete_file_id) await deleteFile(config, tok, f.id);
+      // Only the previous INCOMPLETE upload is replaced; anything else (the last complete backup, even if this row no
+      // longer knows its id after a reconnect) stays.
+      const previousIncomplete = r.status === 'incomplete' && r.last_file_id !== r.complete_file_id ? r.last_file_id : null;
+      await clean((f) => f.id !== previousIncomplete);
       await finish('incomplete', `Thiếu ${missing.length} file (nơi lưu đang lỗi) — vẫn giữ bản đầy đủ trước đó.`,
         ', bytes_sent = $3, last_bytes = $3, last_file_id = $4', [bytes, up.id]);
     }

@@ -122,3 +122,49 @@ describe('Google Drive backup job', () => {
     expect((await row()).status).toBe('ok');
   });
 });
+
+describe('review fixes', () => {
+  it('a failed cleanup never deletes the new verified backup', async () => {
+    await run();
+    g.failNextDeletes(5);
+    await run();
+    const r = await row();
+    expect(r.status).toBe('ok');
+    expect(backups().map(([id]) => id)).toContain(r.complete_file_id);
+    g.failNextDeletes(0);
+    await run(); // cleanup works again: back to one file
+    expect(backups()).toHaveLength(1);
+  });
+
+  it('an access token that expires during a long upload is renewed for the steps after it', async () => {
+    await run();
+    g.expireTokensWhenUploadFinishes(true);
+    try {
+      await run();
+      const r = await row();
+      expect(r.status).toBe('ok');
+      expect(backups()).toHaveLength(1);
+      expect(backups()[0][0]).toBe(r.complete_file_id);
+    } finally {
+      g.expireTokensWhenUploadFinishes(false);
+    }
+  });
+
+  it.skipIf(!s3Available)('after a reconnect, an incomplete run still keeps the complete backup', async () => {
+    await run();
+    const complete = (await row()).complete_file_id;
+    // Disconnect + reconnect: the settings row starts over (complete_file_id unknown); the folder is found by name.
+    const folder = (await row()).folder_id;
+    await t.pool.query('delete from drive_backup');
+    await t.pool.query(`insert into drive_backup (id, account_email, refresh_enc, folder_id) values (1, 'owner@example.com', $1, $2)`,
+      [encryptSecret('rt-good', t.config.sessionSecret), folder]);
+    const loc = (await t.pool.query(`insert into storage_locations (name, kind, endpoint, region, bucket, access_key_id, secret_enc)
+      values ('Gone', 's3', $1, 'us-east-1', 'no-such-bucket-here', $2, $3) returning id`,
+    [process.env.S3_TEST_ENDPOINT, process.env.S3_TEST_KEY, encryptSecret(process.env.S3_TEST_SECRET!, t.config.sessionSecret)])).rows[0].id;
+    const a = (await t.pool.query('select id from albums limit 1')).rows[0].id;
+    await t.pool.query(`insert into media (album_id, kind, status, storage_id) values ($1, 'image', 'ready', $2)`, [a, loc]);
+    await run();
+    expect((await row()).status).toBe('incomplete');
+    expect(backups().map(([id]) => id)).toContain(complete);
+  });
+});

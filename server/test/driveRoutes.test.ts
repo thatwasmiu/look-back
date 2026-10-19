@@ -57,6 +57,7 @@ describe('Google Drive backup routes', () => {
   });
 
   it('run now is refused while running', async () => {
+    await t.pool.query(`delete from pgboss.job where name = 'drive-backup'`); // no worker in tests: start from an empty queue
     await t.pool.query(`update drive_backup set status = 'running', started_at = now()`);
     const jobs = async () => Number((await t.pool.query(`select count(*) from pgboss.job where name = 'drive-backup'`)).rows[0].count);
     const before = await jobs();
@@ -66,6 +67,8 @@ describe('Google Drive backup routes', () => {
     expect(await jobs()).toBe(before);
     await t.pool.query(`update drive_backup set status = 'ok'`);
     expect((await owner('POST', '/api/manage/drive/run')).json()).toEqual({ queued: true });
+    expect(await jobs()).toBe(before + 1);
+    await owner('POST', '/api/manage/drive/run'); // a second click before the worker starts: still one job
     expect(await jobs()).toBe(before + 1);
   });
 

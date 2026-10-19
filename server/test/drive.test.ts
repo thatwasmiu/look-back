@@ -1,5 +1,5 @@
 import { Readable } from 'node:stream';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 import type { Config } from '../src/config.js';
 import { accessToken, authUrl, deleteFile, DriveError, ensureFolder, exchangeCode, listFolder, uploadFile } from '../src/drive.js';
 import { startFakeGoogle } from './fakeGoogle.js';
@@ -59,5 +59,19 @@ describe('Google Drive client', () => {
     const e = await accessToken(config, 'rt-dead').catch((x) => x);
     expect(e).toBeInstanceOf(DriveError);
     expect(e.reason).toBe('invalid_grant');
+  });
+
+  it('chunks are assembled without re-copying the whole buffer for every small piece', async () => {
+    const token = await accessToken(config, 'rt-3');
+    const folder = await ensureFolder(config, token, null);
+    const pieces = Array.from({ length: 40 * 1024 }, () => Buffer.alloc(1024, 7)); // 40 MiB in 1 KiB pieces
+    const concat = vi.spyOn(Buffer, 'concat');
+    try {
+      const r = await uploadFile(config, token, folder, 'x.tar', Readable.from(pieces));
+      expect(r.size).toBe(40 * 1024 * 1024);
+      expect(concat.mock.calls.length).toBeLessThan(20);
+    } finally {
+      concat.mockRestore();
+    }
   });
 });

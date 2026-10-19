@@ -73,7 +73,7 @@ export async function listFolder(config: Config, tok: string, folderId: string):
 // Resumable upload of a stream of unknown length: 32 MiB chunks with "bytes a-b/*", the last one with the total.
 export async function uploadFile(config: Config, tok: string, folderId: string, name: string, body: Readable,
   onProgress?: (bytes: number) => void): Promise<{ id: string; size: number }> {
-  const start = await check(await fetch(`${config.googleApiBase}/upload/drive/v3/files?uploadType=resumable`, {
+  const start = await check(await fetch(`${config.googleApiBase}/upload/drive/v3/files?uploadType=resumable&fields=id,size`, {
     method: 'POST', headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json; charset=UTF-8' },
     body: JSON.stringify({ name, parents: [folderId] }),
   }), 'bắt đầu tải lên');
@@ -87,18 +87,23 @@ export async function uploadFile(config: Config, tok: string, folderId: string, 
     onProgress?.(sent);
     return res;
   };
-  let buf = Buffer.alloc(0);
+  // Pieces are collected and joined once per chunk (joining on every small piece would copy the chunk thousands of times).
+  let parts: Buffer[] = [];
+  let held = 0;
   for await (const c of body) {
-    buf = Buffer.concat([buf, c as Buffer]);
-    while (buf.length > CHUNK) { // strictly more: the final chunk always carries the total
-      await put(buf.subarray(0, CHUNK), null);
-      buf = buf.subarray(CHUNK);
+    parts.push(c as Buffer);
+    held += (c as Buffer).length;
+    while (held > CHUNK) { // strictly more: the final chunk always carries the total
+      const all = Buffer.concat(parts, held);
+      await put(all.subarray(0, CHUNK), null);
+      parts = [all.subarray(CHUNK)];
+      held -= CHUNK;
     }
   }
-  const last = await put(buf, sent + buf.length);
-  const { id } = await last.json() as { id: string };
-  const meta = await (await check(await api(config, tok, `files/${id}?fields=size`), 'kiểm tra file')).json() as { size?: string };
-  return { id, size: Number(meta.size ?? 0) };
+  const last = await put(Buffer.concat(parts, held), sent + held);
+  // The final response is the file itself (fields=id,size), so no second request with a possibly expired token.
+  const meta = await last.json() as { id: string; size?: string };
+  return { id: meta.id, size: Number(meta.size ?? 0) };
 }
 
 export async function deleteFile(config: Config, tok: string, id: string): Promise<void> {

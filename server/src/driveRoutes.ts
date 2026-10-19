@@ -82,7 +82,8 @@ export function registerDriveRoutes(app: FastifyInstance, pool: pg.Pool, config:
   app.post('/api/manage/drive/run', async (_req, reply) => {
     const r = await row();
     if (!r?.refresh_enc) return reply.code(400).send({ error: 'Chưa kết nối Google Drive.' });
-    if (r.status === 'running' && Date.now() - new Date(r.started_at).getTime() < STALE_MS) return reply.code(409).send({ error: 'Đang backup…' });
+    const queued = (await pool.query(`select 1 from pgboss.job where name = $1 and state in ('created', 'retry', 'active') limit 1`, [JOB_DRIVE_BACKUP])).rowCount;
+    if (queued || (r.status === 'running' && Date.now() - new Date(r.started_at).getTime() < STALE_MS)) return reply.code(409).send({ error: 'Đang backup…' });
     await boss.send(JOB_DRIVE_BACKUP, {});
     return { queued: true };
   });
