@@ -4,8 +4,10 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
+import { bucketClient } from '../src/objectStore.js';
 import { restoreBackup } from '../src/restore.js';
 import { testApp } from './helpers.js';
+import { s3Available, testBucket } from './s3.js';
 
 const t = await testApp();
 await t.login(); // password hashing is slow on purpose: once, outside the tests' time limit
@@ -80,5 +82,55 @@ describe('manage (hidden owner page)', () => {
     expect(back.pages[0].layout.elements[0].mediaId).toBe(ids[0]);
     expect(existsSync(join(t.config.mediaDir, ids[0], 'display.webp'))).toBe(true);
     expect((await owner('GET', '/api/manage')).json().mediaBytes).toBe(150);
+  });
+});
+
+describe.skipIf(!s3Available)('backup with bucket files', () => {
+  async function bucketMedia(name: string) {
+    const b = await testBucket(name);
+    const loc = (await owner('POST', '/api/manage/locations', { name, ...b })).json().id as string;
+    const a = (await owner('POST', '/api/albums', { title: `bk ${name}` })).json().id as string;
+    const id = (await t.pool.query(`insert into media (album_id, kind, status, storage_id, bytes) values ($1, 'image', 'ready', $2, 5) returning id`, [a, loc])).rows[0].id as string;
+    await bucketClient(b).put(`${id}/display.webp`, Buffer.from('cloud'), 5);
+    return { b, loc, id };
+  }
+  async function backupTar() {
+    const res = await owner('GET', '/api/manage/backup');
+    expect(res.statusCode).toBe(200);
+    const dir = mkdtempSync(join(tmpdir(), 'bk-'));
+    const file = join(dir, 'b.tar');
+    await writeFile(file, res.rawPayload);
+    return { dir, file, raw: res.rawPayload, listing: execFileSync('tar', ['-t', '-f', file]).toString() };
+  }
+
+  it('backup contains bucket files and no secrets', async () => {
+    const m = await bucketMedia('bk-a');
+    const { dir, file, raw, listing } = await backupTar();
+    expect(listing).toContain(`media/${m.id}/display.webp`);
+    expect(listing).not.toContain('MISSING.txt');
+    expect(raw.includes(Buffer.from(m.b.secretAccessKey))).toBe(false);
+    execFileSync('tar', ['-x', '-f', file, '-C', dir, 'db.json']);
+    const db = JSON.parse(readFileSync(join(dir, 'db.json'), 'utf8'));
+    expect(db.tables.storage_locations.find((l: { id: string }) => l.id === m.loc).secret_enc).toBeNull();
+  });
+
+  it('unreadable bucket → MISSING.txt, backup still completes', async () => {
+    const m = await bucketMedia('bk-b');
+    await t.pool.query(`update storage_locations set bucket = 'no-such-bucket-here' where id = $1`, [m.loc]);
+    const { dir, file, listing } = await backupTar();
+    expect(listing).toContain('MISSING.txt');
+    execFileSync('tar', ['-x', '-f', file, '-C', dir, 'MISSING.txt']);
+    expect(readFileSync(join(dir, 'MISSING.txt'), 'utf8')).toContain(m.id);
+  });
+
+  it('restore puts everything on the VPS and asks for the keys again', async () => {
+    await t.pool.query('truncate albums, pages, media, pending_deletes, storage_locations cascade');
+    const m = await bucketMedia('bk-c');
+    const { file } = await backupTar();
+    await restoreBackup(t.pool, t.config.mediaDir, file);
+    expect((await t.pool.query('select storage_id from media where id = $1', [m.id])).rows[0].storage_id).toBeNull();
+    expect(readFileSync(join(t.config.mediaDir, m.id, 'display.webp'), 'utf8')).toBe('cloud');
+    expect((await t.pool.query('select check_status, secret_enc from storage_locations where id = $1', [m.loc])).rows[0])
+      .toEqual({ check_status: 'needs-keys', secret_enc: null });
   });
 });

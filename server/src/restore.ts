@@ -19,9 +19,12 @@ export async function restoreBackup(pool: pg.Pool, mediaDir: string, tarFile: st
     const c = await pool.connect();
     try {
       await c.query('begin');
-      await c.query('truncate albums, pages, media cascade');
+      await c.query('truncate albums, pages, media, pending_deletes, storage_locations cascade');
       for (const t of BACKUP_TABLES) {
         for (const row of dump.tables[t] ?? []) {
+          // Every file comes back onto the VPS; bucket keys were never in the backup.
+          if (t === 'media') Object.assign(row, { storage_id: null, moving_to: null, move_error: null });
+          if (t === 'storage_locations') Object.assign(row, { secret_enc: null, check_status: 'needs-keys', check_message: null });
           const cols = Object.keys(row);
           // jsonb columns (layout, variants) arrive as objects: pass them as JSON text.
           const vals = cols.map((k) => (row[k] !== null && typeof row[k] === 'object' && !(row[k] instanceof Date) ? JSON.stringify(row[k]) : row[k]));
