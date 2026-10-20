@@ -240,10 +240,15 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .album-fx-option[aria-pressed='true'] { outline: 3px solid var(--accent); }
 .edit-stage { flex: 1; min-height: 0; container-type: size; display: grid; place-items: safe center; overflow: auto; isolation: isolate; /* Moveable's z-index stays under the tools */ }
 .edit-page { position: relative; width: calc(min(100cqw - 24px, (100cqh - 24px) * .75) * var(--zoom, 1)); touch-action: none; }
-.edit-page.editing .el-text > .text:not(.text-editing) { visibility: hidden; }
-/* Manga bubbles / narration / sound effects: hide the drawn words while their text is being typed. */
-.edit-page.editing .el-text .manga-text { visibility: hidden; }
+.el-text:has(.text-editing) > .text:not(.text-editing) { visibility: hidden; }
+/* Manga bubbles / narration / sound effects: the bubble or box stays; only its own drawn words hide while typing,
+   and the typed text sits where they were (centred, same padding). */
+.el-text:has(.text-editing) .manga-words { visibility: hidden; }
 .el-text .text-editing { position: absolute; inset: 0; outline: 1px dashed #4a3b2c88; cursor: text; user-select: text; -webkit-user-select: text; }
+.el-text .text-editing.manga-edit { z-index: 2; display: grid; place-items: center; text-align: center; padding: 0 8%; line-height: 1.1;
+  white-space: pre-wrap; overflow-wrap: anywhere; outline: none; }
+.el-text .text-editing.manga-edit-narration { place-items: center start; text-align: left; padding: 0 6%; }
+.text-editing::selection, .text-editing ::selection { background: #f7d26a99; color: inherit; }
 .page-edit .el { cursor: grab; }
 .editor-moveable { --moveable-color: #b5543a; }
 

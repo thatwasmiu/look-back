@@ -511,14 +511,17 @@ test('manga: Background → Right → left saves the reading direction', async (
 const mangaText = (id: string, textStyle: 'speech' | 'sfx', color: string): PageElement =>
   ({ type: 'text', id, x: 0.2, y: 0.5, w: 0.36, h: 0.2, rotation: 0, z: 3, text: 'BÙM!', font: textStyle === 'sfx' ? 'bangers' : 'patrick-hand', color, size: 0.06, textStyle, tail: 'bl' });
 
-test('manga: editing a bubble hides its drawn words, and sound-effect text is readable while typing', () => {
+test('manga: editing a bubble keeps its bubble/box, hides only its own drawn words; sound-effect text is readable while typing', () => {
   const { container } = renderEditor(mangaBundle([mangaText('s1', 'sfx', '#ffffff')]));
   fireEvent.doubleClick(container.querySelector('[data-el="s1"]')!);
   const editor = container.querySelector<HTMLElement>('[data-el="s1"] .text-editing')!;
   expect(editor).not.toBeNull();
   expect(editor.style.color).toBe('rgb(17, 17, 17)'); // white SFX would be invisible on white paper while typing
   expect(container.querySelector('.edit-page')!.classList.contains('editing')).toBe(true);
-  expect(readFileSync('src/styles.css', 'utf8')).toContain('.edit-page.editing .el-text .manga-text');
+  expect(editor.classList.contains('manga-edit')).toBe(true); // laid out like the drawn words (centred, padded)
+  const css = readFileSync('src/styles.css', 'utf8');
+  expect(css).toContain('.el-text:has(.text-editing) .manga-words { visibility: hidden; }');
+  expect(css).not.toContain('.edit-page.editing .el-text .manga-text'); // the bubble shape stays visible
 });
 
 test('manga: a selected speech bubble can point its tail at any corner', async () => {

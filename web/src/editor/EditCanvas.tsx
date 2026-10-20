@@ -233,7 +233,7 @@ function fitBubble(el: TextEl, text: string, words: Element | null | undefined):
 // Inline editor laid over the text element (the rendered text is hidden under it via .editing CSS).
 function TextEditor({ el, onDone }: { el: TextEl; onDone(text: string): void }) {
   return (
-    <div className="text text-editing" contentEditable suppressContentEditableWarning spellCheck={false}
+    <div className={`text text-editing${el.textStyle && el.textStyle !== 'plain' ? ` manga-edit manga-edit-${el.textStyle}` : ''}`} contentEditable suppressContentEditableWarning spellCheck={false}
       ref={(n) => { if (n && document.activeElement !== n) { n.focus(); document.getSelection()?.selectAllChildren(n); } }}
       // White sound-effect lettering has an outline when drawn; while typing it would be invisible on white paper.
       style={{ ...textCss(el, el.textStyle === 'sfx' ? '#111111' : el.color), ...(el.textStyle === 'sfx' && { WebkitTextStroke: 'initial' }) }}
