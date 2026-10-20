@@ -107,6 +107,15 @@ Owner creates a share token (32 random bytes). `/s/<token>` loads the album read
 access to that album's media only. Crawlers hitting `/s/<token>` get an Open Graph HTML page with a 1200×630 cover
 image generated on the fly. Revoking clears the token.
 
+Crawlers are recognised by user agent in nginx. In-app browsers can carry the same name (Zalo's says "Zalo"), so a
+phone browser (iPhone/iPad/Android) is never treated as a crawler, and the preview page itself forwards to
+`/s/<token>?app`, which always gets the app — a person taken for a crawler can never get stuck on the preview.
+
+### Hidden pages
+
+A page can be marked hidden in the editor. It stays there (faded, labelled "Ẩn") but is left out of the viewer,
+share links (server-side, together with photos/videos only those pages show) and print/PDF. Nothing is deleted.
+
 ### Storage management (`/manage`)
 
 The owner adds buckets (keys encrypted at rest), sees disk/bucket usage, finds unused or failed files, deletes in bulk,

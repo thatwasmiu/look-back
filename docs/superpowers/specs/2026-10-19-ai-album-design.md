@@ -72,12 +72,18 @@ Each text slot declares its `textStyle` and a max length so the AI knows what go
 - The prompt sent to Gemini lists, for the chosen mode, every template: id, a one-line description of what the page
   is good for, panel/frame count, and its slots (style + max length). Plus sticker ids with a short word each.
 - Model name: a setting in /manage next to the key, default the current free Flash model; builder checks the current
-  name at implementation time.
+  name at implementation time. *Built:* `gemini-3.8-flash` (`gemini-2.5-flash` is closed to new users); a real run
+  with the owner's key made a 5-page manga in ~20 s.
+- *Built:* keys may be the classic `AIza…` or the newer AI Studio `AQ.…` form (contains a dot); both are accepted.
 - Errors map to Vietnamese messages: no key, invalid key (401/403), free quota exhausted (429: "Hết lượt miễn phí,
   thử lại sau"), timeout, unusable answer.
 - Album title: the user's title field if filled, otherwise the AI's `title`.
 - The response creates the album server-side (same code as `design` creation, refactored into a shared function)
-  and returns the album, so the web just navigates to it.
+  and returns the album, so the web just navigates to it. *Built:* instead of a refactor, the route hands the design
+  to `POST /api/albums` in-process (`app.inject` with the owner's cookie) — one create path.
+- *Built after review:* Gemini timeout 45 s with nginx `/api/ai/` at 90 s (no 504 for an album that is then created),
+  text cut by characters (an emoji is never split), unknown model → its own message, the New album dialog can't be
+  closed while generating.
 
 ### Storage
 

@@ -84,7 +84,8 @@ in `gemini.ts`). Not in backups.
 ### 2.2 Page layout (`shared/src/layout.ts`)
 
 ```ts
-PageLayout = { background: 'paper-cream' | 'paper-kraft' | 'paper-grid' | 'paper-dots' | 'paper-white'; elements: PageElement[] }  // ≤ 200 elements, unique ids
+PageLayout = { background: 'paper-cream' | 'paper-kraft' | 'paper-grid' | 'paper-dots' | 'paper-white'; elements: PageElement[];  // ≤ 200 elements, unique ids
+               hidden?: true }  // editor only: left out of the viewer, share links and print
 // Every element: id, x, y, w, h (fractions of the page, 0..1), rotation (deg), z, pinned?
 PageElement =
   | Frame   { type: 'frame', frameStyle (polaroid, torn, circle, heart, …, 'panel'), mediaId | null,
@@ -131,8 +132,8 @@ Owner session required for every `/api` route except the public ones marked ●.
 | GET/DELETE /api/media/:id | media | poll processing status · delete (frames emptied, cover/music cleared) |
 | ALL /api/uploads[/*] | uploads | tus server (resumable, 50 MiB chunks, metadata `albumId`, `filename`, `filetype`) |
 | POST/DELETE /api/albums/:id/share | share | create (idempotent) / revoke share token |
-| ● GET /api/share/:token | share | album bundle for viewers; sets `lb_share` cookie (30 days) |
-| ● GET /api/share/:token/preview[.jpg] | share | Open Graph HTML for crawlers · 1200×630 JPEG of the cover |
+| ● GET /api/share/:token | share | album bundle for viewers without hidden pages and media only they show (`hideHiddenPages`); sets `lb_share` cookie (30 days) |
+| ● GET /api/share/:token/preview[.jpg] | share | Open Graph HTML for crawlers (page count excludes hidden pages; meta refresh → `/s/<token>?app`) · 1200×630 JPEG of the cover |
 | GET /api/manage | manage | disk total/free, media/db size, every file with size, album, used, location, move state |
 | POST /api/manage/move | manage | queue moves `{mediaIds, to: 'local' \| locationId}`; 400 unusable target, 409 over cap |
 | GET /api/manage/backup | manage | streamed `.tar` backup |
@@ -186,7 +187,12 @@ Errors are `{ error: string }`; user-facing ones are Vietnamese.
   within 500 ms (drags of a slider, quick taps).
 - **Canvas** (`EditCanvas.tsx`): react-moveable for drag/resize/rotate/pinch, snap guides (page edges/centre, frames,
   text; drag only; on/off remembered in `localStorage`), pin, crop overlay, manga shape overlay, inline text editing
-  (bubbles grow to fit typed text), one-tap "+ add" even under effect layers.
+  (bubbles grow to fit typed text; while typing, a bubble/narration/shout keeps its drawn shape and only its own words
+  hide — `.el-text:has(.text-editing)` — with the typed text laid out like them and a soft yellow selection),
+  one-tap "+ add" even under effect layers.
+- **Hidden pages:** the current page's thumbnail has **Ẩn / Hiện** (`layout.hidden`, one undo step, autosaved);
+  hidden thumbnails are faded with an "Ẩn" badge and the page shows a note. Done / `?page=N` count only visible pages
+  (a hidden page maps to the visible one before it); the viewer's Edit maps back to the full page index.
 - **Toolbar:** element pickers, Font panel (typeface, size, align, line spacing, outline, colour), frame/panel tools,
   ✂ Trim for videos, z-order, duplicate, delete, undo/redo, zoom, Snap, save status.
 - **Autosave** (`useAutosave.ts`): debounced `PUT /api/pages/:id`, retried on failure; leaving a page waits for it.
@@ -196,7 +202,8 @@ Errors are `{ error: string }`; user-facing ones are Vietnamese.
 ### 5.4 Viewer
 
 `useFlip` (index, turn animation, swipe/keys/edges, rtl), `spread.ts` (two-page spread on wide landscape screens),
-`preload.ts` (preload neighbouring pages' images), background music after the first interaction.
+`preload.ts` (preload neighbouring pages' images), background music after the first interaction. `Book` and
+`PrintAlbum` skip `layout.hidden` pages; with every page hidden the viewer says so.
 
 ### 5.5 PWA
 
@@ -276,7 +283,10 @@ bucket.
 - `buildPrompt` lists the mode's templates (id, about, slots), stickers and colours, with the description fenced as
   content. `answerSchema` is Gemini's `responseSchema` (enums for template/sticker/colour/effect ids, 4–10 pages).
 - `generateJson`: `POST {geminiBase}/v1beta/models/{model}:generateContent`, key in `x-goog-api-key`, 45 s timeout (nginx
-  gives `/api/ai/` 90 s).
+  gives `/api/ai/` 90 s). The answer is the non-thought text parts joined (thinking models may send thought parts).
+  Default model `gemini-3.8-flash` (older Flash models are closed to new keys); a real run takes ~20 s.
+- Key format: `PUT /api/manage/ai` accepts `^[A-Za-z0-9._-]+$`, 20–200 chars — both `AIza…` keys and the newer
+  AI Studio `AQ.…` keys; invisible pasted characters are rejected.
   Errors → `bad-key` (400 API_KEY_INVALID/401/403), `no-model` (404), `quota` (429), `busy` (503), `timeout`, `unusable`, `http`,
   each with a Vietnamese message.
 - `toDesign`: drops pages with unknown/other-mode templates, keeps ≤10, needs ≥4; unknown colour/effect → defaults;
@@ -295,6 +305,11 @@ bucket.
 | MAX_UPLOAD_BYTES | per-file limit (default 4 GiB) |
 | VIDEO_RENDITIONS / FFMPEG_PRESET | e.g. `720` or `720,1080`; `veryfast` |
 | COOKIE_SECURE / TRUST_PROXY / PORT | `true` behind HTTPS; `true` behind nginx; `3000` |
+
+Link-preview crawlers (`deploy/nginx/common-http.inc`): `map $http_user_agent $link_crawler` — first
+`(iphone|ipad|android).*zalo → 0` (Zalo's in-app browser), then the crawler list (facebookexternalhit, zalo,
+telegrambot…). `map "$link_crawler:$uri:$args" $share_preview` rewrites only `/s/<token>` with no query string, so
+`/s/<token>?app` always serves the app.
 
 Compose also sets `TEMPLATE_MUSIC_DIR=/data/template-music`, `LOOKBACK_MODE` (nginx: `behind-proxy` \|
 `standalone`), and image names via `IMAGE_PREFIX` / `IMAGE_TAG` (default `dastewasmiu/scrapbook-*:latest`).
@@ -320,3 +335,7 @@ The host proxy must allow large request bodies on `/api/uploads` (`client_max_bo
 - Bucket deletes are one request per object.
 - A bucket that fails in the middle of a file truncates that backup download (download again).
 - Exporting single pages as images is not implemented (PDF via print only).
+- Zalo's preview crawler user agent is not documented; if it ever says iPhone/Android, Zalo previews fall back to the
+  app's generic card.
+- Media on a hidden page is only left out of the share bundle; its URL still works for a share-cookie holder who
+  already knows it (ids are random UUIDs).
