@@ -54,6 +54,10 @@ describe('fillTemplate', () => {
     expect(speech).toMatchObject({ text: 'Chào!', font: 'patrick-hand', tail: t.ai!.texts!.find((s) => s.style === 'speech')!.tail ?? 'bl' })
   })
 
+  it('narration slots are two lines tall', () => {
+    for (const t of mangaTemplates) for (const s of t.ai?.texts ?? []) if (s.style === 'narration') expect(s.box[3], t.id).toBeGreaterThanOrEqual(0.075)
+  })
+
   it('result passes pageLayoutSchema for every template', () => {
     for (const t of [...templates, ...mangaTemplates]) {
       const l = fillTemplate(t.id, Array(8).fill('x'), Array(stickerSpotCount(t)).fill('heart'), id)

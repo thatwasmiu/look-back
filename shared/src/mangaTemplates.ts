@@ -19,7 +19,9 @@ const title = (id: string, [x, y, w, h]: Box, text: string, size: number, extra:
 // AI album: what each page is for, and bubble / narration / sfx boxes that sit inside its panels.
 type B = [x: number, y: number, w: number, h: number, rotation?: number]
 const MAX: Record<SlotStyle, number> = { plain: 40, speech: 40, thought: 40, shout: 20, narration: 40, sfx: 12 }
-const at = (style: SlotStyle, box: B, tail?: TextSlot['tail']): TextSlot => ({ box, style, max: MAX[style], ...(tail ? { tail } : {}) })
+// A narration box gets room for two lines: up to 40 characters don't fit on one at caption size.
+const at = (style: SlotStyle, [x, y, w, h, r]: B, tail?: TextSlot['tail']): TextSlot =>
+  ({ box: [x, y, w, style === 'narration' ? Math.max(h, 0.075) : h, r], style, max: MAX[style], ...(tail ? { tail } : {}) })
 const koma = (full - 3 * g) / 4
 const MANGA_AI: Record<string, TemplateAi> = {
   'manga-cover': { about: 'Cover: album title over one big panel', stickers: [[0.06, 0.76, 0.18, 0.135, -8], [0.78, 0.035, 0.16, 0.12]] },
