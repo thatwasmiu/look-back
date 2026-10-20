@@ -9,7 +9,7 @@ type Props = {
   onUpload(files: File[]): void; onRetry(localId: string): void;
   onPick(mediaId: string): void; // tap/click: put it in the selected frame
   onDrop(mediaId: string, frameId: string): void; // dragged onto a frame
-  onDelete(mediaId: string): void; onSetCover(mediaId: string): void;
+  onDelete?(mediaId: string): void; onSetCover?(mediaId: string): void; // absent: no ★ / 🗑 (edit-link guests)
 };
 
 const chip: Partial<Record<MediaDTO['status'], string>> = { uploading: 'đang tải…', processing: 'đang xử lý…', failed: 'tải lên lỗi' };
@@ -99,12 +99,12 @@ export function MediaTray({ media, items, coverMediaId, onUpload, onRetry, onPic
                 {chip[m.status] && <span className={m.status === 'failed' ? 'chip chip-error' : 'chip'}>{chip[m.status]}</span>}
                 {m.id === coverMediaId && <span className="tray-cover">cover</span>}
               </button>
-              <div className="tray-actions">
+              {onSetCover && onDelete && <div className="tray-actions">
                 <button type="button" title="Set as album cover" aria-label="Set as album cover" disabled={m.id === coverMediaId}
                   onClick={() => onSetCover(m.id)}>★</button>
                 <button type="button" title="Delete from album" aria-label="Delete from album"
                   onClick={() => window.confirm('Xóa ảnh/video này khỏi album? Nó sẽ bị gỡ khỏi mọi trang.') && onDelete(m.id)}>🗑</button>
-              </div>
+              </div>}
             </li>
           );
         })}

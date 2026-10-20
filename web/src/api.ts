@@ -42,6 +42,10 @@ export const api = {
   getAlbum: (id: string) => req<AlbumBundle>('GET', `/albums/${id}`),
   shareAlbum: (id: string) => req<{ shareToken: string }>('POST', `/albums/${id}/share`),
   unshareAlbum: (id: string) => req<void>('DELETE', `/albums/${id}/share`),
+  createEditLink: (id: string, hours: number) => req<{ editToken: string; expiresAt: string }>('POST', `/albums/${id}/edit-link`, { hours }),
+  revokeEditLink: (id: string) => req<void>('DELETE', `/albums/${id}/edit-link`),
+  // Public: opening an edit link starts a guest session for that album (no password).
+  openEditLink: (token: string) => req<AlbumBundle>('GET', `/edit/${encodeURIComponent(token)}`, undefined, true),
   // Public share link: quiet — a dead link must not bounce visitors to the owner's login page.
   getShared: (token: string) => req<AlbumBundle>('GET', `/share/${encodeURIComponent(token)}`, undefined, true),
   addPage: (albumId: string, templateId: string, position?: number) =>

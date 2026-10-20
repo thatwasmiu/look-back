@@ -49,8 +49,14 @@ describe('edit links (owner)', () => {
     expect(hours).toBeGreaterThan(7.9);
     expect(hours).toBeLessThanOrEqual(8);
     expect((await owner('POST', `/api/albums/${albumId}/edit-link`)).json().editToken).toBe(editToken);
+    // The owner picks the hours (1–168): same link, new expiry.
+    const r2 = (await owner('POST', `/api/albums/${albumId}/edit-link`, { hours: 24 })).json();
+    expect(r2.editToken).toBe(editToken);
+    expect((new Date(r2.expiresAt).getTime() - Date.now()) / 3600_000).toBeGreaterThan(23.9);
+    for (const hours of [0, 169, 1.5]) expect((await owner('POST', `/api/albums/${albumId}/edit-link`, { hours })).statusCode).toBe(400);
+    const back = (await owner('POST', `/api/albums/${albumId}/edit-link`, { hours: 8 })).json();
     const bundle = (await owner('GET', `/api/albums/${albumId}`)).json();
-    expect(bundle.album).toMatchObject({ editToken, editExpiresAt: expiresAt });
+    expect(bundle.album).toMatchObject({ editToken, editExpiresAt: back.expiresAt });
     expect((await owner('DELETE', `/api/albums/${albumId}/edit-link`)).statusCode).toBe(204);
     expect((await as(undefined, 'GET', `/api/edit/${editToken}`)).statusCode).toBe(404);
     expect((await owner('POST', `/api/albums/${albumId}/edit-link`)).json().editToken).not.toBe(editToken); // a new one

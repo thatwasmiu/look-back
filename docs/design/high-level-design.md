@@ -17,6 +17,7 @@ past the VPS disk limit.
 |---|---|
 | **Owner** (one password) | Everything: create/decorate/delete albums, upload, share, manage storage, back up. |
 | **Share-link viewer** | View one album read-only (`/s/<token>`), including its photos, videos and music. |
+| **Edit-link guest** | Opens `/e/<token>` (no password) for the hours the owner chose: puts photos/videos into the album's existing frames and changes existing text — nothing else. |
 | **Link crawler** (Facebook, Zalo…) | Gets an Open Graph preview (title, page count, cover image) for a share link. |
 
 ### Goals
@@ -110,6 +111,14 @@ image generated on the fly. Revoking clears the token.
 Crawlers are recognised by user agent in nginx. In-app browsers can carry the same name (Zalo's says "Zalo"), so a
 phone browser (iPhone/iPad/Android) is never treated as a crawler, and the preview page itself forwards to
 `/s/<token>?app`, which always gets the app — a person taken for a crawler can never get stuck on the preview.
+
+### Edit links
+
+From the Share dialog the owner makes an edit link for an album, valid for the hours they type (default 8, max 168),
+and can renew or revoke it. Opening `/e/<token>` starts a guest session for that album; every guest request checks
+the code is still current and unexpired. Guests get a cut-down editor (no adding, moving, deleting or restyling;
+no pages); the server enforces the same on every save (`guestEditAllowed`) and limits uploads to photos/videos in
+that album.
 
 ### Hidden pages
 

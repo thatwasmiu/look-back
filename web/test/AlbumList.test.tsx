@@ -271,3 +271,31 @@ test('Đăng xuất ends the session and goes to the login page', async () => {
   await waitFor(() => expect(assign).toHaveBeenCalledWith('/login'));
   expect(calls).toContain('POST /api/auth/logout');
 });
+
+test('Share dialog: an edit link for the hours the owner types (8 by default), to copy, renew or revoke', async () => {
+  const album = { id: 'a1', title: 'Trip', coverMediaId: null, backgroundEffect: 'none', backgroundColor: 'walnut', shareToken: null, editToken: null, coverThumb: null, pageCount: 2 };
+  const token = 'E'.repeat(43);
+  const expiresAt = new Date(Date.now() + 8 * 3600_000).toISOString();
+  const calls: string[] = [];
+  const bodies: unknown[] = [];
+  setup(vi.fn(async (url: string, init?: RequestInit) => {
+    calls.push(`${init?.method ?? 'GET'} ${url}`);
+    if (url === '/api/albums/a1/edit-link' && init?.method === 'POST') bodies.push(JSON.parse(String(init.body)));
+    if (url === '/api/albums') return json(200, [album]);
+    if (url === '/api/albums/a1/edit-link' && init?.method === 'POST') return json(200, { editToken: token, expiresAt });
+    return new Response(null, { status: 204 });
+  }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Share Trip' }));
+  const hours = screen.getByLabelText('Số giờ') as HTMLInputElement;
+  expect(hours.value).toBe('8');
+  await userEvent.clear(hours);
+  await userEvent.type(hours, '24');
+  await userEvent.click(screen.getByRole('button', { name: 'Tạo link sửa' }));
+  expect(bodies).toEqual([{ hours: 24 }]);
+  const link = await screen.findByRole('textbox', { name: 'Edit link' }) as HTMLInputElement;
+  expect(link.value).toBe(`${location.origin}/e/${token}`);
+  expect(screen.getByText(/hết hạn lúc/)).toBeTruthy();
+  await userEvent.click(screen.getByRole('button', { name: 'Thu hồi link sửa' }));
+  expect(calls).toContain('DELETE /api/albums/a1/edit-link');
+  expect(await screen.findByRole('button', { name: 'Tạo link sửa' })).toBeTruthy();
+});

@@ -526,3 +526,11 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .thumb.is-hidden .thumb-page { opacity: .4; }
 .thumb.is-hidden::after { content: 'Ẩn'; position: absolute; top: 4px; left: 4px; font-size: .7rem; background: #3b2a1aCC; color: #fff; border-radius: 6px; padding: 0 .3rem; pointer-events: none; }
 .hidden-note { margin: .3rem auto; width: max-content; max-width: calc(100% - 32px); background: #fff4ec; border: 1px dashed var(--accent); border-radius: 10px; padding: .25rem .7rem; font-size: .9rem; color: #3b2a1a; }
+.share-dialog .edit-link { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding-top: .6rem; border-top: 1px dashed #c9bda4; }
+.share-dialog .edit-link > span { flex: 1 1 100%; }
+.share-dialog .edit-hours { display: inline-flex; align-items: center; gap: .35rem; font-size: .9rem; }
+.share-dialog .edit-hours input { flex: none; width: 4.5rem; }
+.guest-badge { font-size: .9rem; background: #fff4ec; color: #3b2a1a; border-radius: 999px; padding: .2rem .7rem; white-space: nowrap; }
+.guest-tools { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+.guest-tools .guest-hint { flex: 1 1 12rem; font-size: .85rem; opacity: .8; }
+

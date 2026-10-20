@@ -7,6 +7,7 @@ import AlbumList from './pages/AlbumList';
 import Viewer from './pages/Viewer';
 import Editor from './pages/Editor';
 import SharedAlbum from './pages/SharedAlbum';
+import GuestEdit from './pages/GuestEdit';
 import Guide from './pages/Guide';
 import PrintAlbum from './pages/PrintAlbum';
 
@@ -36,6 +37,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/s/:token" element={<SharedAlbum />} /> {/* public share link: outside the login gate */}
+        <Route path="/e/:token" element={<GuestEdit />} /> {/* edit link: outside the login gate too */}
         {Preview && <Route path="/dev/preview" element={<Suspense><Preview /></Suspense>} />}
         {ViewerPreview && <Route path="/dev/viewer" element={<Suspense><ViewerPreview /></Suspense>} />}
         {TemplatesPreview && <Route path="/dev/templates" element={<Suspense><TemplatesPreview /></Suspense>} />}

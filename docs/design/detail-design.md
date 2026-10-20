@@ -79,6 +79,9 @@ docs/        guides, designs, specs, plans
 **ai_settings** — one row: `key_enc` (Gemini API key, AES-256-GCM as §6.3), `key_last4`, `model` (null = default
 in `gemini.ts`). Not in backups.
 
+**albums.edit_token / edit_expires_at** (migration 010) — the album's temporary edit link; the owner's album DTO
+carries `editToken`/`editExpiresAt` only while unexpired; share and guest bundles never carry the code.
+
 **schema_migrations** — applied migration file names. pg-boss keeps its own schema.
 
 ### 2.2 Page layout (`shared/src/layout.ts`)
@@ -118,6 +121,11 @@ A media that lives in a bucket has exactly the same keys under the bucket (`<med
 ## 3. API (`server/src`)
 
 Owner session required for every `/api` route except the public ones marked ●. `/media/*` checks access itself.
+An edit-link guest (session `guest`, re-checked against the album each request) also reaches `PUT /api/pages/:id`
+(own album; `guestEditAllowed`: same elements/order/background/hidden, only frame `mediaId`/`crop` and text
+`text`/`h` may change → else 403), `GET /api/media/:id` (own album) and tus uploads (create: own album, image/video
+only; continue: own album's uploads; no cancel). `/api/auth/check` and bucket media accept the guest for their
+album's files.
 
 | Method & path | Module | Purpose |
 |---|---|---|
@@ -132,6 +140,8 @@ Owner session required for every `/api` route except the public ones marked ●.
 | GET/DELETE /api/media/:id | media | poll processing status · delete (frames emptied, cover/music cleared) |
 | ALL /api/uploads[/*] | uploads | tus server (resumable, 50 MiB chunks, metadata `albumId`, `filename`, `filetype`) |
 | POST/DELETE /api/albums/:id/share | share | create (idempotent) / revoke share token |
+| POST/DELETE /api/albums/:id/edit-link | editLinks | make `{hours?: 1–168}` (default 8; a valid link keeps its code, gets the new expiry) → `{editToken, expiresAt}` · revoke |
+| ● GET /api/edit/:token | editLinks | album bundle for a guest; sets `guest {albumId, token}` in the session |
 | ● GET /api/share/:token | share | album bundle for viewers without hidden pages and media only they show (`hideHiddenPages`); sets `lb_share` cookie (30 days) |
 | ● GET /api/share/:token/preview[.jpg] | share | Open Graph HTML for crawlers (page count excludes hidden pages; meta refresh → `/s/<token>?app`) · 1200×630 JPEG of the cover |
 | GET /api/manage | manage | disk total/free, media/db size, every file with size, album, used, location, move state |

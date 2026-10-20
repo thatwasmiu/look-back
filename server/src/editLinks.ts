@@ -5,11 +5,11 @@ import type pg from 'pg';
 import { loadBundle, uuidParams } from './albums.js';
 import { isShareToken } from './share.js';
 
-// Temporary edit links: a secret per-album code, valid for 8 hours. Its holder (a "guest", no password) may put
+// Temporary edit links: a secret per-album code, valid for the hours the owner picks (default 8, up to a week). Its holder (a "guest", no password) may put
 // photos/videos into the album's existing frames and change existing text — nothing else. The guest's session only
 // remembers album + code; every request checks the code is still the album's and not expired, so revoking or
 // expiry locks them out at once.
-export const EDIT_HOURS = 8;
+export const EDIT_HOURS = 8, MAX_EDIT_HOURS = 168;
 
 declare module 'fastify' {
   interface FastifyRequest { guestAlbumId: string | null } // set by the auth guard for a valid guest
@@ -53,15 +53,20 @@ export async function guestAllowsMedia(pool: pg.Pool, req: FastifyRequest, uri: 
 }
 
 export function registerEditLinks(app: FastifyInstance, pool: pg.Pool): void {
-  // Owner: make (or repeat, while still valid) / revoke the album's edit link.
-  app.post<{ Params: { id: string } }>('/api/albums/:id/edit-link', { schema: uuidParams }, async (req, reply) => {
+  // Owner: make the album's edit link, valid `hours` from now (a still-valid link keeps its code, gets the new
+  // expiry; without `hours` it is just returned as is) / revoke it.
+  app.post<{ Params: { id: string }; Body: { hours?: number } | undefined }>('/api/albums/:id/edit-link', {
+    schema: { ...uuidParams, body: { type: ['object', 'null'], additionalProperties: false, properties: {
+      hours: { type: 'integer', minimum: 1, maximum: MAX_EDIT_HOURS } } } },
+  }, async (req, reply) => {
+    const hours = req.body?.hours ?? null;
     const { rows } = await pool.query(
       `update albums set
          edit_token = case when edit_token is not null and edit_expires_at > now() then edit_token else $2 end,
-         edit_expires_at = case when edit_token is not null and edit_expires_at > now() then edit_expires_at
-                                else now() + make_interval(hours => $3) end
+         edit_expires_at = case when $3::int is null and edit_token is not null and edit_expires_at > now() then edit_expires_at
+                                else now() + make_interval(hours => coalesce($3::int, $4)) end
        where id = $1 returning edit_token, edit_expires_at`,
-      [req.params.id, randomBytes(32).toString('base64url'), EDIT_HOURS]);
+      [req.params.id, randomBytes(32).toString('base64url'), hours, EDIT_HOURS]);
     if (!rows[0]) return reply.code(404).send({ error: 'not found' });
     return { editToken: rows[0].edit_token, expiresAt: new Date(rows[0].edit_expires_at).toISOString() };
   });

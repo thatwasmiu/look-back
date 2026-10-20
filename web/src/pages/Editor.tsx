@@ -5,7 +5,7 @@ import { mangaTemplates, pageLayoutSchema, templates, type AlbumBundle, type Rea
 import { api as realApi, ApiError } from '../api';
 import { PageRenderer } from '../render/PageRenderer';
 import { EditCanvas } from '../editor/EditCanvas';
-import { Toolbar, stepZoom } from '../editor/Toolbar';
+import { Toolbar, statusLabel, stepZoom } from '../editor/Toolbar';
 import { BackgroundEffectView } from '../render/effects';
 import { initHistory, push, redo, undo } from '../editor/history';
 import { addElement, assignMedia, clearMedia, duplicate, removeElement, updateElement } from '../editor/layoutOps';
@@ -55,7 +55,9 @@ const placeholder = (id: string, albumId: string): MediaDTO => ({
 const MUSIC = '#music'; // upload target: the album's background music instead of a frame
 
 // `uploader` is swappable so /dev/editor can fake uploads without a server.
-export function EditorView({ bundle, api, uploader = useUpload }: { bundle: AlbumBundle; api: EditorApi; uploader?: typeof useUpload }) {
+// guest: opened from an edit link — only photos in the existing frames and existing text can change (the server
+// enforces the same), so the tools to add, move, delete or restyle anything are left out.
+export function EditorView({ bundle, api, uploader = useUpload, guest = false }: { bundle: AlbumBundle; api: EditorApi; uploader?: typeof useUpload; guest?: boolean }) {
   const albumId = bundle.album.id;
   const [media, setMedia] = useState(() => new Map(bundle.media.map((m) => [m.id, m])));
   const mediaRef = useRef(media);
@@ -374,7 +376,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
         upload.add(files, sel?.type === 'frame' && !sel.mediaId ? sel.id : undefined);
         return;
       }
-      if (!clip.current) return;
+      if (!clip.current || guest) return;
       e.preventDefault();
       const copy = duplicate(clip.current);
       clip.current = copy; // the next paste lands a step further
@@ -393,10 +395,11 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
         // Nothing selected: ← / → flip pages (→ on the last page offers a new one, like the round button).
         // With an item selected the arrows nudge it instead (below).
         const { cur: c, pages: ps } = latest.current;
-        if (e.key === 'ArrowRight') { e.preventDefault(); if (c < ps.length - 1) void nav.current.switchTo(c + 1); else setPicking(true); }
+        if (e.key === 'ArrowRight') { e.preventDefault(); if (c < ps.length - 1) void nav.current.switchTo(c + 1); else if (!guest) setPicking(true); }
         if (e.key === 'ArrowLeft' && c > 0) { e.preventDefault(); void nav.current.switchTo(c - 1); }
         return;
       }
+      if (guest) return; // nothing to delete or nudge
       // commit(fn) derives from h.present, not this render's layout: key repeats can arrive before a re-render.
       // Focus often stays on the last-clicked toolbar button; buttons have no use for these keys.
       if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -416,16 +419,18 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
     window.addEventListener('keydown', onKey);
     window.addEventListener('paste', onPaste);
     return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('paste', onPaste); };
-  }, [selectedId, commit, upload]);
+  }, [selectedId, commit, upload, guest]);
 
   const shownPages = withCurrent();
   const toggleHidden = () => commit((l) => ({ ...l, hidden: l.hidden ? undefined : true }));
   return (
     <main className={`editor desk-${bgColor}${busy ? ' busy' : ''}${panelsHidden ? ' panels-hidden' : ''}`} aria-busy={busy}>
       <header className="editor-bar">
-        <Link to={`/albums/${albumId}?page=${viewerPage()}`} onClick={leave}>← Done</Link>
+        {guest
+          ? <span className="guest-badge">✎ Link sửa · đến {bundle.album.editExpiresAt ? new Date(bundle.album.editExpiresAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }) : '—'}</span>
+          : <Link to={`/albums/${albumId}?page=${viewerPage()}`} onClick={leave}>← Done</Link>}
         <h1>
-          {renaming ? (
+          {guest ? <span className="title-text">{title}</span> : renaming ? (
             <input className="title-input" aria-label="Album name" defaultValue={title} maxLength={200} autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter') e.currentTarget.blur();
@@ -443,14 +448,26 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
         </button>
         {/* New tab: the editor keeps its state (and autosave) while the guide is open. An installed app (PWA) has
             no tabs or back button there, so it saves and opens the guide in place; the guide's ← Back returns here. */}
-        {standalone
+        {guest ? null : standalone
           ? <Link className="guide-help" to="/guide" aria-label="Hướng dẫn sử dụng" title="Hướng dẫn sử dụng" onClick={(e) => {
             e.preventDefault();
             void run('mở hướng dẫn', async () => { if (await saved()) navigate('/guide', { state: { back: true } }); });
           }}>?</Link>
           : <a className="guide-help" href="/guide" target="_blank" rel="noopener" aria-label="Hướng dẫn sử dụng" title="Hướng dẫn sử dụng">?</a>}
       </header>
-      {page && (
+      {page && guest && (
+        <div className="toolbar guest-tools" role="toolbar" aria-label="Tools">
+          <button type="button" onClick={() => setHist(undo)} disabled={hist.past.length === 0} aria-label="Undo">↶</button>
+          <button type="button" onClick={() => setHist(redo)} disabled={hist.future.length === 0} aria-label="Redo">↷</button>
+          {selected?.type === 'frame' && selected.mediaId && <>
+            <button type="button" onClick={() => setCropId(selectedId)}>Crop</button>
+            <button type="button" onClick={() => commit(assignMedia(layout, selected.id, null))}>Remove photo</button>
+          </>}
+          <span className="guest-hint">Bấm “+ add” trong khung để thêm ảnh/video · nhấp đúp vào chữ để sửa</span>
+          <button type="button" className="save-status" onClick={() => void flush().then((ok) => ok && setOpError(null))}>{statusLabel[status]}</button>
+        </div>
+      )}
+      {page && !guest && (
         <Toolbar layout={layout} selected={selected} commit={commit}
           undo={() => setHist(undo)} redo={() => setHist(redo)} canUndo={hist.past.length > 0} canRedo={hist.future.length > 0}
           status={status} save={() => void flush().then((ok) => ok && setOpError(null))}
@@ -463,7 +480,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
         {/* Tapping the desk around the page clears the selection, same as tapping empty page. */}
         <div className="stage-wrap" onPointerDown={(e) => { if (e.target === e.currentTarget || e.target === stageRef.current) setSelectedId(null); }}>
           <div className="edit-stage" ref={stageRef}>
-            {page ? <EditCanvas layout={layout} media={media} selectedId={selectedId} onSelect={setSelectedId} onCommit={commit}
+            {page ? <EditCanvas locked={guest} layout={layout} media={media} selectedId={selectedId} onSelect={setSelectedId} onCommit={commit}
               onFrameAddMedia={addToFrame} cropId={cropId} onCrop={setCropId} shapeId={shapeId} onShape={setShapeId} zoom={zoom} snap={snap} />
               : <p className="empty">Chưa có trang nào — thêm trang ở dưới.</p>}
           </div>
@@ -473,12 +490,12 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
           {/* Next page; on the last page it offers a new one (same template picker as the strip's "+"). */}
           {page && (cur < pages.length - 1
             ? <button type="button" className="page-next" aria-label="Next page" title="Next page" onClick={() => void switchTo(cur + 1)}>→</button>
-            : <button type="button" className="page-next" aria-label="New page" title="New page" onClick={() => setPicking(true)}>+</button>)}
+            : !guest && <button type="button" className="page-next" aria-label="New page" title="New page" onClick={() => setPicking(true)}>+</button>)}
         </div>
         <MediaTray media={trayMedia} items={upload.items} coverMediaId={coverId}
           onUpload={(files) => upload.add(files)} onRetry={upload.retry}
           onPick={(id) => selected?.type === 'frame' && putInFrame(id, selected.id)} onDrop={putInFrame}
-          onDelete={deleteMedia} onSetCover={setCover} />
+          onDelete={guest ? undefined : deleteMedia} onSetCover={guest ? undefined : setCover} />
         {/* Portal: inside .edit-main's stacking context the tools would paint over the backdrop. */}
         {cameraFrame && createPortal(
           <FrameCamera frame={cameraFrame.frame} windowShape={cameraFrame.shape} onClose={() => setCameraFrame(null)}
@@ -532,7 +549,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
         {pagesOpen && (
         <div className="strip-list">
           {shownPages.map((p, i) => (
-            <div key={p.id} className={`thumb${i === cur ? ' current' : ''}${p.layout.hidden ? ' is-hidden' : ''}`} draggable
+            <div key={p.id} className={`thumb${i === cur ? ' current' : ''}${p.layout.hidden ? ' is-hidden' : ''}`} draggable={!guest}
               onDragStart={(e) => e.dataTransfer.setData(PAGE_DRAG, String(i))}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
@@ -543,7 +560,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
                 onClick={() => i !== cur && void switchTo(i)}>
                 <PageRenderer layout={p.layout} media={media} mode="edit" active={false} />
               </button>
-              {i === cur && (
+              {i === cur && !guest && (
                 <div className="thumb-actions">
                   <button type="button" aria-label="Move page left" disabled={i === 0} onClick={() => move(i, i - 1)}>◀</button>
                   <button type="button" aria-label={p.layout.hidden ? 'Show page' : 'Hide page'} aria-pressed={!!p.layout.hidden}
@@ -554,7 +571,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
               )}
             </div>
           ))}
-          <button type="button" className="thumb-add" aria-label="Add page" aria-expanded={picking} onClick={() => setPicking((v) => !v)}>+</button>
+          {!guest && <button type="button" className="thumb-add" aria-label="Add page" aria-expanded={picking} onClick={() => setPicking((v) => !v)}>+</button>}
         </div>
         )}
       </nav>

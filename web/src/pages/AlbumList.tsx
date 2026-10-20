@@ -49,11 +49,13 @@ export default function AlbumList() {
   const [sharing, setSharing] = useState<AlbumSummary | null>(null);
   const [shareBusy, setShareBusy] = useState(false);
   const shareUrl = (t: string) => `${location.origin}/s/${t}`;
+  const editUrl = (t: string) => `${location.origin}/e/${t}`;
+  const [editHours, setEditHours] = useState('8');
   // Copy closes the dialog; a short notice confirms it (clipboard may be blocked, e.g. over plain http).
   const [notice, setNotice] = useState('');
-  const copyLink = async (t: string) => {
+  const copyLink = async (url: string) => {
     try {
-      await navigator.clipboard.writeText(shareUrl(t));
+      await navigator.clipboard.writeText(url);
       setSharing(null);
       setNotice('Đã chép link');
     } catch {
@@ -65,6 +67,23 @@ export default function AlbumList() {
     setAlbums((cur) => cur?.map((x) => (x.id === id ? { ...x, shareToken } : x)) ?? cur);
     setSharing((s) => (s && s.id === id ? { ...s, shareToken } : s));
   };
+  // Edit link: the holder may only put photos into the existing frames and change text, for the hours chosen.
+  const setEdit = (id: string, editToken: string | null, editExpiresAt: string | null) => {
+    setAlbums((cur) => cur?.map((x) => (x.id === id ? { ...x, editToken, editExpiresAt } : x)) ?? cur);
+    setSharing((s) => (s && s.id === id ? { ...s, editToken, editExpiresAt } : s));
+  };
+  async function editLink(a: AlbumSummary, hours: number | null) {
+    setShareBusy(true);
+    try {
+      if (hours) { const r = await api.createEditLink(a.id, hours); setEdit(a.id, r.editToken, r.expiresAt); }
+      else { await api.revokeEditLink(a.id); setEdit(a.id, null, null); }
+    } catch (err) {
+      if (!(err instanceof ApiError && err.status === 401)) setLoadError(true);
+    } finally {
+      setShareBusy(false);
+    }
+  }
+
   async function toggleShare(a: AlbumSummary, on: boolean) {
     setShareBusy(true);
     try {
@@ -249,7 +268,7 @@ export default function AlbumList() {
             <>
               <span>Ai có link này đều xem được “{sharing.title}” (không sửa được):</span>
               <input readOnly aria-label="Share link" value={shareUrl(sharing.shareToken)} onFocus={(e) => e.currentTarget.select()} />
-              <button type="button" onClick={() => void copyLink(sharing.shareToken!)}>Copy</button>
+              <button type="button" onClick={() => void copyLink(shareUrl(sharing.shareToken!))}>Copy</button>
               <button type="button" className="danger" disabled={shareBusy} onClick={() => void toggleShare(sharing, false)}>Stop sharing</button>
             </>
           ) : (
@@ -258,6 +277,21 @@ export default function AlbumList() {
               <button type="button" disabled={shareBusy} onClick={() => void toggleShare(sharing, true)}>Create share link</button>
             </>
           )}
+          <div className="edit-link">
+            {sharing.editToken && sharing.editExpiresAt && new Date(sharing.editExpiresAt) > new Date() ? (
+              <>
+                <span>Link cho người khác <b>sửa</b> (chỉ thay ảnh trong khung và sửa chữ), hết hạn lúc {new Date(sharing.editExpiresAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })}:</span>
+                <input readOnly aria-label="Edit link" value={editUrl(sharing.editToken)} onFocus={(e) => e.currentTarget.select()} />
+                <button type="button" onClick={() => void copyLink(editUrl(sharing.editToken!))}>Copy</button>
+                <button type="button" className="danger" aria-label="Thu hồi link sửa" disabled={shareBusy} onClick={() => void editLink(sharing, null)}>Thu hồi</button>
+              </>
+            ) : <span>Link cho người khác <b>sửa</b>: chỉ thay ảnh trong khung và sửa chữ, không thêm/xoá trang hay khung.</span>}
+            <label className="edit-hours">Số giờ
+              <input type="number" min={1} max={168} step={1} value={editHours} onChange={(e) => setEditHours(e.target.value)} />
+            </label>
+            <button type="button" disabled={shareBusy || !(Number(editHours) >= 1 && Number(editHours) <= 168 && Number.isInteger(Number(editHours)))}
+              onClick={() => void editLink(sharing, Number(editHours))}>{sharing.editToken && sharing.editExpiresAt && new Date(sharing.editExpiresAt) > new Date() ? 'Gia hạn' : 'Tạo link sửa'}</button>
+          </div>
           <button type="button" className="secondary" onClick={() => setSharing(null)}>Close</button>
         </div>
       )}

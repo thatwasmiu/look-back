@@ -37,7 +37,7 @@ const SAMPLE: FrameEl = { type: 'frame', id: 'sample', x: 0, y: 0, w: 1, h: 1, r
 export const ZOOMS = [1, 1.25, 1.5, 2, 2.5, 3];
 export const stepZoom = (z: number, dir: 1 | -1) =>
   dir > 0 ? ZOOMS.find((s) => s > z + 1e-9) ?? z : [...ZOOMS].reverse().find((s) => s < z - 1e-9) ?? z;
-const statusLabel: Record<SaveStatus, string> = { saved: 'Saved', saving: 'Saving…', unsaved: 'Unsaved', error: 'Lưu lỗi' };
+export const statusLabel: Record<SaveStatus, string> = { saved: 'Saved', saving: 'Saving…', unsaved: 'Unsaved', error: 'Lưu lỗi' };
 
 // Laptop: a bar above the page. Phone (coarse pointer or < 700px, see CSS): a sheet pinned to the bottom,
 // pickers open above it.

@@ -647,3 +647,32 @@ test('Hide page keeps the page in the editor, marks it, saves hidden, and Done p
   await user.click(screen.getByRole('button', { name: 'Show page' }));
   expect(screen.queryByText(/Trang này đang ẩn/)).toBeNull();
 });
+
+test('guest (edit link): no tools to add, move, delete or restyle; text and photos stay editable', async () => {
+  const user = userEvent.setup();
+  const els: PageElement[] = [
+    { type: 'frame', id: 'f1', x: 0.1, y: 0.1, w: 0.5, h: 0.4, rotation: 0, z: 1, frameStyle: 'polaroid', mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } },
+    { type: 'text', id: 't1', x: 0.1, y: 0.7, w: 0.6, h: 0.1, rotation: 0, z: 2, text: 'Chào', font: 'patrick-hand', color: '#111111', size: 0.04 },
+  ];
+  const b: AlbumBundle = { ...bundle, album: { ...bundle.album, editExpiresAt: new Date(Date.now() + 3600_000).toISOString() },
+    pages: bundle.pages.map((p, i) => (i === 0 ? { ...p, layout: { ...p.layout, elements: els } } : p)) };
+  const { container } = render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={b} api={okApi()} guest /></MemoryRouter>);
+  for (const name of ['Bubble', 'Text', 'Sticker', 'Background', 'Duplicate', 'Add page', 'Delete page', 'Hide page', 'Move page right']) {
+    expect(screen.queryByRole('button', { name }), name).toBeNull();
+  }
+  expect(screen.queryByRole('link', { name: '← Done' })).toBeNull();
+  expect(screen.queryByRole('button', { name: /Rename album/ })).toBeNull();
+  expect(screen.getByText(/Link sửa · đến/)).toBeTruthy();
+  // Selecting an element gives no move/resize handles, and Delete does nothing.
+  fireEvent.pointerDown(container.querySelector('[data-el="t1"]')!);
+  expect(container.querySelector('.moveable-control')).toBeNull();
+  await user.keyboard('{Delete}');
+  expect(container.querySelector('[data-el="t1"]')).not.toBeNull();
+  // Text still edits in place; frames still offer "+ add".
+  fireEvent.doubleClick(container.querySelector('[data-el="t1"]')!);
+  expect(container.querySelector('[data-el="t1"] .text-editing')).not.toBeNull();
+  expect(container.querySelector('[data-el="f1"] .slot-empty')).not.toBeNull();
+  // The page arrow on the last page doesn't offer a new page.
+  await user.click(screen.getByRole('button', { name: 'Next page' }));
+  expect(screen.queryByRole('button', { name: 'New page' })).toBeNull();
+});
