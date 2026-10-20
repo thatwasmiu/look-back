@@ -258,3 +258,16 @@ test('✨ AI: the dialog cannot be closed while the album is being generated', a
   await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   expect(screen.getByRole('dialog', { name: 'New album' })).toBeTruthy();
 });
+
+test('Đăng xuất ends the session and goes to the login page', async () => {
+  const calls: string[] = [];
+  const assign = vi.fn();
+  vi.stubGlobal('location', { ...window.location, assign, origin: 'http://localhost' });
+  setup(vi.fn(async (url: string, init?: RequestInit) => {
+    calls.push(`${init?.method ?? 'GET'} ${url}`);
+    return url === '/api/auth/logout' ? new Response(null, { status: 204 }) : json(200, []);
+  }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Đăng xuất' }));
+  await waitFor(() => expect(assign).toHaveBeenCalledWith('/login'));
+  expect(calls).toContain('POST /api/auth/logout');
+});

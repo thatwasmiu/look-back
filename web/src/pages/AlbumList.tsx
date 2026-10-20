@@ -152,6 +152,8 @@ export default function AlbumList() {
         <h1 className="brand"><img className="brand-logo" src="/brand/logo.svg" alt="" />Look Back</h1>
         <span className="header-actions">
           <Link to="/guide" className="guide-link">Hướng dẫn</Link>
+          {/* Full reload to /login: no album data stays in memory (offline caches are cleared by api.logout). */}
+          <button type="button" className="link-btn logout-btn" onClick={() => void api.logout().catch(() => {}).finally(() => location.assign('/login'))}>Đăng xuất</button>
           <button onClick={() => setCreating(true)}>New album</button>
         </span>
       </header>
