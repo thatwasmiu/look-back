@@ -13,7 +13,7 @@ import { useAutosave } from '../editor/useAutosave';
 import { MediaTray, thumbOf } from '../editor/MediaTray';
 import { mediaUrl } from '../mediaUrl';
 import { ACCEPT, pollUntilSettled, useUpload } from '../editor/useUpload';
-import { FrameCamera, frameWindowShape, type WindowShape } from '../editor/FrameCamera';
+import { FrameCamera, frameWindowShape, type WindowShape, inlineVideoBlocked } from '../editor/FrameCamera';
 import { dropLocalPreview, LocalPreview } from '../localPreview';
 
 export type EditorApi = Pick<typeof realApi,
@@ -508,15 +508,16 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
             <div className="modal frame-menu" role="dialog" aria-modal="true" aria-label="Add photo or video">
               <button type="button" className="modal-close" aria-label="Close" onClick={() => setFrameMenu(null)} autoFocus>×</button>
               <h2>Add to frame</h2>
+              {inlineVideoBlocked() && <p className="manage-hint">Trong Zalo không chụp theo khung được — dùng “Take photo/video”, hoặc mở bằng Safari (⋯ → Mở bằng trình duyệt).</p>}
               <div className="frame-menu-grid">
-                <button type="button" className="frame-menu-upload frame-menu-camera" onClick={() => {
+                {inlineVideoBlocked() ? null : <button type="button" className="frame-menu-upload frame-menu-camera" onClick={() => {
                   const f = layout.elements.find((e) => e.id === frameMenu);
                   if (f?.type === 'frame') {
                     const win = document.querySelector<HTMLElement>(`.edit-page [data-frame-id="${f.id}"] .frame-window`);
                     setCameraFrame({ frame: f, shape: frameWindowShape(win) });
                   }
                   setFrameMenu(null);
-                }}>🎯<span>Chụp theo khung</span></button>
+                }}>🎯<span>Chụp theo khung</span></button>}
                 <button type="button" className="frame-menu-upload frame-menu-camera" onClick={() => { uploadToFrame(frameMenu, true); setFrameMenu(null); }}>📷<span>Take photo/video</span></button>
                 <button type="button" className="frame-menu-upload" onClick={() => { uploadToFrame(frameMenu); setFrameMenu(null); }}>⬆<span>Upload</span></button>
                 {trayMedia.filter((m) => m.status !== 'failed').map((m) => {

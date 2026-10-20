@@ -72,3 +72,18 @@ test('"Chụp theo khung" opens the in-app camera for that frame', async () => {
   await user.click(screen.getByRole('button', { name: 'Đóng' }));
   expect(screen.queryByRole('dialog', { name: 'Chụp theo khung' })).toBeNull();
 });
+
+test('inside Zalo on iPhone the frame camera is left out (it would open as a fullscreen player) with a hint', async () => {
+  const ua = vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Zalo iOS/24.5.1');
+  try {
+    const user = userEvent.setup();
+    setup(bundleWith([m]));
+    await user.click(screen.getByRole('button', { name: '+ add' }));
+    expect(screen.queryByRole('button', { name: /Chụp theo khung/ })).toBeNull();
+    expect(screen.getByRole('button', { name: /Take photo\/video/ })).toBeTruthy();
+    expect(screen.getByText(/mở bằng Safari/)).toBeTruthy();
+  } finally {
+    ua.mockRestore();
+  }
+});

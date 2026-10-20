@@ -50,6 +50,11 @@ const HI_RES = { width: { ideal: 3840 }, height: { ideal: 2160 } };
 const VIDEO_TYPES = ['video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
 const HEART = 'M50 88C10 60 0 38 0 24 0 10 11 0 25 0c11 0 20 6 25 15C55 6 64 0 75 0c14 0 25 10 25 24 0 14-10 36-50 64z';
 
+// Zalo's in-app browser on iPhone can't play video inside the page: the live camera opens in iOS's fullscreen
+// player instead of behind the frame. There the phone's own camera (Take photo/video) is the way.
+export const inlineVideoBlocked = (ua = typeof navigator === 'undefined' ? '' : navigator.userAgent) =>
+  /Zalo/i.test(ua) && /iPhone|iPad|iPod/i.test(ua);
+
 export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame: FrameEl; windowShape?: WindowShape | null; onCapture(file: File): void; onClose(): void }) {
   const [mode, setMode] = useState<Mode>('photo');
   const [facing, setFacing] = useState<Facing>('environment');
