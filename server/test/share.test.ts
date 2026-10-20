@@ -74,6 +74,37 @@ describe('share links', () => {
   });
 });
 
+describe('hidden pages', () => {
+  it('a share link leaves out hidden pages and the photos only they show; the owner still gets everything', async () => {
+    const a = await albumWithMedia('Hidden');
+    const { rows } = await t.pool.query(
+      `insert into media (album_id, kind, status, mime) values ($1, 'image', 'ready', 'image/jpeg') returning id`, [a.id]);
+    const secret = rows[0].id as string;
+    const frame = (id: string, mediaId: string) => ({ type: 'frame', id, x: 0.1, y: 0.1, w: 0.5, h: 0.5, rotation: 0, z: 1,
+      frameStyle: 'polaroid', mediaId, crop: { x: 0.5, y: 0.5, scale: 1 } });
+    const add = async (layout: object) => {
+      const p = (await owner('POST', `/api/albums/${a.id}/pages`, { templateId: 'blank' })).json();
+      expect((await t.app.inject({ method: 'PUT', url: `/api/pages/${p.id}`, payload: { layout }, headers: { cookie: await t.login() } })).statusCode).toBe(200);
+      return p.id as string;
+    };
+    const shown = await add({ background: 'paper-cream', elements: [frame('f1', a.mediaId)] });
+    const hidden = await add({ background: 'paper-cream', hidden: true, elements: [frame('f2', secret)] });
+    const token = (await owner('POST', `/api/albums/${a.id}/share`)).json().shareToken as string;
+
+    const pub = (await t.app.inject({ method: 'GET', url: `/api/share/${token}` })).json();
+    const ids = pub.pages.map((p: { id: string }) => p.id);
+    expect(ids).toContain(shown);
+    expect(ids).not.toContain(hidden);
+    expect(pub.media.map((m: { id: string }) => m.id)).toEqual([a.mediaId]);
+
+    const own = (await owner('GET', `/api/albums/${a.id}`)).json();
+    expect(own.pages.map((p: { id: string }) => p.id)).toContain(hidden);
+    expect(own.pages.find((p: { id: string }) => p.id === hidden).layout.hidden).toBe(true);
+    const preview = await t.app.inject({ method: 'GET', url: `/api/share/${token}/preview` });
+    expect(preview.body).toContain(`${own.pages.length - 1} trang`);
+  });
+});
+
 describe('share link previews (Facebook, Zalo…)', () => {
   const shareOf = async (id: string) => (await owner('POST', `/api/albums/${id}/share`)).json().shareToken as string;
   const anon = (url: string) => t.app.inject({ method: 'GET', url, headers: { host: 'lookback.test' } });

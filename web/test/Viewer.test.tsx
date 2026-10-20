@@ -162,3 +162,17 @@ test('?page=3 (Done in the editor) opens the viewer on that page', async () => {
   setup(vi.fn().mockResolvedValue(json(200, bundle)), '/albums/a1?page=3');
   expect(await screen.findByText('3 / 5')).toBeTruthy();
 });
+
+test('hidden pages are skipped; Edit still opens the right page in the editor', async () => {
+  const withHidden = { ...bundle, pages: bundle.pages.map((p, i) => (i === 1 ? { ...p, layout: { ...p.layout, hidden: true } } : p)) };
+  setup(vi.fn().mockResolvedValue(json(200, withHidden)), '/albums/a1?page=2');
+  expect(await screen.findByText('2 / 4')).toBeTruthy();
+  expect(screen.getByRole('link', { name: 'Edit' }).getAttribute('href')).toBe('/albums/a1/edit?page=3');
+});
+
+test('every page hidden: the viewer says so instead of breaking', async () => {
+  const allHidden = { ...bundle, pages: bundle.pages.map((p) => ({ ...p, layout: { ...p.layout, hidden: true } })) };
+  setup(vi.fn().mockResolvedValue(json(200, allHidden)));
+  expect(await screen.findByText(/Mọi trang đều đang ẩn/)).toBeTruthy();
+  expect(screen.getByRole('link', { name: 'Edit' }).getAttribute('href')).toBe('/albums/a1/edit?page=1');
+});

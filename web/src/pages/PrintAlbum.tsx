@@ -43,7 +43,7 @@ export default function PrintAlbum() {
         <h1>{bundle.album.title}</h1>
         <button type="button" disabled={!ready} onClick={() => window.print()}>{ready ? 'In / Lưu PDF' : 'Đang chuẩn bị ảnh…'}</button>
       </header>
-      {bundle.pages.map((p) => (
+      {bundle.pages.filter((p) => !p.layout.hidden).map((p) => (
         <section key={p.id} className="print-sheet">
           <PageRenderer layout={p.layout} media={media} mode="view" active={false} />
         </section>

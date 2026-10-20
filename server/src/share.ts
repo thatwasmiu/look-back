@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import sharp from 'sharp';
 import type { FastifyInstance } from 'fastify';
 import type pg from 'pg';
+import type { AlbumBundle } from '@scrapbook/shared';
 import { loadBundle, uuidParams } from './albums.js';
 import type { Config } from './config.js';
 import { readMediaFile } from './mediaFiles.js';
@@ -31,7 +32,7 @@ export function registerShare(app: FastifyInstance, pool: pg.Pool, config: Confi
     if (!isShareToken(token)) return reply.code(404).send({ error: 'not found' });
     const a = await pool.query('select * from albums where share_token = $1', [token]);
     if (!a.rows[0]) return reply.code(404).send({ error: 'not found' });
-    const bundle = await loadBundle(pool, a.rows[0]);
+    const bundle = hideHiddenPages(await loadBundle(pool, a.rows[0]));
     reply.setCookie(SHARE_COOKIE, token, { path: '/', httpOnly: true, sameSite: 'lax', secure: config.cookieSecure, maxAge: 30 * 24 * 3600 });
     return { ...bundle, album: { ...bundle.album, shareToken: null } };
   });
@@ -39,7 +40,7 @@ export function registerShare(app: FastifyInstance, pool: pg.Pool, config: Confi
   // Link previews (Facebook, Zalo, Messenger…): crawlers don't run the app, so nginx sends them here for the
   // album's own title / cover. Public like the share link itself; a dead or wrong token reveals nothing.
   const sharedAlbum = async (token: string) => (isShareToken(token)
-    ? (await pool.query('select a.*, (select count(*)::int from pages p where p.album_id = a.id) as page_count from albums a where share_token = $1', [token])).rows[0]
+    ? (await pool.query(`select a.*, (select count(*)::int from pages p where p.album_id = a.id and not coalesce((p.layout->>'hidden')::boolean, false)) as page_count from albums a where share_token = $1`, [token])).rows[0]
     : undefined);
   app.get<{ Params: { token: string } }>('/api/share/:token/preview', async (req, reply) => {
     const a = await sharedAlbum(req.params.token);
@@ -93,3 +94,15 @@ export async function shareAllowsMedia(pool: pg.Pool, token: unknown, uri: unkno
     'select 1 from media m join albums a on a.id = m.album_id where m.id = $1 and a.share_token = $2', [m[1], token]);
   return (r.rowCount ?? 0) > 0;
 }
+
+// Viewers of a share link never get hidden pages, nor the photos/videos that only those pages show.
+export function hideHiddenPages(b: AlbumBundle): AlbumBundle {
+  const used = (pages: AlbumBundle['pages']) =>
+    new Set(pages.flatMap((p) => p.layout.elements.flatMap((e) => (e.type === 'frame' && e.mediaId ? [e.mediaId] : []))));
+  const pages = b.pages.filter((p) => !p.layout.hidden);
+  const shown = used(pages);
+  const hiddenOnly = [...used(b.pages.filter((p) => p.layout.hidden))].filter((id) =>
+    !shown.has(id) && id !== b.album.coverMediaId && id !== b.album.musicMediaId);
+  return { ...b, pages, media: b.media.filter((m) => !hiddenOnly.includes(m.id)) };
+}
+

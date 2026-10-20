@@ -25,3 +25,16 @@ test('print view: one sheet per page, then the print dialog opens once by itself
   await waitFor(() => expect(print).toHaveBeenCalledTimes(1), { timeout: 2000 });
   expect(screen.getByRole('button', { name: 'In / Lưu PDF' })).toBeTruthy();
 });
+
+test('print leaves hidden pages out', async () => {
+  const withHidden = { ...bundle, pages: bundle.pages.map((p, i) => (i === 0 ? { ...p, layout: { ...p.layout, hidden: true } } : p)) };
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(withHidden), { status: 200 })));
+  vi.spyOn(window, 'print').mockImplementation(() => {});
+  const { container } = render(
+    <MemoryRouter initialEntries={['/albums/a1/print']} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <Routes><Route path="/albums/:id/print" element={<PrintAlbum />} /></Routes>
+    </MemoryRouter>,
+  );
+  await screen.findByRole('heading', { name: 'Đà Lạt' });
+  expect(container.querySelectorAll('.print-sheet')).toHaveLength(2);
+});

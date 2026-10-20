@@ -629,3 +629,18 @@ test('✂ Trim on a frame with a video saves the clip range; Full video clears i
   await user.click(screen.getByRole('button', { name: 'Full video' }));
   expect(screen.getByText(/End 0:10.0/)).toBeTruthy();
 });
+
+test('Hide page keeps the page in the editor, marks it, saves hidden, and Done points at the visible page', async () => {
+  const user = userEvent.setup();
+  const api = okApi();
+  setup(api); // 2 pages, on page 1
+  await user.click(screen.getByRole('button', { name: 'Hide page' }));
+  expect(screen.getByText(/Trang này đang ẩn/)).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Page 1' }).closest('.thumb')!.className).toContain('is-hidden');
+  await user.click(screen.getByRole('button', { name: 'Page 2' })); // switching saves page 1
+  await waitFor(() => expect(api.savePage).toHaveBeenCalledWith('p0', expect.objectContaining({ hidden: true }), undefined));
+  expect(screen.getByRole('link', { name: '← Done' }).getAttribute('href')).toBe('/albums/a1?page=1');
+  await user.click(screen.getByRole('button', { name: 'Page 1' }));
+  await user.click(screen.getByRole('button', { name: 'Show page' }));
+  expect(screen.queryByText(/Trang này đang ẩn/)).toBeNull();
+});

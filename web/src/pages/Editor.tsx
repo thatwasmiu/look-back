@@ -297,6 +297,8 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
 
   // Pages list keeps the current page's latest layout too (thumbnails, and switching back).
   const withCurrent = ({ pages: ps, cur: c, layout: l } = latest.current) => ps.map((p, i) => (i === c ? { ...p, layout: l } : p));
+  // 1-based position in the viewer, which skips hidden pages (a hidden page maps to the visible one before it).
+  const viewerPage = () => Math.max(1, withCurrent().slice(0, latest.current.cur + 1).filter((p) => !p.layout.hidden).length);
   const show = (ps: PageDTO[], i: number) => {
     setPages(ps);
     setCur(i);
@@ -338,7 +340,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   });
   const leave = (e: MouseEvent) => {
     e.preventDefault();
-    void run('rời màn trang trí', async () => { if (await saved()) navigate(`/albums/${albumId}?page=${cur + 1}`); });
+    void run('rời màn trang trí', async () => { if (await saved()) navigate(`/albums/${albumId}?page=${viewerPage()}`); });
   };
   const move = (from: number, to: number) => run('sắp xếp trang', async () => {
     if (from === to || to < 0 || to >= pages.length) return;
@@ -417,10 +419,11 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
   }, [selectedId, commit, upload]);
 
   const shownPages = withCurrent();
+  const toggleHidden = () => commit((l) => ({ ...l, hidden: l.hidden ? undefined : true }));
   return (
     <main className={`editor desk-${bgColor}${busy ? ' busy' : ''}${panelsHidden ? ' panels-hidden' : ''}`} aria-busy={busy}>
       <header className="editor-bar">
-        <Link to={`/albums/${albumId}?page=${cur + 1}`} onClick={leave}>← Done</Link>
+        <Link to={`/albums/${albumId}?page=${viewerPage()}`} onClick={leave}>← Done</Link>
         <h1>
           {renaming ? (
             <input className="title-input" aria-label="Album name" defaultValue={title} maxLength={200} autoFocus
@@ -521,6 +524,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
         ))}
       </div>
       {opError && <p role="alert" className="error op-error">{opError}</p>}
+      {layout.hidden && <p className="hidden-note" role="status">Trang này đang ẩn — không hiện khi xem, chia sẻ hay in.</p>}
       <nav className={`page-strip${pagesOpen ? ' open' : ''}`} aria-label="Pages">
         <button type="button" className="strip-tab" aria-expanded={pagesOpen} onClick={() => setPagesOpen((v) => !v)}>
           Pages ({pages.length}) <span aria-hidden>{pagesOpen ? '▾' : '▸'}</span>
@@ -528,7 +532,7 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
         {pagesOpen && (
         <div className="strip-list">
           {shownPages.map((p, i) => (
-            <div key={p.id} className={`thumb${i === cur ? ' current' : ''}`} draggable
+            <div key={p.id} className={`thumb${i === cur ? ' current' : ''}${p.layout.hidden ? ' is-hidden' : ''}`} draggable
               onDragStart={(e) => e.dataTransfer.setData(PAGE_DRAG, String(i))}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
@@ -542,6 +546,8 @@ export function EditorView({ bundle, api, uploader = useUpload }: { bundle: Albu
               {i === cur && (
                 <div className="thumb-actions">
                   <button type="button" aria-label="Move page left" disabled={i === 0} onClick={() => move(i, i - 1)}>◀</button>
+                  <button type="button" aria-label={p.layout.hidden ? 'Show page' : 'Hide page'} aria-pressed={!!p.layout.hidden}
+                    title={p.layout.hidden ? 'Hiện lại trang này' : 'Ẩn trang khi xem / chia sẻ'} onClick={toggleHidden}>{p.layout.hidden ? 'Hiện' : 'Ẩn'}</button>
                   <button type="button" aria-label="Delete page" onClick={() => setConfirmDelete(true)}>✕</button>
                   <button type="button" aria-label="Move page right" disabled={i === pages.length - 1} onClick={() => move(i, i + 1)}>▶</button>
                 </div>

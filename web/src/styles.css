@@ -517,3 +517,7 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .ai-prompt small { justify-self: end; opacity: .65; }
 .ai-prompt p { margin: 0; }
 
+.thumb.is-hidden { position: relative; }
+.thumb.is-hidden .thumb-page { opacity: .4; }
+.thumb.is-hidden::after { content: 'Ẩn'; position: absolute; top: 4px; left: 4px; font-size: .7rem; background: #3b2a1aCC; color: #fff; border-radius: 6px; padding: 0 .3rem; pointer-events: none; }
+.hidden-note { margin: .3rem auto; width: max-content; max-width: calc(100% - 32px); background: #fff4ec; border: 1px dashed var(--accent); border-radius: 10px; padding: .25rem .7rem; font-size: .9rem; color: #3b2a1a; }

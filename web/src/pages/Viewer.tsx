@@ -37,7 +37,8 @@ const slotOf = (i: number, spread: boolean, rtl = false) => (!spread ? 'single' 
 
 // `shared`: opened from a public share link — read-only, no way into the owner's app.
 export function Book({ bundle, shared = false }: { bundle: AlbumBundle; shared?: boolean }) {
-  const { album, pages } = bundle;
+  const { album } = bundle;
+  const pages = useMemo(() => bundle.pages.filter((p) => !p.layout.hidden), [bundle.pages]); // hidden: editor only
   const total = pages.length;
   const media = useMemo(() => new Map(bundle.media.map((m) => [m.id, m])), [bundle.media]);
   const spread = useSpread();
@@ -74,9 +75,9 @@ export function Book({ bundle, shared = false }: { bundle: AlbumBundle; shared?:
         {musicSrc && <Music src={musicSrc} />}
         {total > 0 && <span className="counter">{visible.map((i) => i + 1).join('–')} / {total}</span>}
         {!shared && album.id !== EXAMPLE_ALBUM_ID && <Link className="btn secondary" to={`/albums/${album.id}/print`} title="In hoặc lưu thành PDF">PDF</Link>}
-        {!shared && album.id !== EXAMPLE_ALBUM_ID && <Link className="btn" to={`/albums/${album.id}/edit?page=${(visible[0] ?? 0) + 1}`}>Edit</Link>}
+        {!shared && album.id !== EXAMPLE_ALBUM_ID && <Link className="btn" to={`/albums/${album.id}/edit?page=${Math.max(1, bundle.pages.indexOf(pages[visible[0] ?? 0]) + 1)}`}>Edit</Link>}
       </header>
-      {total === 0 ? <p className="empty">Chưa có trang nào.</p> : (
+      {total === 0 ? <p className="empty">{bundle.pages.length ? 'Mọi trang đều đang ẩn.' : 'Chưa có trang nào.'}</p> : (
         <div className="stage">
           <div className={`book${spread ? ' spread' : ''}${visible.some((i) => slot(i) === 'left') ? ' has-left' : ''}${turn ? (forwardOnScreen ? ' fwd' : ' back') : ''}`} {...swipe}>
             {pages.map((p, i) => {
