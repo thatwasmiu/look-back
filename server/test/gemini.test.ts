@@ -20,6 +20,11 @@ describe('Gemini client', () => {
     expect(r.body.generationConfig).toMatchObject({ responseMimeType: 'application/json', responseSchema: { type: 'object' } });
   });
 
+  it('joins the answer text parts and skips thought parts', async () => {
+    g.reply({ body: { candidates: [{ content: { parts: [{ text: 'thinking…', thought: true }, { text: '{"a":' }, { text: '2}' }] } }] } });
+    expect(await call()).toEqual({ a: 2 });
+  });
+
   it('maps errors', async () => {
     g.reply({ status: 400, body: { error: { code: 400, status: 'INVALID_ARGUMENT', details: [{ reason: 'API_KEY_INVALID' }] } } });
     expect(await kind(call())).toBe('bad-key');

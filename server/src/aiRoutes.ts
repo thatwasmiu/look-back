@@ -25,7 +25,7 @@ export function registerAiRoutes(app: FastifyInstance, pool: pg.Pool, config: Co
 
   app.put<{ Body: { key?: string; model?: string } }>('/api/manage/ai', {
     schema: { body: { type: 'object', additionalProperties: false, properties: {
-      key: { type: 'string', minLength: 20, maxLength: 200, pattern: '^[A-Za-z0-9_-]+$' }, // a pasted invisible char would break the header
+      key: { type: 'string', minLength: 20, maxLength: 200, pattern: '^[A-Za-z0-9._-]+$' }, // AIza… or AQ.…; a pasted invisible char would break the header
       model: { type: 'string', pattern: '^[a-z0-9.-]{3,60}$' },
     } } },
   }, async (req) => {

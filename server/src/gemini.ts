@@ -37,8 +37,10 @@ export async function generateJson(config: Config, key: string, model: string, p
     throw new GeminiError('http', `Gemini HTTP ${res.status}`);
   }
   try {
-    const answer = JSON.parse(text).candidates?.[0]?.content?.parts?.[0]?.text;
-    if (typeof answer !== 'string') throw new Error('no text');
+    // Thinking models may send thought parts first; the answer can also come in several pieces.
+    const parts: { text?: unknown; thought?: boolean }[] = JSON.parse(text).candidates?.[0]?.content?.parts ?? [];
+    const answer = parts.filter((p) => !p.thought && typeof p.text === 'string').map((p) => p.text).join('');
+    if (!answer) throw new Error('no text');
     return JSON.parse(answer);
   } catch {
     throw new GeminiError('unusable', 'answer is not JSON');

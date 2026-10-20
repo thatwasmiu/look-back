@@ -39,6 +39,8 @@ describe('AI settings in /manage', () => {
     expect((await owner('PUT', '/api/manage/ai', { model: 'x y' })).statusCode).toBe(400);
     expect((await owner('PUT', '/api/manage/ai', { key: 'short' })).statusCode).toBe(400);
     expect((await owner('PUT', '/api/manage/ai', { key: 'AIzaSyTESTKEY​0123456789abcd' })).statusCode).toBe(400);
+    // Newer AI Studio keys look like "AQ.Ab8…" (with a dot).
+    expect((await owner('PUT', '/api/manage/ai', { key: 'AQ.Ab8RN6Jl7xlTESTTESTTEST_pH4cF9A' })).json()).toMatchObject({ hasKey: true, last4: 'cF9A' });
     await owner('PUT', '/api/manage/ai', { model: DEFAULT_MODEL });
   });
 
