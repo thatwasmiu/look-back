@@ -30,7 +30,9 @@ test('"+ add" offers Upload first, then the uploaded photos; picking one puts it
   setup(bundleWith([m]));
   await user.click(screen.getByRole('button', { name: '+ add' }));
   const dialog = screen.getByRole('dialog', { name: 'Add photo or video' });
-  const options = dialog.querySelectorAll('.frame-menu-grid button');
+  // Actions sit in their own row above the photo grid (in the grid their wrapped labels overflowed onto the photos).
+  const options = dialog.querySelectorAll('.frame-menu-actions button');
+  expect(dialog.querySelector('.frame-menu-grid .frame-menu-upload')).toBeNull();
   expect(options[0].textContent).toContain('Chụp theo khung'); // phones only (CSS)
   expect(options[1].textContent).toContain('Take photo/video'); // phones only (CSS)
   expect(options[2].textContent).toContain('Upload');

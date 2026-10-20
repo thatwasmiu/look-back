@@ -509,7 +509,7 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
               <button type="button" className="modal-close" aria-label="Close" onClick={() => setFrameMenu(null)} autoFocus>×</button>
               <h2>Add to frame</h2>
               {inlineVideoBlocked() && <p className="manage-hint">Trong Zalo không chụp theo khung được — dùng “Take photo/video”, hoặc mở bằng Safari (⋯ → Mở bằng trình duyệt).</p>}
-              <div className="frame-menu-grid">
+              <div className="frame-menu-actions">
                 {inlineVideoBlocked() ? null : <button type="button" className="frame-menu-upload frame-menu-camera" onClick={() => {
                   const f = layout.elements.find((e) => e.id === frameMenu);
                   if (f?.type === 'frame') {
@@ -520,6 +520,8 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
                 }}>🎯<span>Chụp theo khung</span></button>}
                 <button type="button" className="frame-menu-upload frame-menu-camera" onClick={() => { uploadToFrame(frameMenu, true); setFrameMenu(null); }}>📷<span>Take photo/video</span></button>
                 <button type="button" className="frame-menu-upload" onClick={() => { uploadToFrame(frameMenu); setFrameMenu(null); }}>⬆<span>Upload</span></button>
+              </div>
+              <div className="frame-menu-grid">
                 {trayMedia.filter((m) => m.status !== 'failed').map((m) => {
                   const src = thumbOf(m);
                   return (
