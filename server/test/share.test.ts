@@ -121,6 +121,8 @@ describe('share link previews (Facebook, Zalo…)', () => {
     expect(html).toMatch(new RegExp(`<meta property="og:image" content="https?://lookback\.test/api/share/${token}/preview\.jpg"`));
     expect(html).toMatch(new RegExp(`<meta property="og:url" content="https?://lookback\.test/s/${token}"`));
     expect(html).not.toContain('Hà Giang <3'); // never raw
+    // A real browser taken for a crawler (e.g. Zalo's in-app browser) moves on to the app: ?app skips the preview.
+    expect(html).toMatch(new RegExp(`<meta http-equiv="refresh" content="0;url=https?://lookback\\.test/s/${token}\\?app"`));
   });
 
   it('unknown or revoked links give a 404 that reveals nothing', async () => {

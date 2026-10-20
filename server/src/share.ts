@@ -56,8 +56,8 @@ export function registerShare(app: FastifyInstance, pool: pg.Pool, config: Confi
 <html lang="vi"><head><meta charset="utf-8"><title>${esc(a.title)} · Look Back</title>
 ${tags.map(([k, v]) => `<meta property="${k}" content="${esc(v)}">`).join('\n')}
 <meta name="twitter:card" content="summary_large_image">
-<meta http-equiv="refresh" content="0;url=${esc(link)}">
-</head><body><a href="${esc(link)}">${esc(a.title)}</a></body></html>`);
+<meta http-equiv="refresh" content="0;url=${esc(link)}?app">
+</head><body><a href="${esc(link)}?app">${esc(a.title)}</a></body></html>`);
   });
 
   // The preview picture: the cover photo, else the album's first ready photo (or video poster), cut to 1200×630.
