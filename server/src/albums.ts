@@ -20,7 +20,11 @@ export const uuidParams = {
   params: { type: 'object', properties: { id: { type: 'string', format: 'uuid' } } },
 } as const;
 
-const toAlbumDTO = (r: any): AlbumDTO => ({ id: r.id, title: r.title, coverMediaId: r.cover_media_id, backgroundEffect: r.background_effect, backgroundColor: r.background_color, shareToken: r.share_token ?? null, musicMediaId: r.music_media_id ?? null, mode: r.mode, readingDirection: r.reading_direction });
+const toAlbumDTO = (r: any): AlbumDTO => ({ id: r.id, title: r.title, coverMediaId: r.cover_media_id, backgroundEffect: r.background_effect, backgroundColor: r.background_color, shareToken: r.share_token ?? null, ...editLink(r), musicMediaId: r.music_media_id ?? null, mode: r.mode, readingDirection: r.reading_direction });
+const editLink = (r: any) => {
+  const live = !!r.edit_token && !!r.edit_expires_at && new Date(r.edit_expires_at) > new Date();
+  return { editToken: live ? r.edit_token : null, editExpiresAt: live ? new Date(r.edit_expires_at).toISOString() : null };
+};
 const title = { type: 'string', minLength: 1, maxLength: 200 } as const;
 export const withoutMedia = (l: PageLayout): PageLayout => ({
   ...l,

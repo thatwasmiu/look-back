@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { guestEditAllowed } from './editLinks.js';
 import type { FastifyInstance } from 'fastify';
 import type pg from 'pg';
 import { instantiateTemplate, pageLayoutSchema, type PageDTO } from '@scrapbook/shared';
@@ -62,8 +63,11 @@ export function registerPages(app: FastifyInstance, pool: pg.Pool): void {
     const parsed = pageLayoutSchema.safeParse(req.body?.layout);
     if (!parsed.success) return reply.code(400).send({ error: 'invalid layout', issues: parsed.error.issues });
     const layout = parsed.data;
-    const page = await pool.query('select album_id from pages where id = $1', [req.params.id]);
+    const page = await pool.query('select album_id, layout from pages where id = $1', [req.params.id]);
     if (!page.rows[0]) return reply.code(404).send({ error: 'not found' });
+    if (req.guestAlbumId && (page.rows[0].album_id !== req.guestAlbumId || !guestEditAllowed(page.rows[0].layout, layout))) {
+      return reply.code(403).send({ error: 'Link sửa chỉ cho thay ảnh trong khung và sửa chữ.' });
+    }
 
     const mediaIds = [...new Set(layout.elements.flatMap((e) => (e.type === 'frame' && e.mediaId ? [e.mediaId] : [])))];
     if (mediaIds.length) {

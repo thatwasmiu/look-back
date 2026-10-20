@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type pg from 'pg';
 import type { Config } from './config.js';
+import { guestAllowsMedia } from './editLinks.js';
 import { loadBucket, markLocation } from './locations.js';
 import { BucketError, bucketClient } from './objectStore.js';
 import { SHARE_COOKIE, shareAllowsMedia } from './share.js';
@@ -16,7 +17,8 @@ export function registerRemoteMedia(app: FastifyInstance, pool: pg.Pool, config:
     const { mediaId } = req.params;
     const rest = req.params['*'];
     if (!UUID.test(mediaId) || !rest || rest.split('/').some((p) => !p || p === '..')) return reply.code(404).send();
-    if (!req.session.get('owner') && !(await shareAllowsMedia(pool, req.cookies[SHARE_COOKIE], req.url))) return reply.code(401).send();
+    if (!req.session.get('owner') && !(await shareAllowsMedia(pool, req.cookies[SHARE_COOKIE], req.url))
+      && !(await guestAllowsMedia(pool, req, req.url))) return reply.code(401).send();
 
     const m = (await pool.query(`select m.storage_id, l.check_status from media m
       left join storage_locations l on l.id = m.storage_id where m.id = $1`, [mediaId])).rows[0];

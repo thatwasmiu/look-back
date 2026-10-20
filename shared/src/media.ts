@@ -12,6 +12,7 @@ export type MediaDTO = {
 export type PageDTO = { id: string; albumId: string; position: number; layout: PageLayout }
 export type AlbumDTO = { id: string; title: string; coverMediaId: string | null; backgroundEffect: BackgroundEffect; backgroundColor: BackgroundColor
   shareToken: string | null // secret share-link code; only ever sent to the owner
+  editToken?: string | null; editExpiresAt?: string | null // temporary edit link (owner only); null once expired
   musicMediaId: string | null // background music (an audio media row of this album), looped while viewing
   mode: AlbumMode; readingDirection: ReadingDirection } // fixed at creation; direction only matters for manga
 // coverPage: the first page and the media in its frames, drawn as the card when no cover photo is set.

@@ -14,6 +14,7 @@ export const toMediaDTO = (r: any): MediaDTO => ({
 export function registerMedia(app: FastifyInstance, pool: pg.Pool, config: Config): void {
   app.get<{ Params: { id: string } }>('/api/media/:id', { schema: uuidParams }, async (req, reply) => {
     const { rows } = await pool.query('select * from media where id = $1', [req.params.id]);
+    if (rows[0] && req.guestAlbumId && rows[0].album_id !== req.guestAlbumId) return reply.code(403).send({ error: 'forbidden' });
     return rows[0] ? toMediaDTO(rows[0]) : reply.code(404).send({ error: 'not found' });
   });
 

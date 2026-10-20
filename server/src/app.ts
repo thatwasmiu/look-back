@@ -12,6 +12,7 @@ import { registerDriveRoutes } from './driveRoutes.js';
 import { registerMedia } from './media.js';
 import { registerPages } from './pages.js';
 import { registerShare } from './share.js';
+import { registerEditLinks } from './editLinks.js';
 import { registerUploads } from './uploads.js';
 
 export async function buildApp(config: Config, pool: pg.Pool, boss: PgBoss): Promise<FastifyInstance> {
@@ -20,6 +21,7 @@ export async function buildApp(config: Config, pool: pg.Pool, boss: PgBoss): Pro
   app.get('/api/health', async () => ({ ok: true }));
   registerAlbums(app, pool, config, boss);
   registerShare(app, pool, config);
+  registerEditLinks(app, pool);
   registerManage(app, pool, config, boss);
   registerLocations(app, pool, config);
   registerRemoteMedia(app, pool, config);

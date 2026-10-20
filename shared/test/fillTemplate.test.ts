@@ -27,7 +27,7 @@ describe('fillTemplate', () => {
     const [slot] = textSlots(templates.find((t) => t.id === 'cover')!)
     const [t] = texts(fillTemplate('cover', ['a'.repeat(slot.max - 1) + '🎂🎂'], [], id))
     expect(t).toBe('a'.repeat(slot.max - 1) + '🎂')
-    expect(JSON.stringify(t)).not.toMatch(/\ud83/)
+    expect(JSON.stringify(t)).not.toMatch(/\\ud83/)
   })
 
   it('replaces sticker ids and drops unknown ones', () => {

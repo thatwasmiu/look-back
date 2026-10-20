@@ -63,9 +63,26 @@ export function registerUploads(app: FastifyInstance, config: Config, pool: pg.P
   app.addContentTypeParser('application/offset+octet-stream', (_req, _payload, done) => done(null));
   // The session guard (global onRequest hook) has already run by the time this handler is reached.
   const handler = async (req: import('fastify').FastifyRequest, reply: import('fastify').FastifyReply) => {
+    if (req.guestAlbumId && !(await guestMayUpload(pool, req, req.guestAlbumId))) return reply.code(403).send({ error: 'forbidden' });
     reply.hijack();
     await tus.handle(req.raw, reply.raw);
   };
   app.all('/api/uploads', handler);
   app.all('/api/uploads/*', handler);
 }
+
+// Edit-link guests: new uploads only into their album and only photos/videos; an existing upload only if it is
+// theirs (their album). They can't cancel uploads (DELETE never reaches here for them).
+async function guestMayUpload(pool: pg.Pool, req: import('fastify').FastifyRequest, albumId: string): Promise<boolean> {
+  if (req.method === 'POST') {
+    const meta = Object.fromEntries(String(req.headers['upload-metadata'] ?? '').split(',').map((kv) => {
+      const [k, v = ''] = kv.trim().split(' ');
+      return [k, Buffer.from(v, 'base64').toString()];
+    }));
+    return meta.albumId === albumId && /^(image|video)\//.test(meta.filetype ?? '');
+  }
+  const id = req.url.split('?')[0].split('/').pop() ?? '';
+  if (!UUID.test(id)) return req.method === 'OPTIONS';
+  return ((await pool.query('select 1 from media where id = $1 and album_id = $2', [id, albumId])).rowCount ?? 0) > 0;
+}
+

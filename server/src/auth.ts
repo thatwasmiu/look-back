@@ -4,6 +4,7 @@ import secureSession from '@fastify/secure-session';
 import type { FastifyInstance } from 'fastify';
 import type pg from 'pg';
 import type { Config } from './config.js';
+import { guestAlbum, guestAllowsMedia } from './editLinks.js';
 import { SHARE_COOKIE, shareAllowsMedia } from './share.js';
 
 const KEYLEN = 64;
@@ -24,7 +25,8 @@ export async function verifyPassword(pw: string, stored: string): Promise<boolea
 }
 
 declare module '@fastify/secure-session' {
-  interface SessionData { owner: true; driveState?: string } // driveState: OAuth state while connecting Google Drive
+  // driveState: OAuth state while connecting Google Drive. guest: an album's edit link opened in this browser.
+  interface SessionData { owner: true; driveState?: string; guest?: { albumId: string; token: string } }
 }
 
 export function registerAuth(app: FastifyInstance, config: Config, pool: pg.Pool): void {
@@ -34,6 +36,12 @@ export function registerAuth(app: FastifyInstance, config: Config, pool: pg.Pool
     cookie: { path: '/', httpOnly: true, sameSite: 'lax', secure: config.cookieSecure, maxAge: 30 * 24 * 3600 },
   });
   app.register(rateLimit, { global: false });
+
+  // Edit-link guests reach only these, and each handler keeps them to their own album.
+  const GUEST_ROUTES = new Set(['PUT /api/pages/:id', 'GET /api/media/:id']);
+  const guestRoute = (method: string, route: string) =>
+    GUEST_ROUTES.has(`${method} ${route}`) || ((route === '/api/uploads' || route === '/api/uploads/*') && method !== 'DELETE');
+  app.decorateRequest('guestAlbumId', null);
 
   // Not encapsulated, so the guard covers all routes, and runs after secure-session's hook.
   const plugin = async (a: FastifyInstance) => {
@@ -45,8 +53,13 @@ export function registerAuth(app: FastifyInstance, config: Config, pool: pg.Pool
       const key = `${req.method} ${route}`;
       // Public: login, health, a share link's album, and the media check (it decides itself, below).
       if (key === 'POST /api/auth/login' || key === 'GET /api/health' || key === 'GET /api/share/:token' || key === 'GET /api/auth/check'
-        || key === 'GET /api/share/:token/preview' || key === 'GET /api/share/:token/preview.jpg') return;
-      if (!req.session.get('owner')) return reply.code(401).send({ error: 'unauthorized' });
+        || key === 'GET /api/share/:token/preview' || key === 'GET /api/share/:token/preview.jpg' || key === 'GET /api/edit/:token') return;
+      if (req.session.get('owner')) return;
+      if (guestRoute(req.method, route)) {
+        req.guestAlbumId = await guestAlbum(pool, req);
+        if (req.guestAlbumId) return;
+      }
+      return reply.code(401).send({ error: 'unauthorized' });
     });
 
     // ponytail: counts all login attempts (not only failures), per IP; fine for a single owner.
@@ -69,7 +82,8 @@ export function registerAuth(app: FastifyInstance, config: Config, pool: pg.Pool
     // nginx auth_request for /media/*: the owner's session, or a share-link cookie for that media's album.
     a.get('/api/auth/check', async (req, reply) => {
       if (req.session.get('owner')) return reply.code(204).send();
-      const ok = await shareAllowsMedia(pool, req.cookies[SHARE_COOKIE], req.headers['x-original-uri']);
+      const uri = req.headers['x-original-uri'];
+      const ok = await shareAllowsMedia(pool, req.cookies[SHARE_COOKIE], uri) || await guestAllowsMedia(pool, req, uri);
       return reply.code(ok ? 204 : 401).send();
     });
   };

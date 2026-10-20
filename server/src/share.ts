@@ -34,7 +34,7 @@ export function registerShare(app: FastifyInstance, pool: pg.Pool, config: Confi
     if (!a.rows[0]) return reply.code(404).send({ error: 'not found' });
     const bundle = hideHiddenPages(await loadBundle(pool, a.rows[0]));
     reply.setCookie(SHARE_COOKIE, token, { path: '/', httpOnly: true, sameSite: 'lax', secure: config.cookieSecure, maxAge: 30 * 24 * 3600 });
-    return { ...bundle, album: { ...bundle.album, shareToken: null } };
+    return { ...bundle, album: { ...bundle.album, shareToken: null, editToken: null, editExpiresAt: null } };
   });
 
   // Link previews (Facebook, Zalo, Messenger…): crawlers don't run the app, so nginx sends them here for the
