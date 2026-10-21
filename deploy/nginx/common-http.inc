@@ -23,6 +23,12 @@ map $http_user_agent $link_crawler {
   ~*(iphone|ipad|android).*zalo 0;
   ~*(facebookexternalhit|facebot|zalo|twitterbot|slackbot|telegrambot|discordbot|whatsapp|linkedinbot|skypeuripreview|pinterest|redditbot|embedly|vkshare|applebot) 1;
 }
+# A shared link's page names its own manifest, so "Add to Home Screen" from it starts the installed app on that link
+# (iPhone reads the manifest from the page as served, before any script runs).
+map $request_uri $app_manifest {
+  default /manifest.webmanifest;
+  "~^/(?<man_kind>[es])/(?<man_tok>[A-Za-z0-9_-]{43})(?:\?.*)?$" /api/manifest/$man_kind/$man_tok;
+}
 # /s/<token>?app always gets the app: the preview page sends anyone it reaches there (a browser taken for a crawler).
 map "$link_crawler:$uri:$args" $share_preview {
   default "";

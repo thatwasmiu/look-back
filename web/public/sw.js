@@ -47,6 +47,8 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET' || url.origin !== location.origin || req.headers.has('range')) return;
   const p = url.pathname;
   if (p.startsWith('/api/manage/backup')) return; // a big download: straight from the network, never cached
+  // A shared link's page names its own manifest: never keep it as the one app shell (fetched fresh, still works offline from it).
+  if (req.mode === 'navigate' && /^\/[es]\//.test(p)) return e.respondWith(fetch(req).catch(() => caches.match('/', { cacheName: SHELL })));
   if (req.mode === 'navigate' && !p.startsWith('/api/') && !p.startsWith('/media/')) return e.respondWith(networkFirst(req, SHELL, '/')); // one app shell for every route
   if (p.startsWith('/api/uploads') || p.startsWith('/api/share/') && p.endsWith('/preview.jpg')) return;
   if (p.startsWith('/api/')) return e.respondWith(networkFirst(req, API));

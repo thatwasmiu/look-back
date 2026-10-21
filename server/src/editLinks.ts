@@ -86,4 +86,23 @@ export function registerEditLinks(app: FastifyInstance, pool: pg.Pool): void {
     const bundle = await loadBundle(pool, a.rows[0]);
     return { ...bundle, album: { ...bundle.album, shareToken: null, editToken: null, editExpiresAt: new Date(a.rows[0].edit_expires_at).toISOString() } };
   });
+
+  // Public: the app manifest a link's page points to, so "Add to Home Screen" from /e/<code> or /s/<code> opens that
+  // album — the installed app starts there (and on iPhone it doesn't share Safari's cookies, so it needs the code).
+  app.get<{ Params: { kind: string; token: string } }>('/api/manifest/:kind/:token', async (req, reply) => {
+    const { kind, token } = req.params;
+    if ((kind !== 'e' && kind !== 's') || !isShareToken(token)) return reply.code(404).send({ error: 'not found' });
+    const start = `/${kind}/${token}`;
+    return reply.type('application/manifest+json').header('cache-control', 'no-cache').send({
+      name: 'Look Back', short_name: 'Look Back', description: 'Album được chia sẻ trên Look Back.',
+      id: start, start_url: start, scope: '/', display: 'standalone', orientation: 'any',
+      background_color: '#efe6d4', theme_color: '#efe6d4',
+      icons: [
+        { src: '/brand/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: '/brand/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+        { src: '/brand/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      ],
+    });
+  });
 }
+

@@ -184,3 +184,18 @@ describe('guestEditAllowed', () => {
     expect(guestEditAllowed(a, offPage)).toBe(false);
   });
 });
+
+describe('install manifest for a shared link', () => {
+  it('starts the installed app on that link; public; only real-looking links', async () => {
+    const tok = 'A'.repeat(43);
+    for (const kind of ['e', 's']) {
+      const r = await as(undefined, 'GET', `/api/manifest/${kind}/${tok}`);
+      expect(r.statusCode).toBe(200);
+      expect(r.headers['content-type']).toMatch(/application\/manifest\+json/);
+      expect(r.json()).toMatchObject({ start_url: `/${kind}/${tok}`, id: `/${kind}/${tok}`, scope: '/', display: 'standalone', name: 'Look Back' });
+      expect(r.json().icons.length).toBeGreaterThan(0);
+    }
+    expect((await as(undefined, 'GET', `/api/manifest/x/${tok}`)).statusCode).toBe(404);
+    expect((await as(undefined, 'GET', '/api/manifest/e/short')).statusCode).toBe(404);
+  });
+});

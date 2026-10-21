@@ -24,7 +24,7 @@ button {
 input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); border-radius: 4px; background: #fffaf0; }
 .error { color: #a02020; margin: 0; }
 
-.login { display: grid; place-items: center; min-height: 100vh; padding: 1rem; }
+.login { display: grid; place-items: center; align-content: center; gap: 1rem; min-height: 100vh; padding: 1rem; }
 .paper-card {
   display: flex; flex-direction: column; gap: 1rem; width: min(100%, 22rem); padding: 1.5rem;
   background: #fffaf0; box-shadow: 0 4px 14px #0003; transform: rotate(-1deg);
@@ -535,4 +535,6 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .guest-badge { font-size: .9rem; background: #fff4ec; color: #3b2a1a; border-radius: 999px; padding: .2rem .7rem; white-space: nowrap; }
 .guest-tools { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
 .guest-tools .guest-hint { flex: 1 1 12rem; font-size: .85rem; opacity: .8; }
+
+.login .share-code h2 { margin: 0 0 .5rem; font-size: 1.1rem; }
 

@@ -120,6 +120,11 @@ the code is still current and unexpired. Guests get a cut-down editor (no adding
 no pages); the server enforces the same on every save (`guestEditAllowed`) and limits uploads to photos/videos in
 that album.
 
+Installing the app from a shared link: the page of `/e/<code>` or `/s/<code>` names its own manifest
+(`/api/manifest/<e|s>/<code>`, put in by nginx so iPhone sees it before any script), so the installed app starts on
+that album — needed on iPhone, where a Home Screen app doesn't share Safari's cookies. The login screen also has a
+"link or code" box and a button for the last shared album opened in that browser/app.
+
 ### Hidden pages
 
 A page can be marked hidden in the editor. It stays there (faded, labelled "Ẩn") but is left out of the viewer,

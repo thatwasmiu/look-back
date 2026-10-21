@@ -19,6 +19,7 @@ location / {
   # index.html's link-preview tags need absolute URLs: fill in this site's own origin.
   sub_filter_once off;
   sub_filter '__ORIGIN__' '$fwd_proto://$host';
+  sub_filter 'href="/manifest.webmanifest"' 'href="$app_manifest"';
 }
 # PWA manifest: nginx's stock mime.types doesn't know .webmanifest.
 location = /manifest.webmanifest {

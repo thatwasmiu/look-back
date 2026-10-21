@@ -53,7 +53,7 @@ export function registerAuth(app: FastifyInstance, config: Config, pool: pg.Pool
       const key = `${req.method} ${route}`;
       // Public: login, health, a share link's album, and the media check (it decides itself, below).
       if (key === 'POST /api/auth/login' || key === 'GET /api/health' || key === 'GET /api/share/:token' || key === 'GET /api/auth/check'
-        || key === 'GET /api/share/:token/preview' || key === 'GET /api/share/:token/preview.jpg' || key === 'GET /api/edit/:token') return;
+        || key === 'GET /api/share/:token/preview' || key === 'GET /api/share/:token/preview.jpg' || key === 'GET /api/edit/:token' || key === 'GET /api/manifest/:kind/:token') return;
       if (req.session.get('owner')) return;
       if (guestRoute(req.method, route)) {
         req.guestAlbumId = await guestAlbum(pool, req);

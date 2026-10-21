@@ -141,6 +141,7 @@ album's files.
 | ALL /api/uploads[/*] | uploads | tus server (resumable, 50 MiB chunks, metadata `albumId`, `filename`, `filetype`) |
 | POST/DELETE /api/albums/:id/share | share | create (idempotent) / revoke share token |
 | POST/DELETE /api/albums/:id/edit-link | editLinks | make `{hours?: 1–168}` (default 8; a valid link keeps its code, gets the new expiry) → `{editToken, expiresAt}` · revoke |
+| ● GET /api/manifest/:kind/:token | editLinks | app manifest (`e`/`s`) whose `id`/`start_url` is that link; nginx swaps it into the link's page |
 | ● GET /api/edit/:token | editLinks | album bundle for a guest; sets `guest {albumId, token}` in the session |
 | ● GET /api/share/:token | share | album bundle for viewers without hidden pages and media only they show (`hideHiddenPages`); sets `lb_share` cookie (30 days) |
 | ● GET /api/share/:token/preview[.jpg] | share | Open Graph HTML for crawlers (page count excludes hidden pages; meta refresh → `/s/<token>?app`) · 1200×630 JPEG of the cover |
