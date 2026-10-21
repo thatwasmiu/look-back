@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import type { AlbumBundle } from '@scrapbook/shared';
 import { api, ApiError } from '../api';
@@ -9,6 +9,8 @@ import { PageRenderer } from '../render/PageRenderer';
 import { planPreload, runPreload } from '../viewer/preload';
 import { nextIndex, prevIndex, visiblePages } from '../viewer/spread';
 import { useT } from '../i18n';
+// Pulls in html-to-image only when opened.
+const SocialShare = lazy(() => import('../viewer/SocialShare').then((m) => ({ default: m.SocialShare })));
 import { useFlip, useSpread } from '../viewer/useFlip';
 
 export default function Viewer() {
@@ -40,6 +42,7 @@ const slotOf = (i: number, spread: boolean, rtl = false) => (!spread ? 'single' 
 // `shared`: opened from a public share link — read-only, no way into the owner's app.
 export function Book({ bundle, shared = false }: { bundle: AlbumBundle; shared?: boolean }) {
   const t = useT();
+  const [social, setSocial] = useState(false); // the share-to-social dialog
   const { album } = bundle;
   const pages = useMemo(() => bundle.pages.filter((p) => !p.layout.hidden), [bundle.pages]); // hidden: editor only
   const total = pages.length;
@@ -71,12 +74,15 @@ export function Book({ bundle, shared = false }: { bundle: AlbumBundle; shared?:
 
   return (
     <main className={`viewer desk-${album.backgroundColor}`}>
+      {social && <Suspense fallback={null}><SocialShare bundle={bundle} onClose={() => setSocial(false)}
+        viewLink={shared ? `${location.origin}${location.pathname}` : null} /></Suspense>}
       <BackgroundEffectView kind={album.backgroundEffect} />
       <header className="viewer-bar">
         {!shared && <Link to="/">← {t('Albums')}</Link>}
         <h1>{album.title}</h1>
         {musicSrc && <Music src={musicSrc} />}
         {total > 0 && <span className="counter">{visible.map((i) => i + 1).join('–')} / {total}</span>}
+        {album.id !== EXAMPLE_ALBUM_ID && <button type="button" className="btn secondary" title={t('Share to social media')} aria-label={t('Share to social media')} onClick={() => setSocial(true)}>{t('Share')}</button>}
         {!shared && album.id !== EXAMPLE_ALBUM_ID && <Link className="btn secondary" to={`/albums/${album.id}/print`} title={t('Print or save as PDF')}>PDF</Link>}
         {!shared && album.id !== EXAMPLE_ALBUM_ID && <Link className="btn" to={`/albums/${album.id}/edit?page=${Math.max(1, bundle.pages.indexOf(pages[visible[0] ?? 0]) + 1)}`}>{t('Edit')}</Link>}
       </header>

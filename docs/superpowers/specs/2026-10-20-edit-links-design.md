@@ -59,3 +59,8 @@ a phone should be able to install it as an app that opens that album.
 
 - Edit links default to 8 hours, max 168. One edit link per album.
 - A guest's session cookie lasts like the owner's; the code check on each request is what limits it.
+
+## Built since
+
+- Guests get **Pin all**: it pins what they may edit (text, stickers, bubbles…), never frames/panels.
+- People who open a view link can use **Share to social** too; its Facebook link posts that view link.

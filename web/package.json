@@ -16,6 +16,7 @@
     "@uppy/core": "^6.3.0",
     "@uppy/tus": "^6.0.0",
     "hls.js": "^1.7.3",
+    "html-to-image": "^1.11.11",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-moveable": "^0.56.0",

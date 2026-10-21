@@ -184,10 +184,10 @@ Errors are `{ error: string }`; user-facing ones are Vietnamese (the web shows t
 | Path | Page | Notes |
 |---|---|---|
 | / | AlbumList | create modal (mode, reading direction, template / ✨ AI / copy design), share dialog (view link, edit link with hours), Log out, EN/VI |
-| /albums/:id | Viewer | book; `?page=N` opens on a page |
+| /albums/:id | Viewer | book; `?page=N` opens on a page; **Share** → share-to-social dialog |
 | /albums/:id/edit | Editor | `?page=N` opens on a page; Done returns to the edited page |
 | /albums/:id/print | PrintAlbum | one page per sheet (210×280 mm), opens the print dialog (Save as PDF) |
-| /s/:token | SharedAlbum | public, read-only Viewer; remembers the link; points the manifest at itself |
+| /s/:token | SharedAlbum | public, read-only Viewer (with the Share-to-social button); remembers the link; points the manifest at itself |
 | /e/:token | GuestEdit | public; opens the edit link (guest session) into `EditorView guest`; remembers the link; per-link manifest; expired → message |
 | /login | Login | password, EN/VI, and "Shared an album with you?": the last shared link or a pasted link/code |
 | /guide | Guide | user guide in the current language (`guideContent.ts`), screenshots in `public/guide/*.jpg` (`src/dev/guide-shots.mjs`) |
@@ -232,8 +232,8 @@ Vietnamese (missing entries fall back to English; `{name}` placeholders). `useT(
   full-width button per line and small groups (tail corners, layers, zoom) sharing a line. Pickers: frame styles,
   stickers, tape, effects, bubbles, lines, paper, Background (desk colour, album effect, reading direction, music),
   Font (typeface, size, align, line spacing, outline, colour), Trim.
-- **Guest mode** (`EditorView guest`): no page tools, no Frame/Panel/Frame style/panel tools, no Background, Pin all
-  or title rename; frames can't be deleted, duplicated or pinned; a badge shows the link's expiry; EN/VI switch.
+- **Guest mode** (`EditorView guest`): no page tools, no Frame/Panel/Frame style/panel tools, no Background or title
+  rename; frames can't be deleted, duplicated or pinned (Pin all pins everything else); a badge shows the link's expiry; EN/VI switch.
 - **Frame menu** ("+ add" on an empty frame): an actions row (Shoot in the frame · Take photo/video · Upload — the
   first two on phones only, the frame camera left out inside Zalo on iPhone with a hint) above the album's photos.
 - **Autosave** (`useAutosave.ts`): debounced `PUT /api/pages/:id`, retried on failure; leaving a page waits for it.
@@ -383,7 +383,11 @@ The host proxy must allow large request bodies on `/api/uploads` (`client_max_bo
 - Service-worker caches only grow (no pruning).
 - Bucket deletes are one request per object.
 - A bucket that fails in the middle of a file truncates that backup download (download again).
-- Exporting single pages as images is not implemented (PDF via print only).
+- **Share to social** (`viewer/SocialShare.tsx`, lazy): each visible page drawn off screen by PageRenderer on the
+  desk colour at 1080×1350 (post 4:5) or 1080×1920 (story/TikTok 9:16), photographed with html-to-image (JPEG 0.92,
+  `<picture>` AVIF sources dropped), then `navigator.share({files})` or download. Facebook sharer link when there is
+  a view link (owner's share link, or the `/s/` link a viewer came in by). Not on the example album. Videos show
+  their poster; a bucket photo without CORS makes the export fail with a message.
 - Zalo's preview crawler user agent is not documented; if it ever says iPhone/Android, Zalo previews fall back to the
   app's generic card.
 - Media on a hidden page is only left out of the share bundle; its URL still works for a share-cookie holder who

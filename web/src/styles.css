@@ -544,4 +544,14 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .login .share-code h2 { margin: 0 0 .5rem; font-size: 1.1rem; }
 .lang-switch { min-width: 2.4rem; padding: .3rem .55rem; border-radius: 999px; background: #fffaf0; color: var(--ink); font-weight: 600; font-size: .85rem; border: 1px solid #c9bda4; }
 .login .login-lang { width: auto; justify-self: center; align-self: center; margin: -.4rem auto 0; }
+/* Share to social: the dialog, and the off-screen stage the pictures are taken of (no transitions or animations,
+   so every photo is fully faded in and effects hold still). */
+.social-share { width: min(32rem, 100%); }
+.social-pages { display: flex; flex-wrap: wrap; gap: .3rem .9rem; margin: .4rem 0 .6rem; }
+.social-shots { display: flex; gap: .4rem; overflow-x: auto; padding: .3rem 0; }
+.social-shots img { height: 7rem; border-radius: 6px; box-shadow: 0 2px 6px #0003; }
+.social-stage { position: fixed; left: -100000px; top: 0; pointer-events: none; }
+.social-stage *, .social-stage *::before, .social-stage *::after { transition: none !important; animation-play-state: paused !important; }
+.social-frame { position: relative; overflow: hidden; background: radial-gradient(ellipse 90% 80% at 50% 45%, var(--desk-a, #8a6a4c), var(--desk-b, #5b412e)); }
+.social-page { position: absolute; box-shadow: 0 18px 40px #0006; }
 

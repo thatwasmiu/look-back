@@ -455,4 +455,15 @@ export const VI: Record<string, string> = {
   'File too large': 'File quá lớn',
   'This file is already uploading': 'File này đang được tải lên',
   'went to Photos — the page changed': 'đã vào Ảnh — trang đã đổi',
+  // Share to social
+  'Share to social media': 'Chia sẻ lên mạng xã hội',
+  'Post 4:5 (Instagram, Facebook)': 'Bài đăng 4:5 (Instagram, Facebook)',
+  'Story / TikTok 9:16': 'Story / TikTok 9:16',
+  'One image per page; Instagram takes up to 20 in a post, TikTok 35. Videos show their cover.': 'Mỗi trang một ảnh; Instagram tối đa 20 ảnh/bài, TikTok 35. Video hiện ảnh bìa.',
+  'Making image {n}/{total}…': 'Đang tạo ảnh {n}/{total}…',
+  'Make images': 'Tạo ảnh',
+  'Share…': 'Chia sẻ…',
+  'Download': 'Tải về',
+  'Share the view link on Facebook': 'Chia sẻ link xem lên Facebook',
+  'Couldn\'t make the images. A photo kept in a bucket without CORS can\'t be drawn — move it to the VPS or turn on CORS.': 'Không tạo được ảnh. Ảnh để trong bucket chưa bật CORS thì không vẽ được — chuyển về VPS hoặc bật CORS.',
 };

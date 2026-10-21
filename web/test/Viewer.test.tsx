@@ -176,3 +176,9 @@ test('every page hidden: the viewer says so instead of breaking', async () => {
   expect(await screen.findByText(/Every page is hidden/)).toBeTruthy();
   expect(screen.getByRole('link', { name: 'Edit' }).getAttribute('href')).toBe('/albums/a1/edit?page=1');
 });
+
+test('the owner can open Share to social media from the viewer', async () => {
+  setup(vi.fn().mockResolvedValue(json(200, bundle)));
+  await userEvent.click(await screen.findByRole('button', { name: 'Share to social media' }));
+  expect(await screen.findByRole('dialog', { name: 'Share to social media' })).toBeTruthy();
+});
