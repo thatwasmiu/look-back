@@ -116,8 +116,9 @@ phone browser (iPhone/iPad/Android) is never treated as a crawler, and the previ
 
 From the Share dialog the owner makes an edit link for an album, valid for the hours they type (default 8, max 168),
 and can renew or revoke it. Opening `/e/<token>` starts a guest session for that album; every guest request checks
-the code is still current and unexpired. Guests get a cut-down editor (no adding, moving, deleting or restyling;
-no pages); the server enforces the same on every save (`guestEditAllowed`) and limits uploads to photos/videos in
+the code is still current and unexpired. Guests get the editor without the structure tools (no pages, no frame or
+panel tools, frames don't move; no album settings); the server enforces the same on every save (`guestEditAllowed`:
+the frames and the hidden flag stay as they were, apart from a frame's photo/crop/trim/layer) and limits uploads to photos/videos in
 that album.
 
 Installing the app from a shared link: the page of `/e/<code>` or `/s/<code>` names its own manifest

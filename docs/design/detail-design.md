@@ -122,8 +122,8 @@ A media that lives in a bucket has exactly the same keys under the bucket (`<med
 
 Owner session required for every `/api` route except the public ones marked ●. `/media/*` checks access itself.
 An edit-link guest (session `guest`, re-checked against the album each request) also reaches `PUT /api/pages/:id`
-(own album; `guestEditAllowed`: same elements/order/background/hidden, only frame `mediaId`/`crop` and text
-`text`/`h` may change → else 403), `GET /api/media/:id` (own album) and tus uploads (create: own album, image/video
+(own album; `guestEditAllowed`: same frames by id — only their `mediaId`/`crop`/`trim`/`z` may change — and same
+`hidden`; text, stickers, tape, effects and paper are free → else 403), `GET /api/media/:id` (own album) and tus uploads (create: own album, image/video
 only; continue: own album's uploads; no cancel). `/api/auth/check` and bucket media accept the guest for their
 album's files.
 
