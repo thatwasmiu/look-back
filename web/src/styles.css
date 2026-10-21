@@ -538,4 +538,6 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .guest-badge { font-size: .9rem; background: #fff4ec; color: #3b2a1a; border-radius: 999px; padding: .2rem .7rem; white-space: nowrap; }
 
 .login .share-code h2 { margin: 0 0 .5rem; font-size: 1.1rem; }
+.lang-switch { min-width: 2.4rem; padding: .3rem .55rem; border-radius: 999px; background: #fffaf0; color: var(--ink); font-weight: 600; font-size: .85rem; border: 1px solid #c9bda4; }
+.login .login-lang { width: auto; justify-self: center; align-self: center; margin: -.4rem auto 0; }
 

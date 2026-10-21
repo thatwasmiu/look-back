@@ -157,6 +157,7 @@ stay empty for the owner's photos.
 | **Mobile / PWA** | Installable manifest, touch editing (Moveable handles, pinch), phone toolbar layout, service worker, "new version" prompt driven by `/version.json`. |
 | **Compatibility** | Container-query units compiled to CSS variables with a ResizeObserver polyfill (older iOS). |
 | **Observability** | Fastify logs, pg-boss job state, media `status`/`error`/`move_error` columns surfaced on `/manage`. |
+| **Languages** | Vietnamese and English (`web/src/i18n.tsx`): English text is the key, `i18n.vi.ts` the Vietnamese table, the guide has both (`guideContent.ts`). First language follows the device; the EN/VI switch is remembered per device. Server error messages stay Vietnamese. |
 
 ## 6. Deployment
 

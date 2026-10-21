@@ -1,100 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
-// Usage guide: one section per area of the app, one heading per feature. Button names are the app's own (English).
-type Feature = { h: string; img?: string; p: string[] }; // img: web/public/guide/<img>.jpg (src/dev/guide-shots.mjs)
-type Section = { id: string; title: string; features: Feature[] };
-
-const sections: Section[] = [
-  {
-    id: 'albums', title: '1. Danh sách album', features: [
-      { h: 'Tạo album mới', img: 'new-album', p: ['Bấm **New album**, nhập tên rồi **Create**. Có thể đóng bằng **Cancel**, ×, phím Esc hoặc bấm ra ngoài.', '**Template**: bấm một thẻ để chọn cách bắt đầu. **Empty album** chỉ có trang bìa.', 'Mẫu có sẵn: **2 3 con mực** (nền biển, bong bóng, sticker bạch tuộc, mực; có sẵn nhạc nền nếu server có file nhạc của mẫu), **Trip**, **Birthday**, **Love story**, **Year in review**, **Look Back**. Mỗi mẫu có sẵn nhiều trang, giấy, sticker, chữ, màu bàn và hiệu ứng nền.', '**Chép thiết kế của album (không kèm ảnh)**: tạo album mới giống hệt một album đã có, nhưng mọi khung để trống, không chép ảnh/video.'] },
-      { h: 'Mở, sửa, xóa album', img: 'albums', p: ['Bấm vào ảnh bìa để xem album. **Edit** để trang trí.', 'Ảnh bìa là ảnh được đặt bằng nút ★ trong **Photos**. Nếu chưa đặt, thẻ album hiện thu nhỏ trang đầu tiên.', '**Delete** xóa vĩnh viễn album cùng toàn bộ ảnh và video (luôn hỏi xác nhận trước).'] },
-      { h: 'Album mẫu', p: ['“Look Back — a tribute” là album mẫu chỉ xem, luôn nằm cuối danh sách để tham khảo cách trang trí.'] },
-    ],
-  },
-  {
-    id: 'share', title: '2. Chia sẻ', features: [
-      { h: 'Tạo link chia sẻ', img: 'share', p: ['Bấm **Share** dưới album → **Create share link** → **Copy**.', 'Người nhận mở link là xem được album, không cần mật khẩu, không sửa được.'] },
-      { h: 'Ngừng chia sẻ', p: ['Mở lại **Shared** → **Stop sharing**. Link cũ hết hiệu lực ngay, kể cả ảnh và video trong album.'] },
-    ],
-  },
-  {
-    id: 'pages', title: '3. Trang', features: [
-      { h: 'Thêm trang theo mẫu', img: 'templates', p: ['Bấm **+** trong thanh **Pages**, hoặc nút tròn **+** ở góc trang cuối. Chọn một trong các mẫu (Cover, Blank, One photo, Collage…).'] },
-      { h: 'Chuyển trang', p: ['Nút tròn ← / → ở hai góc dưới, hoặc phím ← / → khi không chọn vật nào, hoặc bấm ảnh nhỏ trong **Pages**.'] },
-      { h: 'Sắp xếp và xóa trang', img: 'pages', p: ['Trong **Pages**: ◀ / ▶ để đổi vị trí, nút xóa để xóa trang. Có thể kéo thả ảnh nhỏ để đổi thứ tự.', 'Bấm nhãn **Pages** để thu gọn / mở thanh trang (trên điện thoại mặc định thu gọn).'] },
-      { h: 'Đổi tên album', p: ['Trong màn trang trí, bấm vào tên album ở góc trên (biểu tượng ✎). Enter để lưu, Esc để hủy.'] },
-    ],
-  },
-  {
-    id: 'media', title: '4. Ảnh và video', features: [
-      { h: 'Tải lên', img: 'editor', p: ['Bấm **Upload** trong khu **Photos**. Hỗ trợ ảnh và video lớn; tải lên tiếp tục được nếu mạng chập chờn.', 'Ảnh được nén và tạo bản xem nhanh (mờ → nét); video được chuyển sang dạng phát mượt (HLS). Trong lúc tải và xử lý, ảnh hiện nhãn “đang tải…” / “đang xử lý…”; lỗi sẽ hiện “tải lên lỗi”.'] },
-      { h: 'Dán ảnh từ clipboard', p: ['Chụp màn hình hoặc “Copy image” rồi nhấn **Ctrl+V** trong màn trang trí. Nếu đang chọn một khung trống, ảnh vào thẳng khung đó; nếu không, ảnh vào khu **Photos**.'] },
-      { h: 'Đưa ảnh vào khung', img: 'frame-menu', p: ['Bấm **+ add** trên khung trống → chọn **Upload** (tải ảnh mới) hoặc chọn một ảnh đã tải. Trên điện thoại có thêm **Take photo/video** để chụp/quay ngay bằng camera.', 'Trên điện thoại còn có **Chụp theo khung**: camera trong app, khung hình hiện đúng hình dạng và tỉ lệ của khung (tròn, tim, khung manga…). Chế độ **Ảnh** cắt ảnh đúng phần trong khung; chế độ **Video** quay rồi khung hiện phần giữa. **Đổi camera** để chụp camera trước.', '**Zoom**: kéo thanh trượt hoặc chụm hai ngón. Máy hỗ trợ (Chrome Android) dùng zoom thật của camera cho cả ảnh và video; máy khác (iPhone) zoom số, chỉ cho ảnh. **⚡ Đèn** bật/tắt đèn flash — chỉ hiện trên máy cho phép (thường là Android, camera sau).', 'Hoặc kéo ảnh từ **Photos** thả vào khung, hoặc chọn khung rồi bấm ảnh trong **Photos**.'] },
-      { h: 'Cắt video (Trim)', p: ['Chọn khung có video → **✂ Trim**: kéo **Start** / **End** để chỉ phát một đoạn, có xem trước ngay trong bảng.', 'Video gốc không bị cắt: mỗi khung giữ đoạn riêng, bấm **Full video** để phát lại cả video.'] },
-      { h: 'Ảnh bìa và xóa ảnh', p: ['Trong **Photos**: nút ★ đặt làm ảnh bìa album; nút xóa xóa ảnh khỏi album (các khung đang dùng ảnh đó sẽ trống lại).'] },
-    ],
-  },
-  {
-    id: 'decorate', title: '5. Trang trí', features: [
-      { h: 'Khung ảnh (Frame)', img: 'frames', p: ['**Frame** thêm khung mới với 14 kiểu: Polaroid, Instant mini, Film strip, Stamp, Heart, Circle…', 'Chọn khung rồi bấm **Frame style** để đổi kiểu mà giữ nguyên ảnh.'] },
-      { h: 'Cắt và chỉnh cỡ ảnh (Crop)', img: 'crop', p: ['Chọn khung có ảnh → **Crop** (hoặc nhấp đúp vào ảnh). Kéo để dịch ảnh, cuộn chuột / chụm hai ngón để phóng to.', '**Size**: chỉnh cỡ ảnh riêng với khung, có thể nhỏ hơn khung. **Fit**: hiện trọn ảnh. **Fill**: ảnh phủ kín khung. **Done** để xong.', '**Remove photo** gỡ ảnh khỏi khung (khung vẫn giữ lại).'] },
-      { h: 'Sticker', img: 'stickers', p: ['**Sticker** mở bộ sticker vẽ tay: hoa, tim, trái cây, cầu vồng, bóng bay, quà, nhạc, ghim bản đồ, núi…', 'Bộ biển: bạch tuộc hồng và xanh, mực, bong bóng, rong biển, vỏ sò, sao biển, cá, mỏ neo. Thêm: tim vô cực, lon tăng lực, cơm nắm, sushi, nhẫn.'] },
-      { h: 'Băng dính (Tape)', p: ['**Tape** thêm miếng băng dính giấy (vàng, hồng, mint, kraft) để “dán” ảnh lên trang.'] },
-      { h: 'Chữ (Text)', img: 'text', p: ['**Text** thêm chữ. Nhấp đúp vào chữ để sửa nội dung.', 'Khi chọn chữ: **Font** mở một bảng chỉnh kiểu chữ, cỡ chữ (**A−** / **A+**) và màu chữ (bảng màu sẵn và ô chọn màu tùy ý).', 'Cũng trong bảng đó: căn **trái / giữa / phải**, khoảng cách dòng (**↕−** / **↕+**) và **Outline** (viền chữ màu tương phản, dễ đọc trên ảnh).'] },
-      { h: 'Giấy nền trang (Paper)', img: 'paper', p: ['**Paper** đổi giấy của trang: kem, kraft, kẻ ô, chấm bi.'] },
-      { h: 'Hiệu ứng trang (Effect)', img: 'effects', p: ['**Effect** thêm hiệu ứng động trên trang: lấp lánh, tim, cánh hoa, confetti, bokeh, light leak, bong bóng. Hiệu ứng là một vật trên trang, di chuyển / chỉnh cỡ như các vật khác.'] },
-      { h: 'Nền album (Background)', img: 'background', p: ['**Background** chọn màu bàn phía sau album và hiệu ứng nền cho cả album (tuyết, cánh hoa, đom đóm, sao, mưa, bong bóng).', 'Nhạc nền: ở cuối bảng **Background**, **Upload music** để chọn một file nhạc (mp3, m4a…). Sau khi xử lý xong, dòng nhạc hiện tên file và độ dài bài.', '**▶ Play** / **⏸ Pause** để nghe thử ngay trong lúc trang trí; đóng bảng thì nhạc vẫn phát, bấm nút ♪ trên thanh công cụ để tạm dừng.', '**Remove music** để bỏ nhạc; muốn đổi bài thì **Remove music** rồi **Upload music** bài mới.'] },
-    ],
-  },
-  {
-    id: 'items', title: '6. Thao tác với vật trên trang', features: [
-      { h: 'Chọn, di chuyển, đổi cỡ, xoay', img: 'selected', p: ['Bấm vào vật để chọn. Giữ chuột và kéo để di chuyển (thả chuột là dừng). Kéo các góc để đổi cỡ, kéo nút tròn phía trên để xoay. Trên điện thoại có thể chụm / xoay hai ngón.', 'Bấm vào chỗ trống trên trang hoặc ra phần nền xung quanh để bỏ chọn.'] },
-      { h: 'Lớp trên / dưới và xóa', p: ['↑ đưa lên trên, ↓ đưa xuống dưới, 🗑 xóa. Phím Delete / Backspace cũng xóa vật đang chọn.'] },
-      { h: 'Gióng thẳng hàng (Snap)', p: ['Khi kéo một vật, nó tự hít vào giữa trang, mép trang, hoặc thẳng hàng với khung ảnh và chữ khác; đường gióng hiện ra lúc đó. Đổi cỡ thì không hít.', 'Nút **Snap** trên thanh công cụ bật/tắt (máy nhớ lựa chọn).'] },
-      { h: 'Ghim (Pin)', p: ['**📌 Pin** khóa vật tại chỗ: không kéo, đổi cỡ, xoay hay dịch bằng phím mũi tên được nữa. **📌 Unpin** để mở khóa.', '**📌 Pin all** ghim một lần mọi vật trên trang. Muốn bỏ ghim thì chọn từng vật rồi bấm **📌 Unpin**.'] },
-      { h: 'Nhân bản và sao chép', p: ['**⧉ Duplicate** tạo bản sao ngay cạnh. Hoặc **Ctrl+C** rồi **Ctrl+V**, kể cả dán sang trang khác.'] },
-      { h: 'Hoàn tác', p: ['↶ / ↷ hoặc **Ctrl+Z** / **Ctrl+Shift+Z** (hoặc **Ctrl+Y**).'] },
-      { h: 'Phóng to trang', p: ['− / + phóng từ 100% đến 300%, bấm số % để về vừa màn hình. **Ctrl + cuộn chuột** cũng phóng to.'] },
-      { h: 'Tự động lưu', p: ['Mọi thay đổi tự lưu (trạng thái “Saved”). Nếu lưu lỗi, trạng thái chuyển thành “Lưu lỗi” và nút **Retry save** hiện ra để thử lại.'] },
-    ],
-  },
-  {
-    id: 'view', title: '7. Xem album', features: [
-      { h: 'Lật trang như sách', img: 'viewer', p: ['Vuốt, bấm hai bên, hoặc phím ← / →. Màn hình rộng hiện hai trang cùng lúc.', 'Ảnh và video của các trang kế tiếp được tải trước nên lật trang không phải chờ.'] },
-      { h: 'Video', p: ['Video tự phát (tắt tiếng, lặp lại) khi tới trang đó; bấm vào để bật tiếng. Video đã cắt (Trim) chỉ phát đoạn đã chọn.'] },
-      { h: 'Sửa đúng trang đang xem', p: ['**Edit** mở màn trang trí ngay tại trang đang xem; **← Done** đưa về đúng trang vừa sửa.'] },
-      { h: 'Xuất PDF / in', p: ['Bấm **PDF** khi xem album: mỗi trang một tờ, hộp thoại in tự mở → chọn **Lưu thành PDF** (Save as PDF). Trên iPhone: Chia sẻ → Lưu vào Tệp.', 'Video in ra bằng ảnh bìa của video.'] },
-      { h: 'Nhạc nền', p: ['Album có nhạc nền thì nhạc bắt đầu từ lần chạm hoặc lật trang đầu tiên (trình duyệt không cho tự phát) và phát lặp lại. Nút ♪ trên thanh trên cùng để tạm dừng / phát tiếp.'] },
-    ],
-  },
-  {
-    id: 'phone', title: '8. Trên điện thoại', features: [
-      { h: 'Thanh công cụ dưới đáy', img: 'phone', p: ['Công cụ nằm ở đáy màn hình cho dễ bấm; các bảng chọn mở lên phía trên.', '**Hide tools** ẩn bớt Photos, Pages và công cụ để nhìn trang rộng hơn; **Show tools** để hiện lại.'] },
-      { h: 'Xem khi không có mạng', p: ['Album và trang nào đã mở khi có mạng thì lúc mất mạng vẫn mở lại xem được (cả danh sách album), trong trình duyệt lẫn app đã cài.', 'Khi offline chỉ xem được: không tải ảnh lên, không lưu chỉnh sửa. Video và nhạc nền cần có mạng.'] },
-    ],
-  },
-  {
-    id: 'manga', title: '9. Manga', features: [
-      { h: 'Tạo album manga', img: 'manga-new-album', p: ['Bấm **New album** → chọn **Manga** thay vì **Scrapbook**, rồi chọn hướng đọc **Left → right** hoặc **Right → left**. Chế độ chỉ chọn một lần khi tạo album, sau đó không đổi được.', 'Album manga mới có sẵn **trang bìa**: tên truyện ở trên, một khung tranh lớn và nhãn “Tập 1”. Nhấp đúp vào chữ để đổi.', 'Mẫu manga dựng sẵn (hiện khi chọn **Manga**): **2 3 con mực** (nền biển, sticker bạch tuộc, có nhạc nếu server có file nhạc của mẫu), **Hành trình**, **Thường ngày**, **Hành động**, **Lãng mạn**. Mỗi mẫu có trang bìa và vài trang đã sẵn bong bóng thoại, lời dẫn, hiệu ứng âm thanh, đường tốc độ; khung tranh để trống cho ảnh của bạn. Mục chép thiết kế chỉ liệt kê album manga.'] },
-      { h: 'Khung tranh (Panel) và bố cục trang', img: 'manga-editor', p: ['Trang manga dùng giấy trắng và khung tranh viền đen. **Add page** cho chọn 10 bố cục: Cover, Classic grid, Dynamic slants, Splash + insets, Tall + stacked, Two tall columns, Three horizontal strips, Diagonal split, Six-panel grid, Full-bleed single panel.', '**Panel** thêm một khung tranh mới. Đưa ảnh/video vào khung giống khung ảnh scrapbook: **+ add**, kéo từ **Photos**, hoặc dán.', 'Khi chọn một khung, nhóm **Shape · Ink · Tone** hiện ra: **Ink** chuyển ảnh sang đen trắng kiểu mực in, **Tone** phủ chấm tram lên khung. Các nút **No border / Thin / Border** đổi độ dày viền.'] },
-      { h: 'Khung tranh tự do (Shape)', p: ['Chọn một khung → **Shape**: bốn góc hiện chấm tròn, kéo từng góc để tạo khung xiên, hình thang hay tứ giác bất kỳ. Trên PC có thể bấm vào một chấm rồi dùng phím mũi tên để chỉnh nhỏ từng chút.', '**Reset** đưa khung về hình chữ nhật, **Done** để lưu (một bước, hoàn tác được bằng ↶).'] },
-      { h: 'Bong bóng thoại, lời dẫn, hiệu ứng âm thanh', p: ['**Bubble** → **Speech** (lời nói), **Shout** (hét), **Thought** (suy nghĩ). **Narration** là ô lời dẫn hình chữ nhật. **Sound effect** là chữ lớn kiểu tiếng động.', 'Khi chọn bong bóng Speech hoặc Thought: nhóm **Tail** (↙ ↘ ↖ ↗ ∅) chọn góc đặt đuôi bong bóng, hướng về nhân vật đang nói.', 'Nhấp đúp để sửa chữ; **Font** (kiểu chữ, cỡ chữ **A−** / **A+**, màu chữ) dùng như chữ thường — áp dụng cho cả bong bóng, lời dẫn và hiệu ứng âm thanh.', 'Gõ xong, bong bóng và ô lời dẫn tự nở cao ra cho vừa chữ (không tự thu nhỏ lại).'] },
-      { h: 'Đường tốc độ, đường tập trung, tông chấm', p: ['**Lines** → **Speed lines** (đường tốc độ) hoặc **Focus lines** (đường tập trung về giữa). **Screentone** thêm lớp chấm tram.', 'Nếu đang chọn một khung, lớp mới phủ đúng khung đó; nếu không, lớp hiện ở giữa trang. Kéo, đổi cỡ hay xoay như các vật khác.'] },
-      { h: 'Đọc từ phải sang trái', p: ['Khi tạo album manga, chọn **Left → right** hoặc **Right → left**. Đổi lại sau trong **Background** → **Reading direction**.', 'Đọc phải sang trái: phím ←, vuốt sang phải hoặc bấm mép trái là sang trang tiếp; trang bìa nằm bên trái và trang trước của mỗi cặp nằm bên phải.'] },
-    ],
-  },
-];
-
-const shortcuts: [string, string][] = [
-  ['← / →', 'Chuyển trang (khi không chọn vật nào)'],
-  ['Mũi tên', 'Dịch vật đang chọn'],
-  ['Delete / Backspace', 'Xóa vật đang chọn'],
-  ['Ctrl+C / Ctrl+V', 'Sao chép / dán vật; Ctrl+V cũng dán ảnh từ clipboard'],
-  ['Ctrl+Z / Ctrl+Shift+Z', 'Hoàn tác / làm lại'],
-  ['Ctrl + cuộn chuột', 'Phóng to / thu nhỏ trang'],
-  ['Esc', 'Đóng bảng chọn, hộp thoại'],
-];
+import { getLang, useT } from '../i18n';
+import { GUIDE } from './guideContent';
 
 // **bold** → <strong>, nothing else.
 const rich = (s: string) => s.split(/\*\*(.+?)\*\*/g).map((part, i) => (i % 2 ? <strong key={i}>{part}</strong> : part));
@@ -102,17 +9,19 @@ const rich = (s: string) => s.split(/\*\*(.+?)\*\*/g).map((part, i) => (i % 2 ? 
 export default function Guide() {
   const back = (useLocation().state as { back?: boolean } | null)?.back; // opened from the editor in the installed app
   const navigate = useNavigate();
+  useT(); // re-render on a language change
+  const g = GUIDE[getLang()];
   return (
     <main className="guide">
       <header>
-        <Link to="/" onClick={(e) => { if (back) { e.preventDefault(); navigate(-1); } }}>{back ? '← Back' : '← Albums'}</Link>
-        <h1>Hướng dẫn sử dụng</h1>
+        <Link to="/" onClick={(e) => { if (back) { e.preventDefault(); navigate(-1); } }}>{back ? g.back : g.albums}</Link>
+        <h1>{g.title}</h1>
       </header>
-      <nav className="guide-toc" aria-label="Mục lục">
-        {sections.map((s) => <a key={s.id} href={`#${s.id}`}>{s.title}</a>)}
-        <a href="#shortcuts">10. Phím tắt</a>
+      <nav className="guide-toc" aria-label={g.toc}>
+        {g.sections.map((s) => <a key={s.id} href={`#${s.id}`}>{s.title}</a>)}
+        <a href="#shortcuts">{g.shortcutsTitle}</a>
       </nav>
-      {sections.map((s) => (
+      {g.sections.map((s) => (
         <section key={s.id} id={s.id}>
           <h2>{s.title}</h2>
           {s.features.map((f) => (
@@ -125,9 +34,9 @@ export default function Guide() {
         </section>
       ))}
       <section id="shortcuts">
-        <h2>10. Phím tắt</h2>
+        <h2>{g.shortcutsTitle}</h2>
         <table>
-          <tbody>{shortcuts.map(([k, v]) => <tr key={k}><th scope="row"><kbd>{k}</kbd></th><td>{v}</td></tr>)}</tbody>
+          <tbody>{g.shortcuts.map(([k, v]) => <tr key={k}><th scope="row"><kbd>{k}</kbd></th><td>{v}</td></tr>)}</tbody>
         </table>
       </section>
     </main>

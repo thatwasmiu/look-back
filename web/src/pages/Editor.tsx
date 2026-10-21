@@ -6,7 +6,7 @@ import { api as realApi, ApiError } from '../api';
 import { PageRenderer } from '../render/PageRenderer';
 import { EditCanvas } from '../editor/EditCanvas';
 import { Toolbar, stepZoom } from '../editor/Toolbar';
-import { useT } from '../i18n';
+import { LangSwitch, useT } from '../i18n';
 import { BackgroundEffectView } from '../render/effects';
 import { initHistory, push, redo, undo } from '../editor/history';
 import { addElement, assignMedia, clearMedia, duplicate, removeElement, updateElement } from '../editor/layoutOps';
@@ -448,6 +448,7 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
             </button>
           )}
         </h1>
+        <LangSwitch />
         <button type="button" className="panels-toggle" aria-pressed={panelsHidden} onClick={() => setPanelsHidden((v) => !v)}>
           {tr(panelsHidden ? 'Show tools' : 'Hide tools')}
         </button>

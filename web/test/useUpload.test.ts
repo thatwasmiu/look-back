@@ -96,7 +96,7 @@ test('onCreated returning false (target frame no longer on the page) leaves a no
   act(() => result.current.add([file('a.jpg')], 'frame1'));
   const id = result.current.items[0].localId;
   act(() => h.uppy!.emit('upload-progress', { id, tus: { uploadUrl: '/api/uploads/u1' } }, { bytesUploaded: 1, bytesTotal: 2 }));
-  expect(result.current.items[0].notice).toBe('đã vào Photos — trang đã đổi');
+  expect(result.current.items[0].notice).toBe('went to Photos — the page changed');
 });
 
 test("upload-error: the server's HEIC 400 message is shown on the item", () => {
@@ -116,7 +116,7 @@ test('a 4xx (e.g. 413 too large) drops the file from Uppy so the same file can b
   act(() => h.uppy!.emit('upload-error', { id: big }, new Error('413'), { status: 413 }));
   act(() => h.uppy!.emit('upload-error', { id: flaky }, new Error('network'), undefined));
   await new Promise((r) => setTimeout(r));
-  expect(result.current.items.find((x) => x.localId === big)).toMatchObject({ state: 'error', error: 'File quá lớn', retryable: false });
+  expect(result.current.items.find((x) => x.localId === big)).toMatchObject({ state: 'error', error: 'File too large', retryable: false });
   expect(h.removed).toContain(big);
   expect(h.removed).not.toContain(flaky);
 });

@@ -70,9 +70,9 @@ export function MediaTray({ media, items, coverMediaId, onUpload, onRetry, onPic
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files.length) onUpload([...e.dataTransfer.files]); }}>
       <div className="tray-head">
-        <button type="button" className="tray-tab" aria-expanded={open} onClick={() => setOpen((v) => !v)}>Photos ({media.length})</button>
+        <button type="button" className="tray-tab" aria-expanded={open} onClick={() => setOpen((v) => !v)}>{t('Photos')} ({media.length})</button>
         <label className="tray-upload">
-          Upload
+          {t('Upload')}
           <input type="file" multiple accept={ACCEPT} hidden
             onChange={(e) => { onUpload([...e.target.files ?? []]); e.target.value = ''; }} />
         </label>
@@ -85,7 +85,7 @@ export function MediaTray({ media, items, coverMediaId, onUpload, onRetry, onPic
               ? <><span className="tray-error" role="alert">{u.error}</span>
                 {u.retryable !== false && <button type="button" onClick={() => onRetry(u.localId)}>{t('Retry')}</button>}</>
               : <progress value={u.progress} max={1} aria-label={t('Uploading {name}', { name: u.name })} />}
-            {u.notice && <span className="tray-notice">{u.notice}</span>}
+            {u.notice && <span className="tray-notice">{t(u.notice)}</span>}
           </li>
         ))}
         {media.map((m) => {

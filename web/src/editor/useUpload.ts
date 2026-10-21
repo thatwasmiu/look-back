@@ -3,6 +3,7 @@ import Uppy from '@uppy/core';
 import Tus from '@uppy/tus';
 import type { MediaDTO } from '@scrapbook/shared';
 import { setLocalPreview } from '../localPreview';
+import { t } from '../i18n';
 
 export const ACCEPT = 'image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm';
 
@@ -35,7 +36,7 @@ type Resp = { status?: number; body?: { xhr?: { responseText?: string } } } | un
 //
 // One Uppy for the whole app, created on first use and never destroyed: destroy()/cancelAll() would send a tus
 // DELETE for every unfinished upload. Uploads keep going while the user browses; the editor only subscribes.
-const PAGE_CHANGED = 'đã vào Photos — trang đã đổi';
+const PAGE_CHANGED = 'went to Photos — the page changed';
 const idOf = (url: string | null | undefined) => url?.split('/').pop() || null;
 
 type Item = UploadItem & { albumId: string };
@@ -90,7 +91,7 @@ function getUppy(): Uppy {
   });
   u.on('upload-error', (f, err, res) => {
     const r = res as Resp;
-    const error = r?.status === 413 ? 'File quá lớn' : r?.status === 400 && r.body?.xhr?.responseText || err.message;
+    const error = r?.status === 413 ? t('File too large') : r?.status === 400 && r.body?.xhr?.responseText || err.message;
     const status = r?.status ?? 0;
     const retryable = !(status >= 400 && status < 500);
     patch(f?.id, { state: 'error', error, retryable });
@@ -129,7 +130,7 @@ export function useUpload(albumId: string, onCreated: OnCreated): Uploader {
         });
         set([...items, { albumId, localId, name: file.name, progress: 0, mediaId: null, state: 'uploading' }]);
       } catch { // Uppy refuses a file that is still in its queue: the same file is already uploading
-        set([...items, { albumId, localId: `x${Date.now()}${items.length}`, name: file.name, progress: 0, mediaId: null, state: 'error', error: 'File này đang được tải lên', retryable: false }]);
+        set([...items, { albumId, localId: `x${Date.now()}${items.length}`, name: file.name, progress: 0, mediaId: null, state: 'error', error: t('This file is already uploading'), retryable: false }]);
       }
     }
   };

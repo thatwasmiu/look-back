@@ -10,6 +10,7 @@ import SharedAlbum from './pages/SharedAlbum';
 import GuestEdit from './pages/GuestEdit';
 import Guide from './pages/Guide';
 import PrintAlbum from './pages/PrintAlbum';
+import { t } from './i18n';
 
 // Dev-only renderer/viewer showcases; import.meta.env.DEV is false in builds, so they're tree-shaken out.
 const Preview = import.meta.env.DEV ? lazy(() => import('./dev/Preview')) : null;
@@ -24,7 +25,7 @@ function Gate() {
     api.check().then((ok) => setState(ok ? 'ok' : 'out'), () => setState('down'));
   }, []);
   if (state === 'wait') return null;
-  if (state === 'down') return <p className="empty">Không kết nối được server</p>;
+  if (state === 'down') return <p className="empty">{t("Couldn't reach the server. Try again later.")}</p>;
   return state === 'ok' ? <Outlet /> : <Navigate to="/login" replace />;
 }
 

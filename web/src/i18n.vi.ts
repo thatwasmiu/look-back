@@ -449,4 +449,10 @@ export const VI: Record<string, string> = {
   'Remove key': 'Xoá key',
   'Move to…': 'Chuyển sang…',
   'No usable location yet.': 'Chưa có nơi lưu nào dùng được.',
+  // Tray
+  'Photos': 'Ảnh',
+  // Uploads
+  'File too large': 'File quá lớn',
+  'This file is already uploading': 'File này đang được tải lên',
+  'went to Photos — the page changed': 'đã vào Ảnh — trang đã đổi',
 };

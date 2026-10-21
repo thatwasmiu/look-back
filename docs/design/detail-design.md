@@ -192,6 +192,12 @@ Errors are `{ error: string }`; user-facing ones are Vietnamese.
   `MangaText` (bubbles, narration, SFX); `textStyle.ts` builds lettering CSS (font, size, align, line height, outline).
 - Effects are CSS/SVG overlays (`render/effects.tsx`); album background effects play behind the book.
 
+### 5.2b Languages
+
+`i18n.tsx`: `t(english, vars)` returns the English text, or its entry in `VI` (`i18n.vi.ts`) when the language is
+Vietnamese (missing entries fall back to English; `{name}` placeholders). `useT()` re-renders on a switch;
+`LangSwitch` (album list, editor, login) flips and saves `lb.lang`. Tests run in English.
+
 ### 5.3 Editor
 
 - **State:** pages list + current page; per-page undo/redo history (`editor/history.ts`), commits coalesce by key
@@ -204,7 +210,9 @@ Errors are `{ error: string }`; user-facing ones are Vietnamese.
 - **Hidden pages:** the current page's thumbnail has **Ẩn / Hiện** (`layout.hidden`, one undo step, autosaved);
   hidden thumbnails are faded with an "Ẩn" badge and the page shows a note. Done / `?page=N` count only visible pages
   (a hidden page maps to the visible one before it); the viewer's Edit maps back to the full page index.
-- **Toolbar:** element pickers, Font panel (typeface, size, align, line spacing, outline, colour), frame/panel tools,
+- **Toolbar:** a main row (**＋ Add** list, Paper, Background, Pin all, undo/redo, zoom, Snap, status) and, with an
+  item selected, a row of that item's tools (Font, Frame style, Crop, Trim, Remove photo, panel/bubble tools,
+  Duplicate, Pin, layer up/down, delete). Element pickers, Font panel (typeface, size, align, line spacing, outline, colour), frame/panel tools,
   ✂ Trim for videos, z-order, duplicate, delete, undo/redo, zoom, Snap, save status.
 - **Autosave** (`useAutosave.ts`): debounced `PUT /api/pages/:id`, retried on failure; leaving a page waits for it.
 - **Uploads** (`useUpload.ts`): one app-wide Uppy + tus instance (survives leaving the editor), resumable, local
