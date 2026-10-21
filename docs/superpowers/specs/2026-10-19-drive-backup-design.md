@@ -1,6 +1,6 @@
 # Automatic backup to Google Drive — design
 
-Date: 2026-10-19. Status: draft for owner approval (builder check done).
+Date: 2026-10-19. Status: built (approved). See "Built since" at the end.
 
 ## Why
 
@@ -110,3 +110,9 @@ link to the setup guide. While a run is going: "Đang backup…" with bytes uplo
   stored.
 - Whether to use Google's token endpoint and Drive REST directly or a small library.
 - Exact wording of the setup guide (Vietnamese) and status messages.
+
+## Built since
+
+- The /manage section is translated (Vietnamese/English): e.g. "Back up now" / "Backup ngay", "Weekly / Daily / Off".
+- Review fixes: the new backup is never deleted by cleanup, a fresh access token is fetched for cleanup after long
+  uploads, an incomplete run never removes the last complete backup, chunk assembly without quadratic copying.

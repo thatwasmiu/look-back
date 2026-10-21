@@ -130,3 +130,13 @@ Each is a set of **panels** (photo slots) on a white page; every panel can after
 - Choice of fonts (within the constraints), component default sizes, toolbar ordering details.
 - Whether `tone` is its own element or only a panel toggle (both described above; one is enough if it keeps the UI
   simpler).
+
+## Built since
+
+- 8 more manga layouts (4-koma, five with slants, big panel + insets, dialogue, action slashes, flashback, chapter
+  opener, ending) — 18 in all; each has AI text slots (`MANGA_AI`), narration boxes two lines tall.
+- Manga tools moved into the toolbar's **＋ Add** list (Panel, Bubble, Narration, Sound effect, Lines, Screentone);
+  panel and tail tools show in the selected-item row.
+- Editing a bubble/narration keeps its drawn shape while typing; tapping away keeps the new words.
+- Panel shape edits are kept however shape mode is left.
+- Edit-link guests can't add, delete, move or reshape panels (they can fill them and letter everything).

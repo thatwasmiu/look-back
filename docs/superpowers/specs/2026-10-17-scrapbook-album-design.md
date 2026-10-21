@@ -1,7 +1,7 @@
 # Scrapbook Album — Design
 
 Date: 2026-10-17
-Status: draft, awaiting owner approval
+Status: built. Later changes are listed at the end ("Built since").
 
 ## 1. Intent
 
@@ -215,3 +215,14 @@ Images fade from blur to sharp. A flip must never show an empty frame.
 - Folder structure, testing approach, migrations tool.
 - Media-URL protection mechanism (§13).
 - Whether originals are kept forever or optionally deleted to save disk.
+
+## Built since
+
+- **Users beyond the owner:** view-only share links (`/s/<code>`) and timed edit links (`/e/<code>`, see
+  `2026-10-20-edit-links-design.md`). Still one owner account; **Log out** on the album list.
+- **Pages:** a page can be hidden (kept in the editor, left out of viewing, sharing and print).
+- **Decorate mode toolbar:** regrouped into a main row with **＋ Add** (all kinds of items) and a row of the selected
+  item's tools; see `2026-10-21-languages-toolbar-design.md`.
+- **Media:** in-app frame camera on phones; one-tap "+ add" even under other items; local preview while uploading.
+- **Languages:** Vietnamese and English, switchable.
+- **More:** multi-storage (R2/B2), Google Drive backup, AI album, 16 more page templates, PDF print, video trim.

@@ -6,7 +6,9 @@ Status: describes the system as built (October 2026). Companion: [detail-design.
 
 Look Back is a private, single-owner web app for turning photos and videos into decorated albums — either a
 **scrapbook** (paper, frames, tape, stickers, handwriting) or a **manga** (panels, speech bubbles, sound effects,
-speed lines, screentone) — and flipping through them like a book. Albums can be shared read-only with a secret link.
+speed lines, screentone) — and flipping through them like a book. Albums can be shared read-only with a secret link,
+or opened for a while to helpers with an edit link (they fill frames and decorate, but can't change the structure).
+The app speaks Vietnamese and English.
 
 It runs on one small VPS. Media can be offloaded to free S3-compatible buckets (Cloudflare R2, Backblaze B2) to get
 past the VPS disk limit.
@@ -30,7 +32,7 @@ past the VPS disk limit.
 
 ### Non-goals
 
-- Multiple user accounts, collaboration, comments.
+- Multiple user accounts, comments, real-time co-editing (edit links are the only shared editing, one session per page save).
 - Editing photos (filters, retouching) beyond crop / ink / tone.
 - Offline *editing* (offline is view-only).
 
@@ -40,6 +42,7 @@ past the VPS disk limit.
 flowchart LR
   owner[Owner browser / PWA] -->|HTTPS| proxy
   viewer[Share-link viewer] -->|HTTPS| proxy
+  guest[Edit-link guest] -->|HTTPS| proxy
   crawler[Link crawler] -->|HTTPS| proxy
   proxy[Host nginx\nTLS termination] --> app
   subgraph app[Docker Compose on the VPS]
@@ -59,17 +62,19 @@ flowchart LR
   worker -.move / delete.-> buckets
   owner -.302 redirect.-> buckets
   viewer -.302 redirect.-> buckets
+  worker -.weekly backup.-> gdrive[(Owner's Google Drive)]
+  api -.album plan.-> gemini[(Google Gemini API)]
 ```
 
 ## 3. Building blocks
 
 | Block | Tech | Responsibility |
 |---|---|---|
-| **web** | React 18, Vite, TypeScript | SPA: album list, editor, book viewer, share view, guide, print/PDF view, hidden `/manage` page. Service worker for offline viewing; update prompt on new builds. |
-| **shared** | TypeScript + zod | One source of truth for the page layout schema (elements, frames, text, effects), templates, media DTOs — used by web and server. |
-| **api** | Node 22, Fastify 5, pg | REST API, owner session auth, share links, tus upload endpoint, storage locations, presigned redirects for bucket media, backup stream, link previews. |
-| **worker** | Node 22, pg-boss, sharp, ffmpeg | Processes uploads (image variants, video HLS renditions + poster, audio), moves media between storage locations, deletes bucket objects, cleans abandoned uploads. |
-| **database** | PostgreSQL 16 | Albums, pages (layout as JSONB), media, storage locations, pending deletes; pg-boss job tables. |
+| **web** | React 18, Vite, TypeScript | SPA: album list, editor (also the guest editor of edit links), book viewer, share view, bilingual guide, print/PDF view, hidden `/manage` page, in-app frame camera. Vietnamese/English UI. Service worker for offline viewing; update prompt on new builds. |
+| **shared** | TypeScript + zod | One source of truth for the page layout schema (elements, frames, text, effects), page templates (with their AI slots), sticker ids, media DTOs — used by web and server. |
+| **api** | Node 22, Fastify 5, pg | REST API, owner session auth, share links, edit links + guest sessions, tus upload endpoint, storage locations, presigned redirects for bucket media, backup stream, Google Drive connection, AI album (Gemini), link previews, per-link app manifests. |
+| **worker** | Node 22, pg-boss, sharp, ffmpeg | Processes uploads (image variants, video HLS renditions + poster, audio), moves media between storage locations, deletes bucket objects, cleans abandoned uploads, runs the scheduled Google Drive backup. |
+| **database** | PostgreSQL 16 | Albums (incl. share/edit link codes), pages (layout as JSONB), media, storage locations, pending deletes, Drive backup state, AI settings; pg-boss job tables. |
 | **nginx** (container) | nginx 1.27 | Serves the built web app, serves `/media/*` from disk behind an auth sub-request, proxies `/api/*`, routes crawlers to preview HTML, falls back to the api for media that live in buckets. |
 | **object storage** (optional) | Any S3-compatible bucket | Holds media moved off the VPS. Private; reached only through short-lived presigned URLs. |
 
@@ -92,7 +97,9 @@ sequenceDiagram
 ```
 
 The editor shows the picked file locally (object URL) while it uploads and processes; the frame then switches to the
-real version.
+real version. On phones a frame can also be filled from the in-app **frame camera** (the camera image cropped to the
+frame's exact shape, photo or video, zoom/torch where supported) — except inside Zalo on iPhone, which can't play the
+camera inline, so only the phone's own camera picker is offered there.
 
 ### Viewing media
 
@@ -131,6 +138,13 @@ that album — needed on iPhone, where a Home Screen app doesn't share Safari's 
 A page can be marked hidden in the editor. It stays there (faded, labelled "Ẩn") but is left out of the viewer,
 share links (server-side, together with photos/videos only those pages show) and print/PDF. Nothing is deleted.
 
+### Google Drive backup
+
+The owner connects their Google Drive once (OAuth, `drive.file` scope; refresh token encrypted). On a schedule
+(weekly by default, daily or off) the worker streams the same `.tar` as the manual backup into a Lookback folder on
+Drive with resumable uploads, keeps only the latest complete backup (an incomplete run — a bucket down — never
+replaces it) and shows the status on `/manage`, with **Back up now**.
+
 ### Storage management (`/manage`)
 
 The owner adds buckets (keys encrypted at rest), sees disk/bucket usage, finds unused or failed files, deletes in bulk,
@@ -150,11 +164,11 @@ stay empty for the owner's photos.
 
 | Concern | Approach |
 |---|---|
-| **Auth** | One owner password (scrypt hash in env), encrypted session cookie, login rate limit. Share viewers get a scoped cookie. |
-| **Privacy** | Every `/media` read is authorized (nginx sub-request or api check). Buckets are private; presigned URLs expire after 10 minutes. Bucket secret keys are AES-256-GCM encrypted and never leave the server or appear in backups. |
-| **Reliability** | Resumable uploads (tus). Processing and moves run as queued jobs. Moves never delete the source before the copy is verified. Bucket deletions are queued and retried while a bucket is down. Autosave with retry in the editor. |
+| **Auth** | One owner password (scrypt hash in env), encrypted session cookie, login rate limit, **Log out** on the album list. Share viewers get a scoped cookie; edit-link guests get a session scoped to one album, re-checked on every request. Sessions currently expire 1 day after login (the session library's default). |
+| **Privacy** | Every `/media` read is authorized (nginx sub-request or api check). Buckets are private; presigned URLs expire after 10 minutes. Bucket keys, the Drive refresh token and the Gemini key are AES-256-GCM encrypted, never returned to the browser and never in backups. |
+| **Reliability** | Resumable uploads (tus). Processing, moves and Drive backups run as queued jobs. Moves never delete the source before the copy is verified. Bucket deletions are queued and retried while a bucket is down. Autosave with retry in the editor; text, crop and panel-shape edits are saved however their mode is left. |
 | **Performance** | Image variants (webp/avif, thumbnails, blur placeholders), adaptive HLS video, preloading neighbouring pages, lazy-loaded routes (`/manage`, dev tools), offline cache of viewed pages and photos. |
-| **Mobile / PWA** | Installable manifest, touch editing (Moveable handles, pinch), phone toolbar layout, service worker, "new version" prompt driven by `/version.json`. |
+| **Mobile / PWA** | Installable manifest (a shared link installs as its own app opening that album), touch editing (Moveable handles, pinch, one-tap "+ add" with a large touch target), compact toolbar (＋ Add list + item row; a side column on desktop), frame camera, service worker, "new version" prompt driven by `/version.json`. In-app browsers (Zalo) are detected for link previews and the camera. |
 | **Compatibility** | Container-query units compiled to CSS variables with a ResizeObserver polyfill (older iOS). |
 | **Observability** | Fastify logs, pg-boss job state, media `status`/`error`/`move_error` columns surfaced on `/manage`. |
 | **Languages** | Vietnamese and English (`web/src/i18n.tsx`): English text is the key, `i18n.vi.ts` the Vietnamese table, the guide has both (`guideContent.ts`). First language follows the device; the EN/VI switch is remembered per device. Server error messages stay Vietnamese. |
@@ -182,3 +196,6 @@ stay empty for the owner's photos.
 | Presigned redirects instead of public buckets | Keeps media private without proxying bytes. |
 | Manual moves between locations, uploads always to the VPS | Simple, predictable; processing needs local files. |
 | Service worker caches what was viewed, nothing precached | Offline viewing without making viewers download code or media they never open. |
+| AI picks templates and writes text; it never places anything | Generated albums always look right; output is validated like any saved page. |
+| Edit links: structure is the owner's, enforced on the server | Helpers can't break the layout even by calling the API directly. |
+| English text as the translation key, one Vietnamese table | No key naming; missing entries fall back to readable English; tests run in English. |

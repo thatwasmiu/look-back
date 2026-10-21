@@ -1,6 +1,6 @@
 # Multi-location media storage — design
 
-Date: 2026-10-19. Status: draft for owner approval (builder check done).
+Date: 2026-10-19. Status: built (approved). See "Built since" at the end.
 
 ## Why
 
@@ -159,3 +159,9 @@ place; this is not replication or backup.
 - How the service worker caches redirected media (keyed by the `/media/...` URL as today).
 - The crying placeholder's drawing (original art, in the style of the app's stickers — no copied characters).
 - Whether the size cap counts processed variants (it should count everything a media file stores).
+
+## Built since
+
+- Edit-link guests may load media of their album from buckets too (`guestAllowsMedia` in the media check and
+  `remoteMedia`).
+- The /manage storage-location UI is translated (Vietnamese/English).

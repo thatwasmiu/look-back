@@ -1,6 +1,6 @@
 # AI album from a description — design
 
-Date: 2026-10-19. Status: draft for owner approval.
+Date: 2026-10-19. Status: built (approved). See "Built since" at the end.
 
 ## Intent
 
@@ -129,3 +129,10 @@ viewer, and print/PDF.
 - Unfilled slots are removed rather than left as "Tiêu đề" — my call.
 - Album title: user's title wins, else AI's — my call.
 - ~8 new templates per mode — my call on count and on the list above.
+
+## Built since
+
+- Manga narration slots are two lines tall (text up to 40 characters no longer overflows).
+- Gemini answers are read from all non-thought text parts; `AQ.…` keys accepted; 503 shown as "busy".
+- The web UI around it (✨ AI card, /manage section) is translated (Vietnamese/English); server messages stay Vietnamese.
+- Owner preference recorded: content can also be written by hand instead of Gemini (the AI is optional).
