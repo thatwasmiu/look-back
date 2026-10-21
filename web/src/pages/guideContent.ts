@@ -75,7 +75,7 @@ const vi: Guide = {
     { id: 'items', title: '6. Thao tác với vật', features: [
       { h: 'Chọn, di chuyển, đổi cỡ, xoay', img: 'selected', p: ['Bấm để chọn, kéo để di chuyển, kéo các góc để đổi cỡ, nút tròn phía trên để xoay. Bấm chỗ trống để bỏ chọn.'] },
       { h: 'Ghim', p: ['**📌 Ghim** khoá vật tại chỗ; **📌 Bỏ ghim** để mở. **📌 Ghim hết** ghim mọi vật trên trang một lần.'] },
-      { h: 'Hít thẳng hàng', p: ['Khi kéo, vật tự hít vào giữa/mép trang và thẳng hàng với khung, chữ khác. Nút **Hít** bật/tắt.'] },
+      { h: 'Đối xứng khi kéo', p: ['Khi kéo, vật tự căn vào giữa/mép trang và thẳng hàng với khung, chữ khác. Nút **Đối xứng** bật/tắt.'] },
       { h: 'Nhân bản, hoàn tác, phóng to', p: [
         '**⧉ Nhân bản** hoặc **Ctrl+C** / **Ctrl+V** (dán được sang trang khác).',
         '↶ / ↷ hoặc **Ctrl+Z** / **Ctrl+Shift+Z**. − / + phóng 100–300%, bấm số % để về vừa màn hình.'] },

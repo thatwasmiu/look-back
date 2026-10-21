@@ -227,3 +227,62 @@ test('"+ add" on a selected PINNED frame still opens the picker with one tap', a
     vi.useRealTimers();
   }
 });
+
+test('typing in a bubble, then tapping elsewhere on the page keeps the new words', () => {
+  const page: PageLayout = { background: 'paper-white', elements: [
+    { type: 'text', id: 't1', x: 0.1, y: 0.1, w: 0.4, h: 0.12, rotation: 0, z: 7, text: 'Cũ', font: 'patrick-hand', color: '#111111', size: 0.032, textStyle: 'speech', tail: 'bl' },
+    { type: 'sticker', id: 's1', x: 0.6, y: 0.6, w: 0.2, h: 0.15, rotation: 0, z: 1, stickerId: 'heart' },
+  ] };
+  const onCommit = vi.fn();
+  const { container } = render(<EditCanvas layout={page} media={new Map()} selectedId="t1" onSelect={() => {}} onCommit={onCommit} />);
+  fireEvent.doubleClick(container.querySelector('[data-el="t1"]')!);
+  const editor = container.querySelector<HTMLElement>('[data-el="t1"] .text-editing')!;
+  editor.innerText = 'Mới nè';
+  editor.textContent = 'Mới nè';
+  act(() => { container.querySelector('[data-el="s1"]')!.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true })); });
+  expect(onCommit).toHaveBeenCalledWith(expect.objectContaining({
+    elements: expect.arrayContaining([expect.objectContaining({ id: 't1', text: 'Mới nè' })]),
+  }));
+  expect(container.querySelector('.text-editing')).toBeNull();
+});
+
+test('leaving crop mode any way (not only Done) keeps the new crop', () => {
+  const filled: PageLayout = { background: 'paper-cream', elements: [
+    { type: 'frame', id: 'f1', x: 0.1, y: 0.1, w: 0.4, h: 0.3, rotation: 0, z: 1, frameStyle: 'polaroid', mediaId: 'm1', crop: { x: 0.5, y: 0.5, scale: 1 } },
+  ] };
+  const onCommit = vi.fn();
+  const props = { layout: filled, media: new Map(), selectedId: 'f1', onSelect: () => {}, onCommit, onCrop: () => {} };
+  const { getByRole, rerender } = render(<EditCanvas {...props} cropId="f1" />);
+  fireEvent.change(getByRole('slider', { name: 'Photo size' }), { target: { value: '0.6' } });
+  rerender(<EditCanvas {...props} selectedId={null} cropId={null} />); // e.g. a tap on the desk deselected it
+  expect(onCommit).toHaveBeenCalledTimes(1);
+  expect(onCommit).toHaveBeenLastCalledWith(expect.objectContaining({ elements: [expect.objectContaining({ crop: { x: 0.5, y: 0.5, scale: 0.6 } })] }));
+});
+
+test('leaving shape mode any way (not only Done) keeps the moved corner', () => {
+  const panel: PageLayout = { background: 'paper-white', elements: [
+    { type: 'frame', id: 'p1', x: 0.1, y: 0.1, w: 0.4, h: 0.3, rotation: 0, z: 1, frameStyle: 'panel', mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } },
+  ] };
+  const onCommit = vi.fn();
+  const props = { layout: panel, media: new Map(), selectedId: 'p1', onSelect: () => {}, onCommit, onShape: () => {} };
+  const { getByRole, rerender } = render(<EditCanvas {...props} shapeId="p1" />);
+  fireEvent.keyDown(getByRole('button', { name: 'Corner 1' }), { key: 'ArrowRight' });
+  rerender(<EditCanvas {...props} selectedId={null} shapeId={null} />);
+  expect(onCommit).toHaveBeenCalledTimes(1);
+  const shape = onCommit.mock.calls[0][0].elements[0].shape;
+  expect(shape[0][0]).toBeGreaterThan(0);
+});
+
+test('Done in crop mode commits once', () => {
+  const filled: PageLayout = { background: 'paper-cream', elements: [
+    { type: 'frame', id: 'f1', x: 0.1, y: 0.1, w: 0.4, h: 0.3, rotation: 0, z: 1, frameStyle: 'polaroid', mediaId: 'm1', crop: { x: 0.5, y: 0.5, scale: 1 } },
+  ] };
+  const onCommit = vi.fn();
+  let cropId: string | null = 'f1';
+  const props = { layout: filled, media: new Map(), selectedId: 'f1', onSelect: () => {}, onCommit, onCrop: (id: string | null) => { cropId = id; } };
+  const { getByRole, rerender } = render(<EditCanvas {...props} cropId={cropId} />);
+  fireEvent.change(getByRole('slider', { name: 'Photo size' }), { target: { value: '0.7' } });
+  fireEvent.click(getByRole('button', { name: 'Done' }));
+  rerender(<EditCanvas {...props} cropId={cropId} />);
+  expect(onCommit).toHaveBeenCalledTimes(1);
+});

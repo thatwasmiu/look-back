@@ -33,12 +33,26 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
   const [editingId, setEditingId] = useState<string | null>(null);
   const start = useRef<PageElement | null>(null);
   const liveRef = useRef<PageLayout | null>(null); // gesture-end handler must not read a stale closure
-  // Crop gesture preview; committed once on Done (or a tap outside the frame).
+  // Crop / shape-mode previews, committed once — on Done, or however the mode ends (a tap on the desk, another
+  // tool…): the pending change is kept in a ref by the handlers, and whatever closes the mode commits it.
+  const layoutRef = useRef(layout);
+  layoutRef.current = layout;
   const [cropLive, setCropLive] = useState<Crop | null>(null);
-  useEffect(() => setCropLive(null), [cropId]);
-  // Shape-mode preview, committed once on Done.
+  const pendingCrop = useRef<{ id: string; crop: Crop } | null>(null);
+  const setCrop = (c: Crop) => { pendingCrop.current = cropId ? { id: cropId, crop: c } : null; setCropLive(c); };
+  useEffect(() => {
+    const p = pendingCrop.current;
+    if (p && p.id !== cropId) { pendingCrop.current = null; onCommit(updateElement(layoutRef.current, p.id, { crop: p.crop })); }
+    setCropLive(null);
+  }, [cropId]); // eslint-disable-line react-hooks/exhaustive-deps
   const [shapeLive, setShapeLive] = useState<Shape | null>(null);
-  useEffect(() => setShapeLive(null), [shapeId]);
+  const pendingShape = useRef<{ id: string; shape: Shape } | null>(null);
+  const setShape = (s: Shape) => { pendingShape.current = shapeId ? { id: shapeId, shape: s } : null; setShapeLive(s); };
+  useEffect(() => {
+    const p = pendingShape.current;
+    if (p && p.id !== shapeId) { pendingShape.current = null; onCommit(updateElement(layoutRef.current, p.id, { shape: p.shape })); }
+    setShapeLive(null);
+  }, [shapeId]); // eslint-disable-line react-hooks/exhaustive-deps
   // The page box resizes with the stage (window, phone tray opening): keep the handles on the element.
   useEffect(() => {
     if (typeof ResizeObserver === 'undefined') return; // jsdom
@@ -49,12 +63,14 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
   const base = cropId && cropLive ? updateElement(live ?? layout, cropId, { crop: cropLive }) : live ?? layout;
   const shown = shapeId && shapeLive ? updateElement(base, shapeId, { shape: shapeLive }) : base;
   const finishShape = () => {
+    pendingShape.current = null;
     if (shapeId && shapeLive) onCommit(updateElement(layout, shapeId, { shape: shapeLive }));
     onShape?.(null);
   };
   const selected = layout.elements.find((e) => e.id === selectedId) ?? null;
   const pinned = !!selected?.pinned || (lockFrames && selected?.type === 'frame');
   const finishCrop = () => {
+    pendingCrop.current = null;
     if (cropId && cropLive) onCommit(updateElement(layout, cropId, { crop: cropLive }));
     onCrop?.(null);
   };
@@ -105,7 +121,11 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
     if ((e.target as Element).closest('.moveable-control-box, [contenteditable], .crop-overlay')) return;
     if (cropId) finishCrop();
     const id = (e.target as Element).closest('[data-el]')?.getAttribute('data-el') ?? null;
-    if (id !== editingId) setEditingId(null);
+    if (id !== editingId) {
+      // Save what was typed first: closing the editor unmounts it, and its own blur would then never reach React.
+      if (editingId) (document.activeElement as HTMLElement | null)?.blur?.();
+      setEditingId(null);
+    }
     // "+ add" of an empty frame: one tap opens the picker (no select-then-tap-again) — also when something else
     // lies over the button: an effect layer, a neighbour's bubble or sticker, an overlapping frame. Only the
     // selected item keeps its taps (it is being moved). Opened after the tap ends (a short tap, still on the
@@ -154,10 +174,10 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
   };
 
   const renderOverlay = (el: PageElement) => el.id === shapeId && el.type === 'frame'
-    ? <ShapeOverlay el={el} onChange={setShapeLive} onDone={finishShape} />
+    ? <ShapeOverlay el={el} onChange={setShape} onDone={finishShape} />
     : el.id === cropId && el.type === 'frame'
-    ? <CropOverlay el={el} media={el.mediaId ? media.get(el.mediaId) : undefined} onChange={setCropLive} onDone={finishCrop}
-      onRemove={() => { onCommit(assignMedia(layout, el.id, null)); onCrop?.(null); }} />
+    ? <CropOverlay el={el} media={el.mediaId ? media.get(el.mediaId) : undefined} onChange={setCrop} onDone={finishCrop}
+      onRemove={() => { pendingCrop.current = null; onCommit(assignMedia(layout, el.id, null)); onCrop?.(null); }} />
     : el.id === editingId && el.type === 'text'
     ? <TextEditor el={el} onDone={(text) => {
       setEditingId(null);
