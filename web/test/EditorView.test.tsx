@@ -11,6 +11,11 @@ const setup = (api: EditorApi) => render(
   <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={bundle} api={api} /></MemoryRouter>,
 );
 const mediaApi = { getMedia: vi.fn(), deleteMedia: vi.fn(), updateAlbum: vi.fn() };
+// Kinds of items to add sit behind the toolbar's "+ Add".
+const addVia = async (user: ReturnType<typeof userEvent.setup>, name: string) => {
+  await user.click(screen.getByRole('button', { name: 'Add' }));
+  await user.click(screen.getByRole('button', { name }));
+};
 const okApi = (): EditorApi => ({ savePage: vi.fn().mockResolvedValue({}), addPage: vi.fn(), deletePage: vi.fn(), reorderPages: vi.fn(), ...mediaApi });
 
 const bundle: AlbumBundle = {
@@ -27,11 +32,11 @@ test('a failed save blocks switching page; Save retries, then the switch goes th
   const user = userEvent.setup();
   setup(api);
   expect(screen.queryByRole('button', { name: 'Retry save' })).toBeNull(); // autosave: no button while saves succeed
-  await user.click(screen.getByRole('button', { name: 'Text' }));
+  await addVia(user, 'Text');
   await user.click(screen.getByRole('button', { name: 'Page 2' }));
   expect((await screen.findByRole('alert')).textContent).toContain("chưa lưu được");
   expect(screen.getByRole('button', { name: 'Page 1' }).getAttribute('aria-current')).toBe('true');
-  expect(screen.getByRole('status').textContent).toBe('Lưu lỗi');
+  expect(screen.getByRole('status').textContent).toBe('Save failed');
 
   await user.click(screen.getByRole('button', { name: 'Retry save' }));
   await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Saved'));
@@ -44,7 +49,7 @@ test('a failed save blocks switching page; Save retries, then the switch goes th
 test('arrow-key nudges of one element coalesce into a single undo step', async () => {
   const user = userEvent.setup();
   const { container } = setup(okApi());
-  await user.click(screen.getByRole('button', { name: 'Text' })); // adds and selects the text
+  await addVia(user, 'Text'); // adds and selects the text
   const el = () => container.querySelector<HTMLElement>('.edit-page .el-text')!;
   const x0 = el().style.left;
   await user.keyboard('{ArrowRight}{ArrowRight}{ArrowRight}');
@@ -56,7 +61,7 @@ test('arrow-key nudges of one element coalesce into a single undo step', async (
 test.each(['{Delete}', '{Backspace}'])('%s removes the selected element even while a toolbar button keeps focus', async (key) => {
   const user = userEvent.setup();
   const { container } = setup(okApi());
-  await user.click(screen.getByRole('button', { name: 'Text' })); // adds + selects the text
+  await addVia(user, 'Text'); // adds + selects the text
   await user.click(screen.getByRole('button', { name: 'Bring forward' })); // focus stays on this button
   expect(document.activeElement?.tagName).toBe('BUTTON');
   await user.keyboard(key);
@@ -132,7 +137,7 @@ test('a 4xx after the early frame assign leaves the media shown as failed, not s
 test('Frame opens a list of styles; with a frame selected, Frame style switches it', async () => {
   const user = userEvent.setup();
   const { container } = setup(okApi());
-  await user.click(screen.getByRole('button', { name: 'Frame' }));
+  await addVia(user, 'Frame');
   expect(screen.getAllByRole('button', { name: /frame$/i }).length).toBeGreaterThanOrEqual(14);
   await user.click(screen.getByRole('button', { name: 'Heart frame' }));
   expect(container.querySelector('.edit-page .frame-heart')).not.toBeNull();
@@ -155,11 +160,11 @@ test('phone: Hide tools tucks the photos, pages and tools away; Show tools bring
 test('an open picker closes on a click outside it (and on Escape)', async () => {
   const user = userEvent.setup();
   const { container } = setup(okApi());
-  await user.click(screen.getByRole('button', { name: 'Sticker' }));
+  await addVia(user, 'Sticker');
   expect(container.querySelector('.picker')).not.toBeNull();
   await user.click(container.querySelector('.edit-stage')!);
   expect(container.querySelector('.picker')).toBeNull();
-  await user.click(screen.getByRole('button', { name: 'Frame' }));
+  await addVia(user, 'Frame');
   expect(container.querySelector('.picker')).not.toBeNull();
   await user.keyboard('{Escape}');
   expect(container.querySelector('.picker')).toBeNull();
@@ -201,7 +206,7 @@ test('Effect adds a page effect; Album background saves the album effect and sho
   const user = userEvent.setup();
   const api = { ...okApi(), updateAlbum: vi.fn().mockResolvedValue({}) };
   const { container } = setup(api);
-  await user.click(screen.getByRole('button', { name: 'Effect' }));
+  await addVia(user, 'Effect');
   await user.click(screen.getByRole('button', { name: 'Sparkles effect' }));
   expect(container.querySelector('.edit-page .el-effect .fx-sparkles')).not.toBeNull();
   await user.click(screen.getByRole('button', { name: 'Background' }));
@@ -325,13 +330,13 @@ test('tapping the desk around the page clears the selection', () => {
   const del = () => (screen.getByRole('button', { name: 'Delete' }) as HTMLButtonElement).disabled;
   expect(del()).toBe(false);
   fireEvent.pointerDown(container.querySelector('.edit-stage')!);
-  expect(del()).toBe(true);
+  expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull(); // item tools show only with something selected
 });
 
 test('a pinned item ignores arrow nudges until it is unpinned', async () => {
   const user = userEvent.setup();
   const { container } = setup(okApi());
-  await user.click(screen.getByRole('button', { name: 'Text' }));
+  await addVia(user, 'Text');
   const el = () => container.querySelector<HTMLElement>('.edit-page .el-text')!;
   const x0 = el().style.left;
   await user.click(screen.getByRole('button', { name: '📌 Pin' }));
@@ -346,22 +351,22 @@ test('a pinned item ignores arrow nudges until it is unpinned', async () => {
 test('Pin all pins every item on the page; unpinning is one item at a time', async () => {
   const user = userEvent.setup();
   const { container } = setup(okApi());
-  await user.click(screen.getByRole('button', { name: 'Text' }));
+  await addVia(user, 'Text');
   const el = () => container.querySelector<HTMLElement>('.edit-page .el-text')!;
   const x0 = el().style.left;
-  await user.click(screen.getByRole('button', { name: '📌 Pin all' }));
-  expect(screen.queryByRole('button', { name: '📌 Pin all' })).toBeNull(); // nothing left to pin; no "Unpin all"
+  await user.click(screen.getByRole('button', { name: 'Pin all' }));
+  expect(screen.queryByRole('button', { name: 'Pin all' })).toBeNull(); // nothing left to pin; no "Unpin all"
   expect(screen.getByRole('button', { name: '📌 Unpin' }).getAttribute('aria-pressed')).toBe('true');
   await user.keyboard('{ArrowRight}');
   expect(el().style.left).toBe(x0);
   await user.click(screen.getByRole('button', { name: '📌 Unpin' }));
-  expect(screen.getByRole('button', { name: '📌 Pin all' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Pin all' })).toBeTruthy();
 });
 
 test('Ctrl+C / Ctrl+V pastes a copy of the selected item (also on another page); Duplicate does the same', async () => {
   const user = userEvent.setup();
   const { container } = setup(okApi());
-  await user.click(screen.getByRole('button', { name: 'Text' }));
+  await addVia(user, 'Text');
   const count = () => container.querySelectorAll('.edit-page [data-el]').length;
   expect(count()).toBe(1);
   await user.keyboard('{Control>}c{/Control}');
@@ -392,7 +397,7 @@ test('with text selected, Font opens one panel for typeface, size and color', as
   const user = userEvent.setup();
   const { container } = setup(okApi());
   expect(screen.queryByRole('button', { name: 'Font' })).toBeNull();
-  await user.click(screen.getByRole('button', { name: 'Text' }));
+  await addVia(user, 'Text');
   await user.click(screen.getByRole('button', { name: 'Font' }));
   await user.click(screen.getByRole('button', { name: 'ink #a33a2a' }));
   expect(container.querySelector<HTMLElement>('.edit-page .el-text .text')!.style.color).toBe('rgb(163, 58, 42)');
@@ -409,7 +414,7 @@ test('with text selected, Font opens one panel for typeface, size and color', as
 test('Font panel: align, line spacing and outline restyle the text', async () => {
   const user = userEvent.setup();
   const { container } = setup(okApi());
-  await user.click(screen.getByRole('button', { name: 'Text' }));
+  await addVia(user, 'Text');
   await user.click(screen.getByRole('button', { name: 'Font' }));
   const style = () => container.querySelector<HTMLElement>('.edit-page .el-text .text')!.style;
   await user.click(screen.getByRole('button', { name: 'Align right' }));
@@ -456,13 +461,16 @@ const mangaBundle = (elements: PageElement[] = []): AlbumBundle => ({
 const mangaPanel: PageElement = { type: 'frame', id: 'p1', x: 0.1, y: 0.1, w: 0.5, h: 0.4, rotation: 0, z: 1, frameStyle: 'panel', mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } };
 const renderEditor = (b: AlbumBundle, api: EditorApi = { ...okApi(), updateAlbum: vi.fn().mockResolvedValue({}) }) => ({ api, ...render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={b} api={api} /></MemoryRouter>) });
 
-test('manga album: the toolbar has manga tools and no Tape / Sticker / Paper; a scrapbook album keeps its tools', () => {
+test('manga album: the toolbar has manga tools and no Tape / Sticker / Paper; a scrapbook album keeps its tools', async () => {
+  const user = userEvent.setup();
   renderEditor(mangaBundle());
-  for (const name of ['Panel', 'Bubble', 'Narration', 'Sound effect', 'Lines', 'Screentone']) expect(screen.getByRole('button', { name })).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: 'Add' }));
+  for (const name of ['Panel', 'Bubble', 'Narration', 'Sound effect', 'Lines', 'Screentone', 'Text', 'Effect']) expect(screen.getByRole('button', { name })).toBeTruthy();
   expect(screen.queryByRole('button', { name: 'Tone' })).toBeNull(); // the panel Tone toggle only shows with a panel selected
   for (const name of ['Tape', 'Sticker', 'Paper']) expect(screen.queryByRole('button', { name })).toBeNull();
   cleanup();
   setup(okApi());
+  await user.click(screen.getByRole('button', { name: 'Add' }));
   for (const name of ['Tape', 'Sticker', 'Paper', 'Frame']) expect(screen.getByRole('button', { name })).toBeTruthy();
   expect(screen.queryByRole('button', { name: 'Bubble' })).toBeNull();
 });
@@ -470,7 +478,7 @@ test('manga album: the toolbar has manga tools and no Tape / Sticker / Paper; a 
 test('manga: Bubble → Shout adds a shout bubble, selected, with Font / Color tools', async () => {
   const user = userEvent.setup();
   const { container } = renderEditor(mangaBundle());
-  await user.click(screen.getByRole('button', { name: 'Bubble' }));
+  await addVia(user, 'Bubble');
   await user.click(screen.getByRole('button', { name: 'Shout' }));
   expect(container.querySelector('.edit-page .manga-shout')).not.toBeNull();
   expect(screen.getByRole('button', { name: 'Font' })).toBeTruthy();
@@ -537,7 +545,7 @@ test('manga: with a panel selected, new speed lines start over that panel instea
   const user = userEvent.setup();
   const { container } = renderEditor(mangaBundle([mangaPanel]));
   fireEvent.pointerDown(container.querySelector('[data-el="p1"]')!);
-  await user.click(screen.getByRole('button', { name: 'Lines' }));
+  await addVia(user, 'Lines');
   await user.click(screen.getByRole('button', { name: 'Speed lines' }));
   const fx = container.querySelector<HTMLElement>('.edit-page .el-effect')!;
   expect([fx.style.left, fx.style.top, fx.style.width, fx.style.height]).toEqual(['10%', '10%', '50%', '40%']);
@@ -658,14 +666,18 @@ test('guest (edit link): page and frame tools are gone; text, stickers and the r
     pages: bundle.pages.map((p, i) => (i === 0 ? { ...p, layout: { ...p.layout, elements: els } } : p)) };
   const { container } = render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={b} api={okApi()} guest /></MemoryRouter>);
   // Structure and album settings: owner only.
-  for (const name of ['Frame', 'Background', 'Add page', 'Delete page', 'Hide page', 'Move page right', '📌 Pin all']) {
+  for (const name of ['Background', 'Add page', 'Delete page', 'Hide page', 'Move page right', 'Pin all']) {
     expect(screen.queryByRole('button', { name }), name).toBeNull();
   }
   expect(screen.queryByRole('link', { name: '← Done' })).toBeNull();
   expect(screen.queryByRole('button', { name: /Rename album/ })).toBeNull();
   expect(screen.getByText(/Link sửa · đến/)).toBeTruthy();
   // Everything else is there.
-  for (const name of ['Text', 'Sticker', 'Tape', 'Paper', 'Effect']) expect(screen.getByRole('button', { name }), name).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Paper' })).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: 'Add' }));
+  for (const name of ['Text', 'Sticker', 'Tape', 'Effect']) expect(screen.getByRole('button', { name }), name).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Frame' })).toBeNull();
+  await user.keyboard('{Escape}');
   // A frame can't be deleted, duplicated, pinned or restyled…
   fireEvent.pointerDown(container.querySelector('[data-el="f1"]')!);
   expect(screen.queryByRole('button', { name: /Duplicate/ })).toBeNull();

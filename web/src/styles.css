@@ -191,7 +191,10 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .title-btn:hover .title-pen { opacity: 1; }
 .title-input { width: min(18rem, 100%); padding: .05rem .4rem; border: 0; border-radius: 6px; background: #fffaf0; color: var(--ink); font: inherit; }
 .toolbar { position: relative; z-index: 20; padding: .35rem .75rem; background: color-mix(in srgb, var(--desk-b, #5b412e) 70%, #000); box-shadow: 0 2px 8px #0004; }
-.tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .35rem; }
+.tools { display: flex; flex-direction: column; align-items: stretch; gap: .35rem; }
+.tools-main, .tools-context { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .35rem; }
+.tools-context { padding-top: .35rem; border-top: 1px solid #fff3; }
+.tools .add-btn { background: var(--accent); color: #fff; font-weight: 600; }
 .tools button { padding: .35rem .7rem; background: #fffaf0; color: var(--ink); min-width: 2.4rem; }
 .tools button:disabled { opacity: .4; cursor: default; }
 .tools button[aria-pressed='true'], .tools button[aria-expanded='true'] { outline: 2px solid var(--accent); }
