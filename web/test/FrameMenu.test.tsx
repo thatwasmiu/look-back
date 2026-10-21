@@ -33,7 +33,7 @@ test('"+ add" offers Upload first, then the uploaded photos; picking one puts it
   // Actions sit in their own row above the photo grid (in the grid their wrapped labels overflowed onto the photos).
   const options = dialog.querySelectorAll('.frame-menu-actions button');
   expect(dialog.querySelector('.frame-menu-grid .frame-menu-upload')).toBeNull();
-  expect(options[0].textContent).toContain('Chụp theo khung'); // phones only (CSS)
+  expect(options[0].textContent).toContain("Shoot in the frame"); // phones only (CSS)
   expect(options[1].textContent).toContain('Take photo/video'); // phones only (CSS)
   expect(options[2].textContent).toContain('Upload');
   await user.click(screen.getByRole('button', { name: 'Use image m1abcdef' }));
@@ -68,7 +68,7 @@ test('"Chụp theo khung" opens the in-app camera for that frame', async () => {
   const user = userEvent.setup();
   setup(bundleWith([m]));
   await user.click(screen.getByRole('button', { name: '+ add' }));
-  await user.click(screen.getByRole('button', { name: /Chụp theo khung/ }));
+  await user.click(screen.getByRole('button', { name: /Shoot in the frame/ }));
   expect(screen.queryByRole('dialog', { name: 'Add photo or video' })).toBeNull();
   expect(screen.getByRole('dialog', { name: 'Chụp theo khung' })).toBeTruthy();
   await user.click(screen.getByRole('button', { name: 'Đóng' }));
@@ -82,9 +82,9 @@ test('inside Zalo on iPhone the frame camera is left out (it would open as a ful
     const user = userEvent.setup();
     setup(bundleWith([m]));
     await user.click(screen.getByRole('button', { name: '+ add' }));
-    expect(screen.queryByRole('button', { name: /Chụp theo khung/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Shoot in the frame/ })).toBeNull();
     expect(screen.getByRole('button', { name: /Take photo\/video/ })).toBeTruthy();
-    expect(screen.getByText(/mở bằng Safari/)).toBeTruthy();
+    expect(screen.getByText(/open in Safari/)).toBeTruthy();
   } finally {
     ua.mockRestore();
   }

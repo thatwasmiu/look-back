@@ -36,7 +36,7 @@ test('parseShareInput takes a full link, a path or a bare code', () => {
 test('an edit link points "Add to Home Screen" at itself and is remembered', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(200, bundle)));
   app(`/e/${T}`);
-  await screen.findByText(/Link sửa · đến/);
+  await screen.findByText(/Edit link · until/);
   expect(document.querySelector('link[rel="manifest"]')!.getAttribute('href')).toBe(`/api/manifest/e/${T}`);
   expect(lastGuestLink()).toBe(`/e/${T}`);
 });

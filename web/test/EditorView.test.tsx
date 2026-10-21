@@ -34,7 +34,7 @@ test('a failed save blocks switching page; Save retries, then the switch goes th
   expect(screen.queryByRole('button', { name: 'Retry save' })).toBeNull(); // autosave: no button while saves succeed
   await addVia(user, 'Text');
   await user.click(screen.getByRole('button', { name: 'Page 2' }));
-  expect((await screen.findByRole('alert')).textContent).toContain("chưa lưu được");
+  expect((await screen.findByRole('alert')).textContent).toContain("isn't saved yet");
   expect(screen.getByRole('button', { name: 'Page 1' }).getAttribute('aria-current')).toBe('true');
   expect(screen.getByRole('status').textContent).toBe('Save failed');
 
@@ -646,14 +646,14 @@ test('Hide page keeps the page in the editor, marks it, saves hidden, and Done p
   const api = okApi();
   setup(api); // 2 pages, on page 1
   await user.click(screen.getByRole('button', { name: 'Hide page' }));
-  expect(screen.getByText(/Trang này đang ẩn/)).toBeTruthy();
+  expect(screen.getByText(/This page is hidden/)).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Page 1' }).closest('.thumb')!.className).toContain('is-hidden');
   await user.click(screen.getByRole('button', { name: 'Page 2' })); // switching saves page 1
   await waitFor(() => expect(api.savePage).toHaveBeenCalledWith('p0', expect.objectContaining({ hidden: true }), undefined));
   expect(screen.getByRole('link', { name: '← Done' }).getAttribute('href')).toBe('/albums/a1?page=1');
   await user.click(screen.getByRole('button', { name: 'Page 1' }));
   await user.click(screen.getByRole('button', { name: 'Show page' }));
-  expect(screen.queryByText(/Trang này đang ẩn/)).toBeNull();
+  expect(screen.queryByText(/This page is hidden/)).toBeNull();
 });
 
 test('guest (edit link): page and frame tools are gone; text, stickers and the rest stay editable', async () => {
@@ -671,7 +671,7 @@ test('guest (edit link): page and frame tools are gone; text, stickers and the r
   }
   expect(screen.queryByRole('link', { name: '← Done' })).toBeNull();
   expect(screen.queryByRole('button', { name: /Rename album/ })).toBeNull();
-  expect(screen.getByText(/Link sửa · đến/)).toBeTruthy();
+  expect(screen.getByText(/Edit link · until/)).toBeTruthy();
   // Everything else is there.
   expect(screen.getByRole('button', { name: 'Paper' })).toBeTruthy();
   await user.click(screen.getByRole('button', { name: 'Add' }));

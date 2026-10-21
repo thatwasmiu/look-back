@@ -6,6 +6,7 @@ import { api as realApi, ApiError } from '../api';
 import { PageRenderer } from '../render/PageRenderer';
 import { EditCanvas } from '../editor/EditCanvas';
 import { Toolbar, stepZoom } from '../editor/Toolbar';
+import { useT } from '../i18n';
 import { BackgroundEffectView } from '../render/effects';
 import { initHistory, push, redo, undo } from '../editor/history';
 import { addElement, assignMedia, clearMedia, duplicate, removeElement, updateElement } from '../editor/layoutOps';
@@ -27,6 +28,7 @@ export default function Editor() {
   const { id = '' } = useParams();
   const [bundle, setBundle] = useState<AlbumBundle | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const tr = useT();
   const load = useCallback(() => {
     setLoadError(false);
     realApi.getAlbum(id).then(setBundle, (e) => {
@@ -37,8 +39,8 @@ export default function Editor() {
   if (bundle) return <EditorView bundle={bundle} api={realApi} />;
   return (
     <main className="editor">
-      <header className="editor-bar"><Link to="/">← Albums</Link></header>
-      {loadError && <p role="alert" className="empty">Không tải được album <button onClick={load}>Retry</button></p>}
+      <header className="editor-bar"><Link to="/">← {tr('Albums')}</Link></header>
+      {loadError && <p role="alert" className="empty">{tr("Couldn't load the album")} <button onClick={load}>{tr('Retry')}</button></p>}
     </main>
   );
 }
@@ -60,6 +62,7 @@ const MUSIC = '#music'; // upload target: the album's background music instead o
 // enforces the same.
 export function EditorView({ bundle, api, uploader = useUpload, guest = false }: { bundle: AlbumBundle; api: EditorApi; uploader?: typeof useUpload; guest?: boolean }) {
   const albumId = bundle.album.id;
+  const tr = useT();
   const [media, setMedia] = useState(() => new Map(bundle.media.map((m) => [m.id, m])));
   const mediaRef = useRef(media);
   mediaRef.current = media;
@@ -106,14 +109,14 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
     if (!t || t === title) return;
     const prev = title;
     setTitle(t);
-    api.updateAlbum(albumId, { title: t }).catch(() => { setTitle(prev); setOpError("Không đổi tên được album."); });
+    api.updateAlbum(albumId, { title: t }).catch(() => { setTitle(prev); setOpError(tr("Couldn't rename the album.")); });
   };
   const [bgEffect, setBgEffectState] = useState(bundle.album.backgroundEffect);
   const [bgColor, setBgColorState] = useState(bundle.album.backgroundColor);
   const setBgColor = (c: BackgroundColor) => {
     const prev = bgColor;
     setBgColorState(c);
-    api.updateAlbum(albumId, { backgroundColor: c }).catch(() => { setBgColorState(prev); setOpError("Không lưu được màu bàn."); });
+    api.updateAlbum(albumId, { backgroundColor: c }).catch(() => { setBgColorState(prev); setOpError(tr("Couldn't save the desk color.")); });
   };
   const mode = bundle.album.mode ?? 'scrapbook';
   const pageTemplates = mode === 'manga' ? mangaTemplates : templates;
@@ -121,13 +124,13 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
   const setReadingDirection = (d: ReadingDirection) => {
     const prev = readingDirection;
     setReadingDirectionState(d);
-    api.updateAlbum(albumId, { readingDirection: d }).catch(() => { setReadingDirectionState(prev); setOpError('Không lưu được hướng đọc.'); });
+    api.updateAlbum(albumId, { readingDirection: d }).catch(() => { setReadingDirectionState(prev); setOpError(tr("Couldn't save the reading direction.")); });
   };
   // Album-level setting: optimistic, rolled back if the save fails.
   const setBgEffect = (e: BackgroundEffect) => {
     const prev = bgEffect;
     setBgEffectState(e);
-    api.updateAlbum(albumId, { backgroundEffect: e }).catch(() => { setBgEffectState(prev); setOpError("Không lưu được nền album."); });
+    api.updateAlbum(albumId, { backgroundEffect: e }).catch(() => { setBgEffectState(prev); setOpError(tr("Couldn't save the album background.")); });
   };
   // Background music: uploaded from the Background picker; the album points at it as soon as tus created the row.
   const [musicId, setMusicId] = useState(bundle.album.musicMediaId);
@@ -135,7 +138,7 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
     if (!musicId) return;
     const prev = musicId;
     setMusicId(null);
-    api.deleteMedia(prev).catch(() => { setMusicId(prev); setOpError("Không gỡ được nhạc."); }); // the server clears the album's pointer
+    api.deleteMedia(prev).catch(() => { setMusicId(prev); setOpError(tr("Couldn't remove the music.")); }); // the server clears the album's pointer
   };
   const stageRef = useRef<HTMLDivElement>(null);
   // Ctrl + wheel (and trackpad pinch, which arrives as ctrl+wheel) zooms the page, not the browser.
@@ -242,7 +245,7 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
     setMedia((cur) => (cur.has(mediaId) ? cur : new Map(cur).set(mediaId, placeholder(mediaId, albumId))));
     if (frameId === MUSIC) {
       setMusicId(mediaId);
-      api.updateAlbum(albumId, { musicMediaId: mediaId }).catch(() => setOpError("Không lưu được nhạc."));
+      api.updateAlbum(albumId, { musicMediaId: mediaId }).catch(() => setOpError(tr("Couldn't save the music.")));
       return true;
     }
     if (!frameId) return true;
@@ -286,7 +289,7 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
   const putInFrame = (mediaId: string, frameId: string) => commit((l) => assignMedia(l, frameId, mediaId), frameId);
   // The server empties frames on delete; mirror that everywhere here (pages, undo history) so no later save
   // sends a mediaId the server no longer knows.
-  const deleteMedia = (mediaId: string) => run('xóa ảnh/video', async () => {
+  const deleteMedia = (mediaId: string) => run("Couldn't delete the photo/video.", async () => {
     if (!(await saved())) return;
     await api.deleteMedia(mediaId);
     const strip = (l: PageLayout) => clearMedia(l, mediaId);
@@ -296,7 +299,7 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
     setCoverId((c) => (c === mediaId ? null : c));
   });
   const setCover = (mediaId: string) => api.updateAlbum(albumId, { coverMediaId: mediaId })
-    .then(() => setCoverId(mediaId), () => setOpError("Không đặt được ảnh bìa."));
+    .then(() => setCoverId(mediaId), () => setOpError(tr("Couldn't set the cover photo.")));
 
   // Pages list keeps the current page's latest layout too (thumbnails, and switching back).
   const withCurrent = ({ pages: ps, cur: c, layout: l } = latest.current) => ps.map((p, i) => (i === c ? { ...p, layout: l } : p));
@@ -312,20 +315,20 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
   // Leaving the current page (switch, delete, route leave) needs its edits saved; a failed save blocks it.
   const saved = async () => {
     if (await flush()) return true;
-    setOpError("Trang này chưa lưu được. Bấm Retry save.");
+    setOpError(tr("This page isn't saved yet. Tap Retry save."));
     return false;
   };
   const run = async (what: string, f: () => Promise<void>) => {
     setOpError(null);
     setBusy(true);
     latest.current.busy = true;
-    try { await f(); } catch { setOpError(`Không thể ${what}.`); } finally { setBusy(false); }
+    try { await f(); } catch { setOpError(tr(what)); } finally { setBusy(false); }
   };
 
-  const switchTo = (i: number) => run('chuyển trang', async () => {
+  const switchTo = (i: number) => run("Couldn't switch pages.", async () => {
     if (await saved()) show(withCurrent(), i);
   });
-  const addPage = (templateId: string) => run('thêm trang', async () => {
+  const addPage = (templateId: string) => run("Couldn't add the page.", async () => {
     setPicking(false);
     if (!(await saved())) return;
     const at = latest.current.pages.length ? latest.current.cur + 1 : 0;
@@ -334,7 +337,7 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
     ps.splice(at, 0, p);
     show(ps, at);
   });
-  const deletePage = () => run('xóa trang', async () => {
+  const deletePage = () => run("Couldn't delete the page.", async () => {
     const id = page?.id;
     if (!id || !(await saved())) return;
     await api.deletePage(id);
@@ -343,9 +346,9 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
   });
   const leave = (e: MouseEvent) => {
     e.preventDefault();
-    void run('rời màn trang trí', async () => { if (await saved()) navigate(`/albums/${albumId}?page=${viewerPage()}`); });
+    void run("Couldn't leave the editor.", async () => { if (await saved()) navigate(`/albums/${albumId}?page=${viewerPage()}`); });
   };
-  const move = (from: number, to: number) => run('sắp xếp trang', async () => {
+  const move = (from: number, to: number) => run("Couldn't reorder the pages.", async () => {
     if (from === to || to < 0 || to >= pages.length) return;
     const ps = withCurrent();
     const [p] = ps.splice(from, 1);
@@ -429,33 +432,33 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
     <main className={`editor desk-${bgColor}${busy ? ' busy' : ''}${panelsHidden ? ' panels-hidden' : ''}`} aria-busy={busy}>
       <header className="editor-bar">
         {guest
-          ? <span className="guest-badge">✎ Link sửa · đến {bundle.album.editExpiresAt ? new Date(bundle.album.editExpiresAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }) : '—'}</span>
-          : <Link to={`/albums/${albumId}?page=${viewerPage()}`} onClick={leave}>← Done</Link>}
+          ? <span className="guest-badge">✎ {tr('Edit link · until')} {bundle.album.editExpiresAt ? new Date(bundle.album.editExpiresAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }) : '—'}</span>
+          : <Link to={`/albums/${albumId}?page=${viewerPage()}`} onClick={leave}>← {tr('Done')}</Link>}
         <h1>
           {guest ? <span className="title-text">{title}</span> : renaming ? (
-            <input className="title-input" aria-label="Album name" defaultValue={title} maxLength={200} autoFocus
+            <input className="title-input" aria-label={tr('Album name')} defaultValue={title} maxLength={200} autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter') e.currentTarget.blur();
                 if (e.key === 'Escape') { renameCancelled.current = true; e.currentTarget.blur(); }
               }}
               onBlur={(e) => rename(e.currentTarget.value)} />
           ) : (
-            <button type="button" className="title-btn" aria-label={`Rename album: ${title}`} title={`${title} — click to rename`} onClick={() => setRenaming(true)}>
+            <button type="button" className="title-btn" aria-label={tr('Rename album: {title}', { title })} title={tr('{title} — click to rename', { title })} onClick={() => setRenaming(true)}>
               <span className="title-text">{title}</span><span className="title-pen" aria-hidden>✎</span>
             </button>
           )}
         </h1>
         <button type="button" className="panels-toggle" aria-pressed={panelsHidden} onClick={() => setPanelsHidden((v) => !v)}>
-          {panelsHidden ? 'Show tools' : 'Hide tools'}
+          {tr(panelsHidden ? 'Show tools' : 'Hide tools')}
         </button>
         {/* New tab: the editor keeps its state (and autosave) while the guide is open. An installed app (PWA) has
             no tabs or back button there, so it saves and opens the guide in place; the guide's ← Back returns here. */}
         {guest ? null : standalone
-          ? <Link className="guide-help" to="/guide" aria-label="Hướng dẫn sử dụng" title="Hướng dẫn sử dụng" onClick={(e) => {
+          ? <Link className="guide-help" to="/guide" aria-label={tr('User guide')} title={tr('User guide')} onClick={(e) => {
             e.preventDefault();
-            void run('mở hướng dẫn', async () => { if (await saved()) navigate('/guide', { state: { back: true } }); });
+            void run("Couldn't open the guide.", async () => { if (await saved()) navigate('/guide', { state: { back: true } }); });
           }}>?</Link>
-          : <a className="guide-help" href="/guide" target="_blank" rel="noopener" aria-label="Hướng dẫn sử dụng" title="Hướng dẫn sử dụng">?</a>}
+          : <a className="guide-help" href="/guide" target="_blank" rel="noopener" aria-label={tr('User guide')} title={tr('User guide')}>?</a>}
       </header>
       {page && (
         <Toolbar guest={guest} layout={layout} selected={selected} commit={commit}
@@ -472,15 +475,15 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
           <div className="edit-stage" ref={stageRef}>
             {page ? <EditCanvas lockFrames={guest} layout={layout} media={media} selectedId={selectedId} onSelect={setSelectedId} onCommit={commit}
               onFrameAddMedia={addToFrame} cropId={cropId} onCrop={setCropId} shapeId={shapeId} onShape={setShapeId} zoom={zoom} snap={snap} />
-              : <p className="empty">Chưa có trang nào — thêm trang ở dưới.</p>}
+              : <p className="empty">{tr('No pages yet — add one below.')}</p>}
           </div>
           {page && cur > 0 && (
-            <button type="button" className="page-next page-prev" aria-label="Previous page" title="Previous page" onClick={() => void switchTo(cur - 1)}>←</button>
+            <button type="button" className="page-next page-prev" aria-label={tr('Previous page')} title={tr('Previous page')} onClick={() => void switchTo(cur - 1)}>←</button>
           )}
           {/* Next page; on the last page it offers a new one (same template picker as the strip's "+"). */}
           {page && (cur < pages.length - 1
-            ? <button type="button" className="page-next" aria-label="Next page" title="Next page" onClick={() => void switchTo(cur + 1)}>→</button>
-            : !guest && <button type="button" className="page-next" aria-label="New page" title="New page" onClick={() => setPicking(true)}>+</button>)}
+            ? <button type="button" className="page-next" aria-label={tr('Next page')} title={tr('Next page')} onClick={() => void switchTo(cur + 1)}>→</button>
+            : !guest && <button type="button" className="page-next" aria-label={tr('New page')} title={tr('New page')} onClick={() => setPicking(true)}>+</button>)}
         </div>
         <MediaTray media={trayMedia} items={upload.items} coverMediaId={coverId}
           onUpload={(files) => upload.add(files)} onRetry={upload.retry}
@@ -495,10 +498,10 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
         {frameMenu && createPortal(
           <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setFrameMenu(null); }}
             onKeyDown={(e) => { if (e.key === 'Escape') setFrameMenu(null); }}>
-            <div className="modal frame-menu" role="dialog" aria-modal="true" aria-label="Add photo or video">
-              <button type="button" className="modal-close" aria-label="Close" onClick={() => setFrameMenu(null)} autoFocus>×</button>
-              <h2>Add to frame</h2>
-              {inlineVideoBlocked() && <p className="manage-hint">Trong Zalo không chụp theo khung được — dùng “Take photo/video”, hoặc mở bằng Safari (⋯ → Mở bằng trình duyệt).</p>}
+            <div className="modal frame-menu" role="dialog" aria-modal="true" aria-label={tr('Add photo or video')}>
+              <button type="button" className="modal-close" aria-label={tr('Close')} onClick={() => setFrameMenu(null)} autoFocus>×</button>
+              <h2>{tr('Add to frame')}</h2>
+              {inlineVideoBlocked() && <p className="manage-hint">{tr('Inside Zalo the frame camera can\'t work — use “Take photo/video”, or open in Safari (⋯ → Open in browser).')}</p>}
               <div className="frame-menu-actions">
                 {inlineVideoBlocked() ? null : <button type="button" className="frame-menu-upload frame-menu-camera" onClick={() => {
                   const f = layout.elements.find((e) => e.id === frameMenu);
@@ -507,15 +510,15 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
                     setCameraFrame({ frame: f, shape: frameWindowShape(win) });
                   }
                   setFrameMenu(null);
-                }}>🎯<span>Chụp theo khung</span></button>}
-                <button type="button" className="frame-menu-upload frame-menu-camera" onClick={() => { uploadToFrame(frameMenu, true); setFrameMenu(null); }}>📷<span>Take photo/video</span></button>
-                <button type="button" className="frame-menu-upload" onClick={() => { uploadToFrame(frameMenu); setFrameMenu(null); }}>⬆<span>Upload</span></button>
+                }}>🎯<span>{tr('Shoot in the frame')}</span></button>}
+                <button type="button" className="frame-menu-upload frame-menu-camera" onClick={() => { uploadToFrame(frameMenu, true); setFrameMenu(null); }}>📷<span>{tr('Take photo/video')}</span></button>
+                <button type="button" className="frame-menu-upload" onClick={() => { uploadToFrame(frameMenu); setFrameMenu(null); }}>⬆<span>{tr('Upload')}</span></button>
               </div>
               <div className="frame-menu-grid">
                 {trayMedia.filter((m) => m.status !== 'failed').map((m) => {
                   const src = thumbOf(m);
                   return (
-                    <button type="button" key={m.id} aria-label={`Use ${m.kind} ${m.id.slice(0, 8)}`}
+                    <button type="button" key={m.id} aria-label={tr(m.kind === 'video' ? 'Use video {id}' : 'Use image {id}', { id: m.id.slice(0, 8) })}
                       onClick={() => { putInFrame(m.id, frameMenu); setFrameMenu(null); }}>
                       {src ? <img src={mediaUrl(src)} alt="" /> : <><LocalPreview id={m.id} /><span className="chip">{m.status}…</span></>}
                       {m.kind === 'video' && <span className="play-badge" aria-hidden>▶</span>}
@@ -528,16 +531,16 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
           document.body,
         )}
         {(['Upload into frame', 'Take photo or video'] as const).map((label, i) => (
-          <input key={label} type="file" accept={ACCEPT} hidden aria-label={label} capture={i ? 'environment' : undefined}
+          <input key={label} type="file" accept={ACCEPT} hidden aria-label={tr(label)} capture={i ? 'environment' : undefined}
             ref={(n) => { if (i) cameraPick.current = n; else framePick.current.input = n; }}
             onChange={(e) => { upload.add([...e.target.files ?? []], framePick.current.frameId); e.target.value = ''; }} />
         ))}
       </div>
       {opError && <p role="alert" className="error op-error">{opError}</p>}
-      {layout.hidden && <p className="hidden-note" role="status">Trang này đang ẩn — không hiện khi xem, chia sẻ hay in.</p>}
-      <nav className={`page-strip${pagesOpen ? ' open' : ''}`} aria-label="Pages">
+      {layout.hidden && <p className="hidden-note" role="status">{tr('This page is hidden — not shown when viewing, sharing or printing.')}</p>}
+      <nav className={`page-strip${pagesOpen ? ' open' : ''}`} aria-label={tr('Pages')}>
         <button type="button" className="strip-tab" aria-expanded={pagesOpen} onClick={() => setPagesOpen((v) => !v)}>
-          Pages ({pages.length}) <span aria-hidden>{pagesOpen ? '▾' : '▸'}</span>
+          {tr('Pages')} ({pages.length}) <span aria-hidden>{pagesOpen ? '▾' : '▸'}</span>
         </button>
         {pagesOpen && (
         <div className="strip-list">
@@ -549,42 +552,42 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
                 const from = e.dataTransfer.getData(PAGE_DRAG); // '' for drops that aren't a page thumbnail
                 if (from) { e.preventDefault(); move(Number(from), i); }
               }}>
-              <button type="button" className="thumb-page" aria-label={`Page ${i + 1}`} aria-current={i === cur}
+              <button type="button" className="thumb-page" aria-label={tr('Page {n}', { n: i + 1 })} aria-current={i === cur}
                 onClick={() => i !== cur && void switchTo(i)}>
                 <PageRenderer layout={p.layout} media={media} mode="edit" active={false} />
               </button>
               {i === cur && !guest && (
                 <div className="thumb-actions">
-                  <button type="button" aria-label="Move page left" disabled={i === 0} onClick={() => move(i, i - 1)}>◀</button>
-                  <button type="button" aria-label={p.layout.hidden ? 'Show page' : 'Hide page'} aria-pressed={!!p.layout.hidden}
-                    title={p.layout.hidden ? 'Hiện lại trang này' : 'Ẩn trang khi xem / chia sẻ'} onClick={toggleHidden}>{p.layout.hidden ? 'Hiện' : 'Ẩn'}</button>
-                  <button type="button" aria-label="Delete page" onClick={() => setConfirmDelete(true)}>✕</button>
-                  <button type="button" aria-label="Move page right" disabled={i === pages.length - 1} onClick={() => move(i, i + 1)}>▶</button>
+                  <button type="button" aria-label={tr('Move page left')} disabled={i === 0} onClick={() => move(i, i - 1)}>◀</button>
+                  <button type="button" aria-label={tr(p.layout.hidden ? 'Show page' : 'Hide page')} aria-pressed={!!p.layout.hidden}
+                    title={tr(p.layout.hidden ? 'Show this page again' : 'Hide the page when viewing / sharing')} onClick={toggleHidden}>{tr(p.layout.hidden ? 'Show' : 'Hide')}</button>
+                  <button type="button" aria-label={tr('Delete page')} onClick={() => setConfirmDelete(true)}>✕</button>
+                  <button type="button" aria-label={tr('Move page right')} disabled={i === pages.length - 1} onClick={() => move(i, i + 1)}>▶</button>
                 </div>
               )}
             </div>
           ))}
-          {!guest && <button type="button" className="thumb-add" aria-label="Add page" aria-expanded={picking} onClick={() => setPicking((v) => !v)}>+</button>}
+          {!guest && <button type="button" className="thumb-add" aria-label={tr('Add page')} aria-expanded={picking} onClick={() => setPicking((v) => !v)}>+</button>}
         </div>
         )}
       </nav>
       {confirmDelete && (
-        <div className="inline-confirm" role="alertdialog" aria-label="Delete page">
-          Xóa trang {cur + 1}? Ảnh vẫn còn trong album.
-          <button type="button" onClick={deletePage}>Delete</button>
-          <button type="button" className="secondary" onClick={() => setConfirmDelete(false)}>Cancel</button>
+        <div className="inline-confirm" role="alertdialog" aria-label={tr('Delete page')}>
+          {tr('Delete page {n}? Its photos stay in the album.', { n: cur + 1 })}
+          <button type="button" onClick={deletePage}>{tr('Delete')}</button>
+          <button type="button" className="secondary" onClick={() => setConfirmDelete(false)}>{tr('Cancel')}</button>
         </div>
       )}
       {picking && (
-        <div className="template-picker" role="dialog" aria-label="Pick a template" ref={pickRef}>
+        <div className="template-picker" role="dialog" aria-label={tr('Pick a template')} ref={pickRef}>
           <div className="template-head">
-            <span>New page</span>
-            <button type="button" className="template-close" aria-label="Close" title="Close" onClick={() => setPicking(false)}>×</button>
+            <span>{tr('New page')}</span>
+            <button type="button" className="template-close" aria-label={tr('Close')} title={tr('Close')} onClick={() => setPicking(false)}>×</button>
           </div>
           {pageTemplates.map((t) => (
             <button key={t.id} type="button" className="template" onClick={() => addPage(t.id)}>
               <PageRenderer layout={t.layout} media={noMedia} mode="edit" active={false} />
-              <span>{t.name}</span>
+              <span>{tr(t.name)}</span>
             </button>
           ))}
         </div>

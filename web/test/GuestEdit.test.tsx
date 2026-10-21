@@ -21,7 +21,7 @@ const open = (fetchMock: ReturnType<typeof vi.fn>) => {
 test('an edit link opens the album in the guest editor', async () => {
   const fetchMock = vi.fn().mockResolvedValue(json(200, bundle));
   open(fetchMock);
-  expect(await screen.findByText(/Link sửa · đến/)).toBeTruthy();
+  expect(await screen.findByText(/Edit link · until/)).toBeTruthy();
   expect(fetchMock).toHaveBeenCalledWith('/api/edit/TOKEN', expect.anything());
   expect(screen.queryByRole('button', { name: 'Add page' })).toBeNull();
 });
