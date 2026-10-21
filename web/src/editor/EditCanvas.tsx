@@ -105,12 +105,12 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
     if (cropId) finishCrop();
     const id = (e.target as Element).closest('[data-el]')?.getAttribute('data-el') ?? null;
     if (id !== editingId) setEditingId(null);
-    // "+ add" of an empty frame: one tap opens the picker (no select-then-tap-again) — also when an effect layer
-    // (speed lines, focus lines…) lies over it, since effects usually cover whole panels. Opened after the tap
-    // ends (a short tap, still on the button) so the file dialog can't strand a gesture.
-    const overEffect = layout.elements.find((x) => x.id === id)?.type === 'effect';
+    // "+ add" of an empty frame: one tap opens the picker (no select-then-tap-again) — also when something else
+    // lies over the button: an effect layer, a neighbour's bubble or sticker, an overlapping frame. Only the
+    // selected item keeps its taps (it is being moved). Opened after the tap ends (a short tap, still on the
+    // button) so the file dialog can't strand a gesture.
     const add = (e.target as Element).closest('.slot-empty')
-      ?? (overEffect ? document.elementsFromPoint?.(e.clientX, e.clientY).find((n) => n.classList.contains('slot-empty')) : undefined);
+      ?? (id !== selectedId ? document.elementsFromPoint?.(e.clientX, e.clientY).find((n) => n.closest('.slot-empty'))?.closest('.slot-empty') : undefined);
     const frameId = add?.closest('[data-el]')?.getAttribute('data-el');
     // A selected, unpinned frame's tap comes through Moveable's click instead; a pinned one has no Moveable gesture
     // (dragging is off), so its tap is handled here like an unselected frame's.

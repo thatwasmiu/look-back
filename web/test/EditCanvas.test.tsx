@@ -173,6 +173,44 @@ test('"+ add" under an effect layer (speed lines over a panel) still opens with 
   }
 });
 
+test('"+ add" partly covered by a neighbour (an unselected bubble) still opens with one tap', async () => {
+  vi.useFakeTimers();
+  try {
+    const layout: PageLayout = { background: 'paper-cream', elements: [
+      { type: 'frame', id: 'f1', x: 0.1, y: 0.1, w: 0.4, h: 0.3, rotation: 0, z: 1, frameStyle: 'panel', mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } },
+      { type: 'text', id: 't1', x: 0.2, y: 0.2, w: 0.3, h: 0.1, rotation: 0, z: 7, text: 'Chào', font: 'patrick-hand', color: '#111111', size: 0.032, textStyle: 'speech', tail: 'bl' },
+    ] };
+    const onSelect = vi.fn();
+    const onFrameAddMedia = vi.fn();
+    render(<EditCanvas layout={layout} media={new Map()} selectedId={null} onSelect={onSelect} onCommit={() => {}} onFrameAddMedia={onFrameAddMedia} />);
+    const add = document.querySelector('.slot-empty')!;
+    const bubble = document.querySelector('[data-el="t1"]')!;
+    document.elementsFromPoint = () => [bubble, add];
+    act(() => { bubble.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true })); });
+    act(() => { bubble.dispatchEvent(new MouseEvent('pointerup', { bubbles: true })); vi.runAllTimers(); });
+    expect(onFrameAddMedia).toHaveBeenCalledWith('f1');
+    expect(onSelect).not.toHaveBeenCalledWith('t1');
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('the selected item stays draggable even where it covers a "+ add"', async () => {
+  const layout: PageLayout = { background: 'paper-cream', elements: [
+    { type: 'frame', id: 'f1', x: 0.1, y: 0.1, w: 0.4, h: 0.3, rotation: 0, z: 1, frameStyle: 'panel', mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } },
+    { type: 'text', id: 't1', x: 0.2, y: 0.2, w: 0.3, h: 0.1, rotation: 0, z: 7, text: 'Chào', font: 'patrick-hand', color: '#111111', size: 0.032, textStyle: 'speech', tail: 'bl' },
+  ] };
+  const onFrameAddMedia = vi.fn();
+  render(<EditCanvas layout={layout} media={new Map()} selectedId="t1" onSelect={() => {}} onCommit={() => {}} onFrameAddMedia={onFrameAddMedia} />);
+  const add = document.querySelector('.slot-empty')!;
+  const bubble = document.querySelector('[data-el="t1"]')!;
+  document.elementsFromPoint = () => [bubble, add];
+  act(() => { bubble.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true })); });
+  act(() => { bubble.dispatchEvent(new MouseEvent('pointerup', { bubbles: true })); });
+  await new Promise((r) => setTimeout(r, 0));
+  expect(onFrameAddMedia).not.toHaveBeenCalled();
+});
+
 test('"+ add" on a selected PINNED frame still opens the picker with one tap', async () => {
   vi.useFakeTimers();
   try {

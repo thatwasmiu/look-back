@@ -125,6 +125,8 @@
   border: .25cqh solid rgba(74, 59, 44, .25); border-radius: 99px; background: rgba(255, 251, 242, .55); cursor: pointer;
   font-family: 'Patrick Hand', cursive; font-size: 3.6cqh; color: rgba(74, 59, 44, .7);
 }
+/* A bigger invisible target around the pill: easier to hit with a finger. */
+.slot-empty::before { content: ''; position: absolute; inset: -1.6cqh -1.2cqh; }
 .chip {
   position: absolute; left: 6%; bottom: 6%; padding: .3cqh 1.2cqh; border-radius: 1cqh;
   background: rgba(255, 251, 242, .9); color: #4a3b2c; box-shadow: 0 .2cqh .5cqh #0002;
