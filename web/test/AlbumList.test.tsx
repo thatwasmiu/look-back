@@ -16,7 +16,7 @@ function setup(fetchMock: ReturnType<typeof vi.fn>) {
 
 test('500 on load shows an error, not the empty state', async () => {
   setup(vi.fn().mockResolvedValue(json(500, { error: 'boom' })));
-  expect(await screen.findByText(/Không tải được danh sách album/)).toBeTruthy();
+  expect(await screen.findByText(/Couldn't load the album list/)).toBeTruthy();
   expect(screen.queryByText('No albums yet.')).toBeNull();
 });
 
@@ -25,7 +25,7 @@ test('create failure shows an inline error', async () => {
   await userEvent.click(await screen.findByRole('button', { name: 'New album' }));
   await userEvent.type(screen.getByLabelText('Album title'), 'Trip');
   await userEvent.click(screen.getByRole('button', { name: 'Create' }));
-  expect(await screen.findByText("Không tạo được album")).toBeTruthy();
+  expect(await screen.findByText("Couldn't create the album")).toBeTruthy();
 });
 
 test('New album opens a modal; Escape and × close it', async () => {
@@ -53,7 +53,7 @@ test('Delete asks first; Cancel keeps the album, Delete removes it via the API',
   const fetchMock = vi.fn().mockResolvedValueOnce(json(200, [album])).mockResolvedValueOnce(new Response(null, { status: 204 }));
   setup(fetchMock);
   await userEvent.click(await screen.findByRole('button', { name: 'Delete Trip' }));
-  expect(screen.getByRole('alertdialog').textContent).toContain("Không thể hoàn tác");
+  expect(screen.getByRole('alertdialog').textContent).toContain("can't be undone");
   await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   expect(screen.queryByRole('alertdialog')).toBeNull();
   expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -181,7 +181,7 @@ test('Copy puts the share link on the clipboard, closes the dialog and says so',
   await userEvent.click(screen.getByRole('button', { name: 'Copy' }));
   expect(writeText).toHaveBeenCalledWith(`${location.origin}/s/${token}`);
   expect(screen.queryByRole('dialog', { name: 'Share album' })).toBeNull();
-  expect((await screen.findByRole('status')).textContent).toBe('Đã chép link');
+  expect((await screen.findByRole('status')).textContent).toBe('Link copied');
 });
 
 // ✨ AI: settings are fetched when the card is picked; Create sends the description to /api/ai/album.
@@ -204,8 +204,8 @@ test('✨ AI card in both modes; without a key it points to /manage and Create s
   expect(screen.getByRole('radio', { name: /✨ AI/ })).toBeTruthy();
   await userEvent.click(screen.getByRole('radio', { name: 'Manga' }));
   await userEvent.click(screen.getByRole('radio', { name: /✨ AI/ }));
-  expect(await screen.findByText(/Thêm Gemini key trong \/manage/)).toBeTruthy();
-  await userEvent.type(screen.getByLabelText('Mô tả album'), 'abc');
+  expect(await screen.findByText(/Add a Gemini key in \/manage/)).toBeTruthy();
+  await userEvent.type(screen.getByLabelText('Album description'), 'abc');
   expect((screen.getByRole('button', { name: 'Create' }) as HTMLButtonElement).disabled).toBe(true);
 });
 
@@ -216,7 +216,7 @@ test('✨ AI sends the description, mode and direction once, then opens the edit
   await userEvent.click(screen.getByRole('radio', { name: 'Manga' }));
   await userEvent.click(screen.getByRole('radio', { name: 'Right → left' }));
   await userEvent.click(screen.getByRole('radio', { name: /✨ AI/ }));
-  const box = screen.getByLabelText('Mô tả album') as HTMLTextAreaElement;
+  const box = screen.getByLabelText('Album description') as HTMLTextAreaElement;
   expect(box.maxLength).toBe(200);
   expect(screen.getByText('0/200')).toBeTruthy();
   await userEvent.type(box, '1 ngày đi làm');
@@ -224,7 +224,7 @@ test('✨ AI sends the description, mode and direction once, then opens the edit
   const create = await screen.findByRole('button', { name: 'Create' });
   await waitFor(() => expect((create as HTMLButtonElement).disabled).toBe(false));
   await userEvent.click(create);
-  const busy = await screen.findByRole('button', { name: 'AI đang dựng album…' });
+  const busy = await screen.findByRole('button', { name: 'AI is building the album…' });
   expect((busy as HTMLButtonElement).disabled).toBe(true);
   await userEvent.click(busy);
   expect(calls.filter((c) => c.url === '/api/ai/album')).toHaveLength(1);
@@ -237,7 +237,7 @@ test('✨ AI shows the server error', async () => {
   serveAi(true, () => json(502, { error: 'Hết lượt miễn phí của Gemini, thử lại sau.' }));
   await userEvent.click(await screen.findByRole('button', { name: 'New album' }));
   await userEvent.click(screen.getByRole('radio', { name: /✨ AI/ }));
-  await userEvent.type(screen.getByLabelText('Mô tả album'), 'sinh nhật');
+  await userEvent.type(screen.getByLabelText('Album description'), 'sinh nhật');
   await userEvent.type(screen.getByLabelText('Album title'), 'Của tôi');
   const create = screen.getByRole('button', { name: 'Create' });
   await waitFor(() => expect((create as HTMLButtonElement).disabled).toBe(false));
@@ -249,11 +249,11 @@ test('✨ AI: the dialog cannot be closed while the album is being generated', a
   serveAi(true, () => new Promise<Response>(() => {}));
   await userEvent.click(await screen.findByRole('button', { name: 'New album' }));
   await userEvent.click(screen.getByRole('radio', { name: /✨ AI/ }));
-  await userEvent.type(screen.getByLabelText('Mô tả album'), 'abc');
+  await userEvent.type(screen.getByLabelText('Album description'), 'abc');
   const create = screen.getByRole('button', { name: 'Create' });
   await waitFor(() => expect((create as HTMLButtonElement).disabled).toBe(false));
   await userEvent.click(create);
-  await screen.findByRole('button', { name: 'AI đang dựng album…' });
+  await screen.findByRole('button', { name: 'AI is building the album…' });
   await userEvent.keyboard('{Escape}');
   await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   expect(screen.getByRole('dialog', { name: 'New album' })).toBeTruthy();
@@ -267,7 +267,7 @@ test('Đăng xuất ends the session and goes to the login page', async () => {
     calls.push(`${init?.method ?? 'GET'} ${url}`);
     return url === '/api/auth/logout' ? new Response(null, { status: 204 }) : json(200, []);
   }));
-  await userEvent.click(await screen.findByRole('button', { name: 'Đăng xuất' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Log out' }));
   await waitFor(() => expect(assign).toHaveBeenCalledWith('/login'));
   expect(calls).toContain('POST /api/auth/logout');
 });
@@ -286,16 +286,16 @@ test('Share dialog: an edit link for the hours the owner types (8 by default), t
     return new Response(null, { status: 204 });
   }));
   await userEvent.click(await screen.findByRole('button', { name: 'Share Trip' }));
-  const hours = screen.getByLabelText('Số giờ') as HTMLInputElement;
+  const hours = screen.getByLabelText('Hours') as HTMLInputElement;
   expect(hours.value).toBe('8');
   await userEvent.clear(hours);
   await userEvent.type(hours, '24');
-  await userEvent.click(screen.getByRole('button', { name: 'Tạo link sửa' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Create edit link' }));
   expect(bodies).toEqual([{ hours: 24 }]);
   const link = await screen.findByRole('textbox', { name: 'Edit link' }) as HTMLInputElement;
   expect(link.value).toBe(`${location.origin}/e/${token}`);
-  expect(screen.getByText(/hết hạn lúc/)).toBeTruthy();
-  await userEvent.click(screen.getByRole('button', { name: 'Thu hồi link sửa' }));
+  expect(screen.getByText(/until/)).toBeTruthy();
+  await userEvent.click(screen.getByRole('button', { name: 'Revoke edit link' }));
   expect(calls).toContain('DELETE /api/albums/a1/edit-link');
-  expect(await screen.findByRole('button', { name: 'Tạo link sửa' })).toBeTruthy();
+  expect(await screen.findByRole('button', { name: 'Create edit link' })).toBeTruthy();
 });

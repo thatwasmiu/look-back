@@ -6,6 +6,7 @@ import { exampleAlbum, exampleCover } from '../example/lookBack';
 import { albumTemplates } from '../example/albumTemplates';
 import { stickers } from '../render/decor';
 import { PageRenderer } from '../render/PageRenderer';
+import { LangSwitch, getLang, useT } from '../i18n';
 import { mediaUrl } from '../mediaUrl';
 
 // Cover photo if one is set; otherwise the album's first page stands in, drawn small.
@@ -20,6 +21,8 @@ function AlbumCover({ a }: { a: AlbumSummary }) {
 }
 
 export default function AlbumList() {
+  const t = useT();
+  const when = (iso: string) => new Date(iso).toLocaleString(getLang() === 'vi' ? 'vi-VN' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' });
   const [albums, setAlbums] = useState<AlbumSummary[] | null>(null);
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState('');
@@ -57,9 +60,9 @@ export default function AlbumList() {
     try {
       await navigator.clipboard.writeText(url);
       setSharing(null);
-      setNotice('Đã chép link');
+      setNotice(t('Link copied'));
     } catch {
-      setNotice('Không chép được — hãy chọn link và chép bằng tay');
+      setNotice(t("Couldn't copy — select the link and copy it by hand"));
     }
     setTimeout(() => setNotice(''), 2500);
   };
@@ -141,7 +144,7 @@ export default function AlbumList() {
       setAlbums((cur) => [{ ...a, coverThumb: null, pageCount }, ...(cur ?? [])]); // newest first, like the server's list
       closeCreate();
     } catch (err) {
-      if (!(err instanceof ApiError && err.status === 401)) setCreateError("Không tạo được album");
+      if (!(err instanceof ApiError && err.status === 401)) setCreateError(t("Couldn't create the album"));
     }
   }
 
@@ -158,7 +161,7 @@ export default function AlbumList() {
       closeCreate();
       navigate(`/albums/${a.id}/edit`);
     } catch (err) {
-      if (!(err instanceof ApiError && err.status === 401)) setCreateError(err instanceof ApiError && err.status !== 500 ? err.message : 'Không tạo được album');
+      if (!(err instanceof ApiError && err.status === 401)) setCreateError(err instanceof ApiError && err.status !== 500 ? err.message : t("Couldn't create the album"));
     } finally {
       busyRef.current = false;
       setBusy(false);
@@ -170,16 +173,17 @@ export default function AlbumList() {
       <header>
         <h1 className="brand"><img className="brand-logo" src="/brand/logo.svg" alt="" />Look Back</h1>
         <span className="header-actions">
-          <Link to="/guide" className="guide-link">Hướng dẫn</Link>
+          <Link to="/guide" className="guide-link">{t('Guide')}</Link>
+          <LangSwitch />
           {/* Full reload to /login: no album data stays in memory (offline caches are cleared by api.logout). */}
-          <button type="button" className="link-btn logout-btn" onClick={() => void api.logout().catch(() => {}).finally(() => location.assign('/login'))}>Đăng xuất</button>
-          <button onClick={() => setCreating(true)}>New album</button>
+          <button type="button" className="link-btn logout-btn" onClick={() => void api.logout().catch(() => {}).finally(() => location.assign('/login'))}>{t('Log out')}</button>
+          <button onClick={() => setCreating(true)}>{t('New album')}</button>
         </span>
       </header>
       {loadError && (
-        <p role="alert" className="empty">Không tải được danh sách album <button onClick={load}>Retry</button></p>
+        <p role="alert" className="empty">{t("Couldn't load the album list")} <button onClick={load}>{t('Retry')}</button></p>
       )}
-      {albums && albums.length === 0 && <p className="empty">Chưa có album nào.</p>}
+      {albums && albums.length === 0 && <p className="empty">{t('No albums yet.')}</p>}
       <ul className="grid">
         {albums?.map((a, i) => (
           <li key={a.id} className="polaroid" style={{ '--tilt': `${((i % 5) - 2) * 1.2}deg` } as CSSProperties}>
@@ -188,9 +192,9 @@ export default function AlbumList() {
               <strong title={a.title}>{a.title}</strong>
             </Link>
             <small>
-              {a.pageCount} {a.pageCount === 1 ? 'page' : 'pages'} · <Link to={`/albums/${a.id}/edit`}>Edit</Link> ·{' '}
-              <button type="button" className="link-btn" aria-label={`Share ${a.title}`} onClick={() => setSharing(a)}>{a.shareToken ? 'Shared' : 'Share'}</button> ·{' '}
-              <button type="button" className="link-btn" aria-label={`Delete ${a.title}`} onClick={() => setConfirming(a)}>Delete</button>
+              {t(a.pageCount === 1 ? '{n} page' : '{n} pages', { n: a.pageCount })} · <Link to={`/albums/${a.id}/edit`}>{t('Edit')}</Link> ·{' '}
+              <button type="button" className="link-btn" aria-label={t('Share {title}', { title: a.title })} onClick={() => setSharing(a)}>{t(a.shareToken ? 'Shared' : 'Share')}</button> ·{' '}
+              <button type="button" className="link-btn" aria-label={t('Delete {title}', { title: a.title })} onClick={() => setConfirming(a)}>{t('Delete')}</button>
             </small>
           </li>
         ))}
@@ -200,51 +204,51 @@ export default function AlbumList() {
               <img src={exampleCover} alt="" loading="lazy" />
               <strong>{exampleAlbum.album.title}</strong>
             </Link>
-            <small>Example · {exampleAlbum.pages.length} pages · view only</small>
+            <small>{t('Example · {n} pages · view only', { n: exampleAlbum.pages.length })}</small>
           </li>
         )}
       </ul>
       {creating && (
         <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) closeCreate(); }}>
           <form onSubmit={create} className="modal" role="dialog" aria-modal="true" aria-labelledby="new-album-h">
-            <button type="button" className="modal-close" aria-label="Close" onClick={closeCreate}>×</button>
-            <h2 id="new-album-h">New album</h2>
-            <input aria-label="Album title" placeholder={isAi ? 'Để trống: AI đặt tên' : 'e.g. Tà Xùa 2026'} value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
+            <button type="button" className="modal-close" aria-label={t('Close')} onClick={closeCreate}>×</button>
+            <h2 id="new-album-h">{t('New album')}</h2>
+            <input aria-label={t('Album title')} placeholder={isAi ? t('Leave empty: the AI names it') : t('e.g. Tà Xùa 2026')} value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
             {/* Picker cards: template icon is one of the app's own stickers; an album shows its cover. */}
-            <div className="mode-switch" role="radiogroup" aria-label="Mode">
+            <div className="mode-switch" role="radiogroup" aria-label={t('Mode')}>
               {(['scrapbook', 'manga'] as const).map((m) => (
                 <button key={m} type="button" role="radio" aria-checked={mode === m} onClick={() => pickMode(m)}>{m === 'scrapbook' ? 'Scrapbook' : 'Manga'}</button>
               ))}
             </div>
             {mode === 'manga' && (
-              <div className="mode-switch" role="radiogroup" aria-label="Reading direction">
+              <div className="mode-switch" role="radiogroup" aria-label={t('Reading direction')}>
                 {(['ltr', 'rtl'] as const).map((d) => (
-                  <button key={d} type="button" role="radio" aria-checked={direction === d} onClick={() => setDirection(d)}>{d === 'ltr' ? 'Left → right' : 'Right → left'}</button>
+                  <button key={d} type="button" role="radio" aria-checked={direction === d} onClick={() => setDirection(d)}>{t(d === 'ltr' ? 'Left → right' : 'Right → left')}</button>
                 ))}
               </div>
             )}
-            <div className="start-from" role="radiogroup" aria-label="Template">
-              <span className="start-label">Template</span>
+            <div className="start-from" role="radiogroup" aria-label={t('Template')}>
+              <span className="start-label">{t('Template')}</span>
               <div className="start-grid">
                 {[{ value: '', name: 'Empty album', icon: 'sparkle' }, { value: 'ai', name: '✨ AI', icon: 'bubble' }, ...albumTemplates.filter((t) => (t.mode ?? 'scrapbook') === mode).map((t) => ({ value: `tpl:${t.id}`, name: t.name, icon: t.icon }))].map((o) => {
                   const Icon = stickers[o.icon]?.Svg;
                   return (
                     <button key={o.value} type="button" role="radio" aria-checked={from === o.value} className="start-card" onClick={() => pickFrom(o.value)}>
-                      <span className="start-icon el-sticker">{Icon && <Icon />}</span>{o.name}
+                      <span className="start-icon el-sticker">{Icon && <Icon />}</span>{t(o.name)}
                     </button>
                   );
                 })}
               </div>
               {isAi && (
                 <div className="ai-prompt">
-                  <textarea aria-label="Mô tả album" maxLength={200} rows={3} value={prompt} onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="Ví dụ: 1 ngày đi làm — đi đường, thang máy, chấm vân tay, họp, về nhà" />
+                  <textarea aria-label={t('Album description')} maxLength={200} rows={3} value={prompt} onChange={(e) => setPrompt(e.target.value)}
+                    placeholder={t('e.g. A workday — commute, lift, clock in, meeting, home')} />
                   <small>{prompt.length}/200</small>
-                  {aiKey === false && <p className="manage-hint">Thêm Gemini key trong /manage để dùng AI.</p>}
+                  {aiKey === false && <p className="manage-hint">{t('Add a Gemini key in /manage to use AI.')}</p>}
                 </div>
               )}
               {!!sameMode.length && <>
-                <span className="start-label">Chép thiết kế của album (không kèm ảnh)</span>
+                <span className="start-label">{t("Copy an album's design (without photos)")}</span>
                 <div className="start-grid">
                   {sameMode.map((a) => (
                     <button key={a.id} type="button" role="radio" aria-checked={from === `album:${a.id}`} className="start-card" onClick={() => setFrom(`album:${a.id}`)}>
@@ -256,50 +260,50 @@ export default function AlbumList() {
             </div>
             {createError && <p role="alert" className="error">{createError}</p>}
             <div className="modal-actions">
-              <button type="button" className="secondary" onClick={closeCreate}>Cancel</button>
-              <button type="submit" disabled={isAi ? busy || !prompt.trim() || !aiKey : !title.trim()}>{busy ? 'AI đang dựng album…' : 'Create'}</button>
+              <button type="button" className="secondary" onClick={closeCreate}>{t('Cancel')}</button>
+              <button type="submit" disabled={isAi ? busy || !prompt.trim() || !aiKey : !title.trim()}>{busy ? t('AI is building the album…') : t('Create')}</button>
             </div>
           </form>
         </div>
       )}
       {sharing && (
-        <div className="inline-confirm album-confirm share-dialog" role="dialog" aria-label="Share album">
+        <div className="inline-confirm album-confirm share-dialog" role="dialog" aria-label={t('Share album')}>
           {sharing.shareToken ? (
             <>
-              <span>Ai có link này đều xem được “{sharing.title}” (không sửa được):</span>
-              <input readOnly aria-label="Share link" value={shareUrl(sharing.shareToken)} onFocus={(e) => e.currentTarget.select()} />
-              <button type="button" onClick={() => void copyLink(shareUrl(sharing.shareToken!))}>Copy</button>
-              <button type="button" className="danger" disabled={shareBusy} onClick={() => void toggleShare(sharing, false)}>Stop sharing</button>
+              <span>{t('Anyone with this link can view “{title}” (not edit it):', { title: sharing.title })}</span>
+              <input readOnly aria-label={t('Share link')} value={shareUrl(sharing.shareToken)} onFocus={(e) => e.currentTarget.select()} />
+              <button type="button" onClick={() => void copyLink(shareUrl(sharing.shareToken!))}>{t('Copy')}</button>
+              <button type="button" className="danger" disabled={shareBusy} onClick={() => void toggleShare(sharing, false)}>{t('Stop sharing')}</button>
             </>
           ) : (
             <>
-              <span>Chia sẻ “{sharing.title}” bằng link chỉ xem — người nhận không cần mật khẩu.</span>
-              <button type="button" disabled={shareBusy} onClick={() => void toggleShare(sharing, true)}>Create share link</button>
+              <span>{t('Share “{title}” with a view-only link — no password needed.', { title: sharing.title })}</span>
+              <button type="button" disabled={shareBusy} onClick={() => void toggleShare(sharing, true)}>{t('Create share link')}</button>
             </>
           )}
           <div className="edit-link">
             {sharing.editToken && sharing.editExpiresAt && new Date(sharing.editExpiresAt) > new Date() ? (
               <>
-                <span>Link cho người khác <b>sửa</b> (chỉ thay ảnh trong khung và sửa chữ), hết hạn lúc {new Date(sharing.editExpiresAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })}:</span>
-                <input readOnly aria-label="Edit link" value={editUrl(sharing.editToken)} onFocus={(e) => e.currentTarget.select()} />
-                <button type="button" onClick={() => void copyLink(editUrl(sharing.editToken!))}>Copy</button>
-                <button type="button" className="danger" aria-label="Thu hồi link sửa" disabled={shareBusy} onClick={() => void editLink(sharing, null)}>Thu hồi</button>
+                <span>{t('Link for others to edit (not pages or frames), until {when}:', { when: when(sharing.editExpiresAt) })}</span>
+                <input readOnly aria-label={t('Edit link')} value={editUrl(sharing.editToken)} onFocus={(e) => e.currentTarget.select()} />
+                <button type="button" onClick={() => void copyLink(editUrl(sharing.editToken!))}>{t('Copy')}</button>
+                <button type="button" className="danger" aria-label={t('Revoke edit link')} disabled={shareBusy} onClick={() => void editLink(sharing, null)}>{t('Revoke')}</button>
               </>
-            ) : <span>Link cho người khác <b>sửa</b>: chỉ thay ảnh trong khung và sửa chữ, không thêm/xoá trang hay khung.</span>}
-            <label className="edit-hours">Số giờ
+            ) : <span>{t('A link for others to edit: they fill the frames and change text, stickers and more — not pages or frames.')}</span>}
+            <label className="edit-hours">{t('Hours')}
               <input type="number" min={1} max={168} step={1} value={editHours} onChange={(e) => setEditHours(e.target.value)} />
             </label>
             <button type="button" disabled={shareBusy || !(Number(editHours) >= 1 && Number(editHours) <= 168 && Number.isInteger(Number(editHours)))}
-              onClick={() => void editLink(sharing, Number(editHours))}>{sharing.editToken && sharing.editExpiresAt && new Date(sharing.editExpiresAt) > new Date() ? 'Gia hạn' : 'Tạo link sửa'}</button>
+              onClick={() => void editLink(sharing, Number(editHours))}>{sharing.editToken && sharing.editExpiresAt && new Date(sharing.editExpiresAt) > new Date() ? t('Extend') : t('Create edit link')}</button>
           </div>
-          <button type="button" className="secondary" onClick={() => setSharing(null)}>Close</button>
+          <button type="button" className="secondary" onClick={() => setSharing(null)}>{t('Close')}</button>
         </div>
       )}
       {confirming && (
-        <div className="inline-confirm album-confirm" role="alertdialog" aria-label="Delete album">
-          Xóa “{confirming.title}” cùng toàn bộ ảnh và video? Không thể hoàn tác.
-          <button type="button" className="danger" disabled={deleting} onClick={() => void remove(confirming)}>Delete album</button>
-          <button type="button" className="secondary" disabled={deleting} onClick={() => setConfirming(null)}>Cancel</button>
+        <div className="inline-confirm album-confirm" role="alertdialog" aria-label={t('Delete album')}>
+          {t('Delete “{title}” with all its photos and videos? This can\'t be undone.', { title: confirming.title })}
+          <button type="button" className="danger" disabled={deleting} onClick={() => void remove(confirming)}>{t('Delete album')}</button>
+          <button type="button" className="secondary" disabled={deleting} onClick={() => setConfirming(null)}>{t('Cancel')}</button>
         </div>
       )}
       {notice && <p role="status" className="toast">{notice}</p>}
