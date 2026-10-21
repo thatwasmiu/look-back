@@ -69,6 +69,7 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
   const text = selected?.type === 'text' ? selected : null;
   const frame = selected?.type === 'frame' ? selected : null;
   const lockedFrame = guest && !!frame; // a guest may only change a frame's photo (crop, trim, remove)
+  const pinnable = (e: PageElement) => !(guest && e.type === 'frame');
   const video = frame && frameMedia?.kind === 'video' && frameMedia.status === 'ready' && frameMedia.id === frame.mediaId ? frameMedia : null;
   const pickFrame = (s: FrameEl['frameStyle']) => {
     if (picker === 'frameStyle' && frame) { commit(setFrameStyle(layout, frame.id, s)); setPicker(null); } else add(newFrame(s));
@@ -187,8 +188,10 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
           {!guest && <button type="button" aria-expanded={picker === 'albumFx'} onClick={() => toggle('albumFx')}>{t('Background')}</button>}
           {musicPlaying && <button type="button" className="music-btn on" aria-label={t('Pause music')} title={t('Pause music')} onClick={toggleMusic}>♪</button>}
           {/* One way only: unpinning stays per item, so a stray tap can't unlock the whole page. */}
-          {!guest && layout.elements.some((e) => !e.pinned) && (
-            <button type="button" aria-label={t('Pin all')} title={t('Lock every item on this page')} onClick={() => commit({ ...layout, elements: layout.elements.map((e) => ({ ...e, pinned: true })) })}>📌 {t('Pin all')}</button>
+          {/* A guest's frames can't change (they already stay put), so their Pin all leaves frames alone. */}
+          {layout.elements.some((e) => !e.pinned && pinnable(e)) && (
+            <button type="button" aria-label={t('Pin all')} title={t('Lock every item on this page')}
+              onClick={() => commit({ ...layout, elements: layout.elements.map((e) => (pinnable(e) ? { ...e, pinned: true } : e)) })}>📌 {t('Pin all')}</button>
           )}
           <span className="row">
             <button type="button" disabled={!canUndo} aria-label={t('Undo')} title={t('Undo (Ctrl+Z)')} onClick={undo}>↶</button>

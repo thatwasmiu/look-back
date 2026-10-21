@@ -666,7 +666,7 @@ test('guest (edit link): page and frame tools are gone; text, stickers and the r
     pages: bundle.pages.map((p, i) => (i === 0 ? { ...p, layout: { ...p.layout, elements: els } } : p)) };
   const { container } = render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={b} api={okApi()} guest /></MemoryRouter>);
   // Structure and album settings: owner only.
-  for (const name of ['Background', 'Add page', 'Delete page', 'Hide page', 'Move page right', 'Pin all']) {
+  for (const name of ['Background', 'Add page', 'Delete page', 'Hide page', 'Move page right']) {
     expect(screen.queryByRole('button', { name }), name).toBeNull();
   }
   expect(screen.queryByRole('link', { name: '← Done' })).toBeNull();
@@ -682,7 +682,7 @@ test('guest (edit link): page and frame tools are gone; text, stickers and the r
   fireEvent.pointerDown(container.querySelector('[data-el="f1"]')!);
   expect(screen.queryByRole('button', { name: /Duplicate/ })).toBeNull();
   expect(screen.queryByRole('button', { name: 'Frame style' })).toBeNull();
-  expect(screen.queryByRole('button', { name: /Pin/ })).toBeNull();
+  expect(screen.queryByRole('button', { name: /^📌 (Pin|Unpin)$/ })).toBeNull();
   expect((screen.getByRole('button', { name: 'Delete' }) as HTMLButtonElement).disabled).toBe(true);
   await user.keyboard('{Delete}');
   expect(container.querySelector('[data-el="f1"]')).not.toBeNull();
@@ -696,3 +696,23 @@ test('guest (edit link): page and frame tools are gone; text, stickers and the r
   await user.click(screen.getByRole('button', { name: 'Next page' }));
   expect(screen.queryByRole('button', { name: 'New page' })).toBeNull();
 });
+
+test('guest Pin all pins what they may edit, never the frames (the server would refuse a pinned frame)', async () => {
+  const user = userEvent.setup();
+  const els: PageElement[] = [
+    { type: 'frame', id: 'f1', x: 0.1, y: 0.1, w: 0.5, h: 0.4, rotation: 0, z: 1, frameStyle: 'polaroid', mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } },
+    { type: 'text', id: 't1', x: 0.1, y: 0.7, w: 0.6, h: 0.1, rotation: 0, z: 2, text: 'Chào', font: 'patrick-hand', color: '#111111', size: 0.04 },
+  ];
+  const b: AlbumBundle = { ...bundle, album: { ...bundle.album, editExpiresAt: new Date(Date.now() + 3600_000).toISOString() },
+    pages: bundle.pages.map((p, i) => (i === 0 ? { ...p, layout: { ...p.layout, elements: els } } : p)) };
+  const api = okApi();
+  render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={b} api={api} guest /></MemoryRouter>);
+  await user.click(screen.getByRole('button', { name: 'Pin all' }));
+  expect(screen.queryByRole('button', { name: 'Pin all' })).toBeNull(); // everything a guest can pin is pinned
+  await user.click(screen.getByRole('button', { name: 'Page 2' })); // switching saves page 1
+  await waitFor(() => expect(api.savePage).toHaveBeenCalled());
+  const saved = vi.mocked(api.savePage).mock.calls[0][1] as { elements: PageElement[] };
+  expect(saved.elements.find((e) => e.id === 't1')?.pinned).toBe(true);
+  expect(saved.elements.find((e) => e.id === 'f1')?.pinned).toBeUndefined();
+});
+
