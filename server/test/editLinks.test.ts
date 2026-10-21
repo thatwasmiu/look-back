@@ -89,7 +89,7 @@ describe('edit links (guest)', () => {
     expect((await as(undefined, 'GET', '/api/edit/not-a-token')).statusCode).toBe(404);
   });
 
-  it('may put a photo in a frame, crop it and change text (a bubble may grow); nothing else', async () => {
+  it('may fill frames and change anything but the frames and pages: frames and hidden stay as they were', async () => {
     const { albumId, pageId, mediaId } = await albumWithPage();
     const g = await guestFor(albumId);
     const save = (layout: unknown) => as(g.cookie, 'PUT', `/api/pages/${pageId}`, { layout });
@@ -99,13 +99,20 @@ describe('edit links (guest)', () => {
     expect((await save(ok)).statusCode).toBe(200);
     expect((await save(baseLayout())).statusCode).toBe(200); // emptying a frame and resetting text is fine
 
-    const moved = baseLayout(); (moved.elements[0] as { x: number }).x = 0.3;
-    const added = baseLayout(); added.elements.push(frame('f2', null) as never);
-    const removed = baseLayout(); removed.elements.pop();
-    const restyled = baseLayout(); (restyled.elements[1] as { color: string }).color = '#ff0000';
+    // Free: text, stickers, effects, paper — add, remove, move, restyle.
+    const removedText = baseLayout(); removedText.elements.pop();
+    const restyled = baseLayout(); Object.assign(restyled.elements[1], { color: '#ff0000', x: 0.3, rotation: 8 });
+    const sticker = baseLayout(); sticker.elements.push({ type: 'sticker', id: 's1', x: 0.7, y: 0.1, w: 0.1, h: 0.1, rotation: 0, z: 9, stickerId: 'heart' } as never);
     const paper = { ...baseLayout(), background: 'paper-kraft' };
+    for (const good of [removedText, restyled, sticker, paper]) expect((await save(good)).statusCode).toBe(200);
+    // Locked: frames (add, remove, move, resize, restyle) and the page's hidden flag.
+    const moved = baseLayout(); (moved.elements[0] as { x: number }).x = 0.3;
+    const resized = baseLayout(); (resized.elements[0] as { w: number }).w = 0.8;
+    const styled = baseLayout(); (styled.elements[0] as { frameStyle: string }).frameStyle = 'circle';
+    const added = baseLayout(); added.elements.push(frame('f2', null) as never);
+    const noFrame = baseLayout(); noFrame.elements.shift();
     const hidden = { ...baseLayout(), hidden: true };
-    for (const bad of [moved, added, removed, restyled, paper, hidden]) expect((await save(bad)).statusCode).toBe(403);
+    for (const bad of [moved, resized, styled, added, noFrame, hidden]) expect((await save(bad)).statusCode).toBe(403);
 
     const other = await albumWithPage();
     const foreign = baseLayout(); (foreign.elements[0] as { mediaId: string }).mediaId = other.mediaId;
@@ -171,17 +178,19 @@ describe('edit links (guest)', () => {
 });
 
 describe('guestEditAllowed', () => {
-  it('compares structure, not the editable fields', () => {
+  it('only frames (apart from their photo, crop, trim and layer) and hidden are locked', () => {
     const a = baseLayout();
     expect(guestEditAllowed(a, structuredClone(a))).toBe(true);
     const z = structuredClone(a); (z.elements[0] as { z: number }).z = 5;
-    expect(guestEditAllowed(a, z)).toBe(false);
+    expect(guestEditAllowed(a, z)).toBe(true); // bring forward / send back moves layers
     const reordered = { ...a, elements: [a.elements[1], a.elements[0]] };
-    expect(guestEditAllowed(a, reordered)).toBe(false);
-    const shrink = structuredClone(a); (shrink.elements[1] as { h: number }).h = 0.05;
-    expect(guestEditAllowed(a, shrink)).toBe(true); // a bubble's height follows its words
-    const offPage = structuredClone(a); (offPage.elements[1] as { h: number }).h = 0.5;
-    expect(guestEditAllowed(a, offPage)).toBe(false);
+    expect(guestEditAllowed(a, reordered)).toBe(true);
+    const trimmed = structuredClone(a); (trimmed.elements[0] as { trim: unknown }).trim = { start: 1, end: 3 };
+    expect(guestEditAllowed(a, trimmed)).toBe(true);
+    const pinned = structuredClone(a); (pinned.elements[0] as { pinned: boolean }).pinned = true;
+    expect(guestEditAllowed(a, pinned)).toBe(false);
+    const rotated = structuredClone(a); (rotated.elements[0] as { rotation: number }).rotation = 3;
+    expect(guestEditAllowed(a, rotated)).toBe(false);
   });
 });
 

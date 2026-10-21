@@ -23,6 +23,7 @@ type Props = {
   bgColor: BackgroundColor; setBgColor(c: BackgroundColor): void;
   music?: MediaDTO | null; onMusicFile?(f: File): void; onMusicRemove?(): void; // album background music
   mode?: AlbumMode; readingDirection?: ReadingDirection; setReadingDirection?(d: ReadingDirection): void; // manga albums
+  guest?: boolean; // edit-link guest: no frame/panel tools, no album settings (the server refuses those changes)
 };
 
 const backgrounds: PageLayout['background'][] = ['paper-cream', 'paper-kraft', 'paper-grid', 'paper-dots'];
@@ -37,11 +38,11 @@ const SAMPLE: FrameEl = { type: 'frame', id: 'sample', x: 0, y: 0, w: 1, h: 1, r
 export const ZOOMS = [1, 1.25, 1.5, 2, 2.5, 3];
 export const stepZoom = (z: number, dir: 1 | -1) =>
   dir > 0 ? ZOOMS.find((s) => s > z + 1e-9) ?? z : [...ZOOMS].reverse().find((s) => s < z - 1e-9) ?? z;
-export const statusLabel: Record<SaveStatus, string> = { saved: 'Saved', saving: 'Saving…', unsaved: 'Unsaved', error: 'Lưu lỗi' };
+const statusLabel: Record<SaveStatus, string> = { saved: 'Saved', saving: 'Saving…', unsaved: 'Unsaved', error: 'Lưu lỗi' };
 
 // Laptop: a bar above the page. Phone (coarse pointer or < 700px, see CSS): a sheet pinned to the bottom,
 // pickers open above it.
-export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo, status, save, crop, zoom, setZoom, snap, setSnap, frameMedia = null, bgEffect, setBgEffect, bgColor, setBgColor, editShape, music = null, onMusicFile, onMusicRemove, mode = 'scrapbook', readingDirection = 'ltr', setReadingDirection }: Props) {
+export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo, status, save, crop, zoom, setZoom, snap, setSnap, frameMedia = null, bgEffect, setBgEffect, bgColor, setBgColor, editShape, music = null, onMusicFile, onMusicRemove, mode = 'scrapbook', readingDirection = 'ltr', setReadingDirection, guest = false }: Props) {
   const manga = mode === 'manga';
   const [picker, setPicker] = useState<'frame' | 'frameStyle' | 'sticker' | 'tape' | 'bg' | 'effect' | 'albumFx' | 'font' | 'trim' | MangaPicker | null>(null);
   const toggle = (p: typeof picker) => setPicker((cur) => (cur === p ? null : p));
@@ -64,6 +65,7 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
   const sel = selected?.id;
   const text = selected?.type === 'text' ? selected : null;
   const frame = selected?.type === 'frame' ? selected : null;
+  const lockedFrame = guest && !!frame; // a guest may only change a frame's photo (crop, trim, remove)
   const video = frame && frameMedia?.kind === 'video' && frameMedia.status === 'ready' && frameMedia.id === frame.mediaId ? frameMedia : null;
   const pickFrame = (s: FrameEl['frameStyle']) => {
     if (picker === 'frameStyle' && frame) { commit(setFrameStyle(layout, frame.id, s)); setPicker(null); } else add(newFrame(s));
@@ -167,16 +169,16 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
         </div>
       )}
       <div className="tools">
-        {manga ? <MangaButtons picker={picker} toggle={toggle} add={add} selected={selected} /> : <>
-          <button type="button" aria-expanded={picker === 'frame'} onClick={() => toggle('frame')}>Frame</button>
-          {frame && <button type="button" aria-expanded={picker === 'frameStyle'} onClick={() => toggle('frameStyle')}>Frame style</button>}
+        {manga ? <MangaButtons picker={picker} toggle={toggle} add={add} selected={selected} noPanel={guest} /> : <>
+          {!guest && <button type="button" aria-expanded={picker === 'frame'} onClick={() => toggle('frame')}>Frame</button>}
+          {frame && !guest && <button type="button" aria-expanded={picker === 'frameStyle'} onClick={() => toggle('frameStyle')}>Frame style</button>}
           <button type="button" aria-expanded={picker === 'sticker'} onClick={() => toggle('sticker')}>Sticker</button>
           <button type="button" aria-expanded={picker === 'tape'} onClick={() => toggle('tape')}>Tape</button>
         </>}
         <button type="button" onClick={() => add(newText())}>Text</button>
         {!manga && <button type="button" aria-expanded={picker === 'bg'} onClick={() => toggle('bg')}>Paper</button>}
         <button type="button" aria-expanded={picker === 'effect'} onClick={() => toggle('effect')}>Effect</button>
-        <button type="button" aria-expanded={picker === 'albumFx'} onClick={() => toggle('albumFx')}>Background</button>
+        {!guest && <button type="button" aria-expanded={picker === 'albumFx'} onClick={() => toggle('albumFx')}>Background</button>}
         {musicPlaying && <button type="button" className="music-btn on" aria-label="Pause music" title="Pause music" onClick={toggleMusic}>♪</button>}
         {/* One panel for the lettering: typeface, size and color. */}
         {text && (
@@ -187,22 +189,22 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
         {crop && selected?.type === 'frame' && selected.mediaId && <button type="button" onClick={crop}>Crop</button>}
         {video && <button type="button" aria-expanded={picker === 'trim'} onClick={() => toggle('trim')}>✂ Trim</button>}
         {frame?.mediaId && <button type="button" onClick={() => commit(assignMedia(layout, frame.id, null))}>Remove photo</button>}
-        {frame?.frameStyle === 'panel' && <MangaPanelTools panel={frame} layout={layout} commit={commit} editShape={editShape} />}
+        {frame?.frameStyle === 'panel' && !guest && <MangaPanelTools panel={frame} layout={layout} commit={commit} editShape={editShape} />}
         {manga && text && <MangaTextTools text={text} layout={layout} commit={commit} />}
-        {selected && <button type="button" title="Duplicate (Ctrl+C, Ctrl+V)" onClick={() => add(duplicate(selected))}>⧉ Duplicate</button>}
-        {selected && (
+        {selected && !lockedFrame && <button type="button" title="Duplicate (Ctrl+C, Ctrl+V)" onClick={() => add(duplicate(selected))}>⧉ Duplicate</button>}
+        {selected && !lockedFrame && (
           <button type="button" aria-pressed={!!selected.pinned} title={selected.pinned ? 'Unpin to move, resize or rotate again' : 'Lock in place'}
             onClick={() => commit(updateElement(layout, selected.id, { pinned: !selected.pinned }))}>{selected.pinned ? '📌 Unpin' : '📌 Pin'}</button>
         )}
         {/* One way only: unpinning stays per item, so a stray tap can't unlock the whole page. */}
-        {layout.elements.some((e) => !e.pinned) && (
+        {!guest && layout.elements.some((e) => !e.pinned) && (
           <button type="button" title="Lock every item on this page" onClick={() => commit({ ...layout, elements: layout.elements.map((e) => ({ ...e, pinned: true })) })}>📌 Pin all</button>
         )}
         <span className="sep" />
         <span className="row">
           <button type="button" disabled={!sel} aria-label="Bring forward" title="Bring forward" onClick={() => sel && commit(bringForward(layout, sel))}>↑</button>
           <button type="button" disabled={!sel} aria-label="Send backward" title="Send backward" onClick={() => sel && commit(sendBackward(layout, sel))}>↓</button>
-          <button type="button" disabled={!sel} aria-label="Delete" title="Delete" onClick={() => sel && commit(removeElement(layout, sel), null)}>🗑</button>
+          <button type="button" disabled={!sel || lockedFrame} aria-label="Delete" title="Delete" onClick={() => sel && commit(removeElement(layout, sel), null)}>🗑</button>
         </span>
         <span className="sep" />
         <span className="row">

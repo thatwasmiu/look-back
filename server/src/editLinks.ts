@@ -22,22 +22,20 @@ export async function guestAlbum(pool: pg.Pool, req: FastifyRequest): Promise<st
   return r.rows[0]?.id ?? null;
 }
 
-// A guest may change only a frame's photo (mediaId) and crop, and a text's words (and let a bubble grow to fit
-// them, or shrink back). Everything else — elements, order, position, style, background, hidden — must stay exactly as it was.
+// A guest may change anything on a page except its structure: the frames/panels (none added or removed; each keeps
+// its place, size, style and shape — only its photo, crop, video trim and layer may change) and the page's hidden
+// flag. Pages themselves (add, delete, reorder) are owner-only routes anyway. Text, stickers, tape, effects and the
+// paper are free.
 export function guestEditAllowed(before: PageLayout, after: PageLayout): boolean {
-  if (before.background !== after.background || !!before.hidden !== !!after.hidden) return false;
-  if (before.elements.length !== after.elements.length) return false;
-  return before.elements.every((b, i) => {
-    const a = after.elements[i];
-    if (a.id !== b.id || a.type !== b.type) return false;
-    if (a.type === 'text' && a.y + a.h > 1.0001) return false;
-    return canon(strip(a)) === canon(strip(b));
-  });
+  if (!!before.hidden !== !!after.hidden) return false;
+  const frames = (l: PageLayout) => new Map(l.elements.flatMap((e) => (e.type === 'frame' ? [[e.id, e] as const] : [])));
+  const b = frames(before), a = frames(after);
+  if (a.size !== b.size) return false;
+  return [...b].every(([id, f]) => { const g = a.get(id); return !!g && canon(strip(g)) === canon(strip(f)); });
 }
-const strip = (e: PageLayout['elements'][number]) => {
-  if (e.type === 'frame') { const { mediaId: _m, crop: _c, ...rest } = e; return rest; }
-  if (e.type === 'text') { const { text: _t, h: _h, ...rest } = e; return rest; }
-  return e;
+const strip = (f: Extract<PageLayout['elements'][number], { type: 'frame' }>) => {
+  const { mediaId: _m, crop: _c, trim: _t, z: _z, ...rest } = f;
+  return rest;
 };
 // JSON with sorted keys: stored and incoming layouts may list the same fields in a different order.
 const canon = (v: unknown): string => JSON.stringify(v, (_k, x) =>

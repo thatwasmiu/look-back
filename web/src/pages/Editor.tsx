@@ -5,7 +5,7 @@ import { mangaTemplates, pageLayoutSchema, templates, type AlbumBundle, type Rea
 import { api as realApi, ApiError } from '../api';
 import { PageRenderer } from '../render/PageRenderer';
 import { EditCanvas } from '../editor/EditCanvas';
-import { Toolbar, statusLabel, stepZoom } from '../editor/Toolbar';
+import { Toolbar, stepZoom } from '../editor/Toolbar';
 import { BackgroundEffectView } from '../render/effects';
 import { initHistory, push, redo, undo } from '../editor/history';
 import { addElement, assignMedia, clearMedia, duplicate, removeElement, updateElement } from '../editor/layoutOps';
@@ -55,8 +55,9 @@ const placeholder = (id: string, albumId: string): MediaDTO => ({
 const MUSIC = '#music'; // upload target: the album's background music instead of a frame
 
 // `uploader` is swappable so /dev/editor can fake uploads without a server.
-// guest: opened from an edit link — only photos in the existing frames and existing text can change (the server
-// enforces the same), so the tools to add, move, delete or restyle anything are left out.
+// guest: opened from an edit link — the page structure is the owner's: no adding/deleting/moving pages, no frame or
+// panel tools (a frame only takes a photo), no album settings. Everything else on the page is free; the server
+// enforces the same.
 export function EditorView({ bundle, api, uploader = useUpload, guest = false }: { bundle: AlbumBundle; api: EditorApi; uploader?: typeof useUpload; guest?: boolean }) {
   const albumId = bundle.album.id;
   const [media, setMedia] = useState(() => new Map(bundle.media.map((m) => [m.id, m])));
@@ -376,7 +377,7 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
         upload.add(files, sel?.type === 'frame' && !sel.mediaId ? sel.id : undefined);
         return;
       }
-      if (!clip.current || guest) return;
+      if (!clip.current || (guest && clip.current.type === 'frame')) return;
       e.preventDefault();
       const copy = duplicate(clip.current);
       clip.current = copy; // the next paste lands a step further
@@ -399,7 +400,8 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
         if (e.key === 'ArrowLeft' && c > 0) { e.preventDefault(); void nav.current.switchTo(c - 1); }
         return;
       }
-      if (guest) return; // nothing to delete or nudge
+      // A guest can't delete or move a frame.
+      if (guest && latest.current.layout.elements.find((x) => x.id === selectedId)?.type === 'frame') return;
       // commit(fn) derives from h.present, not this render's layout: key repeats can arrive before a re-render.
       // Focus often stays on the last-clicked toolbar button; buttons have no use for these keys.
       if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -455,20 +457,8 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
           }}>?</Link>
           : <a className="guide-help" href="/guide" target="_blank" rel="noopener" aria-label="Hướng dẫn sử dụng" title="Hướng dẫn sử dụng">?</a>}
       </header>
-      {page && guest && (
-        <div className="toolbar guest-tools" role="toolbar" aria-label="Tools">
-          <button type="button" onClick={() => setHist(undo)} disabled={hist.past.length === 0} aria-label="Undo">↶</button>
-          <button type="button" onClick={() => setHist(redo)} disabled={hist.future.length === 0} aria-label="Redo">↷</button>
-          {selected?.type === 'frame' && selected.mediaId && <>
-            <button type="button" onClick={() => setCropId(selectedId)}>Crop</button>
-            <button type="button" onClick={() => commit(assignMedia(layout, selected.id, null))}>Remove photo</button>
-          </>}
-          <span className="guest-hint">Bấm “+ add” trong khung để thêm ảnh/video · nhấp đúp vào chữ để sửa</span>
-          <button type="button" className="save-status" onClick={() => void flush().then((ok) => ok && setOpError(null))}>{statusLabel[status]}</button>
-        </div>
-      )}
-      {page && !guest && (
-        <Toolbar layout={layout} selected={selected} commit={commit}
+      {page && (
+        <Toolbar guest={guest} layout={layout} selected={selected} commit={commit}
           undo={() => setHist(undo)} redo={() => setHist(redo)} canUndo={hist.past.length > 0} canRedo={hist.future.length > 0}
           status={status} save={() => void flush().then((ok) => ok && setOpError(null))}
           crop={() => setCropId(selectedId)} editShape={() => setShapeId(selectedId)} zoom={zoom} setZoom={setZoom} snap={snap} setSnap={setSnap} frameMedia={selected?.type === 'frame' && selected.mediaId ? media.get(selected.mediaId) ?? null : null} bgEffect={bgEffect} setBgEffect={setBgEffect} bgColor={bgColor} setBgColor={setBgColor}
@@ -480,7 +470,7 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
         {/* Tapping the desk around the page clears the selection, same as tapping empty page. */}
         <div className="stage-wrap" onPointerDown={(e) => { if (e.target === e.currentTarget || e.target === stageRef.current) setSelectedId(null); }}>
           <div className="edit-stage" ref={stageRef}>
-            {page ? <EditCanvas locked={guest} layout={layout} media={media} selectedId={selectedId} onSelect={setSelectedId} onCommit={commit}
+            {page ? <EditCanvas lockFrames={guest} layout={layout} media={media} selectedId={selectedId} onSelect={setSelectedId} onCommit={commit}
               onFrameAddMedia={addToFrame} cropId={cropId} onCrop={setCropId} shapeId={shapeId} onShape={setShapeId} zoom={zoom} snap={snap} />
               : <p className="empty">Chưa có trang nào — thêm trang ở dưới.</p>}
           </div>

@@ -17,7 +17,7 @@ past the VPS disk limit.
 |---|---|
 | **Owner** (one password) | Everything: create/decorate/delete albums, upload, share, manage storage, back up. |
 | **Share-link viewer** | View one album read-only (`/s/<token>`), including its photos, videos and music. |
-| **Edit-link guest** | Opens `/e/<token>` (no password) for the hours the owner chose: puts photos/videos into the album's existing frames and changes existing text — nothing else. |
+| **Edit-link guest** | Opens `/e/<token>` (no password) for the hours the owner chose: fills the album's existing frames with photos/videos and freely edits text, stickers, tape, effects and paper — but can't add/remove/move frames or panels, touch pages, or change album settings. |
 | **Link crawler** (Facebook, Zalo…) | Gets an Open Graph preview (title, page count, cover image) for a share link. |
 
 ### Goals

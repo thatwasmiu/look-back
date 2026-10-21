@@ -16,7 +16,7 @@ type Props = {
   shapeId?: string | null; onShape?(frameId: string | null): void; // manga panel in shape mode (move its corners)
   zoom?: number; // 1 = page fits the stage
   snap?: boolean; // snap to the page's edges/centre and other items while dragging or resizing
-  locked?: boolean; // edit-link guest: nothing moves, resizes or rotates (everything acts pinned)
+  lockFrames?: boolean; // edit-link guest: frames/panels don't move, resize or rotate (they act pinned)
 };
 type Crop = FrameEl['crop'];
 const SNAP_DIRS = { left: true, right: true, top: true, bottom: true, center: true, middle: true };
@@ -25,7 +25,7 @@ const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)
 
 // Selected element gets react-moveable handles. During a gesture only a transient layout changes (live preview);
 // the gesture end commits it once. Moveable reports CSS px relative to the page box; page units = px / box size.
-export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFrameAddMedia, cropId = null, onCrop, shapeId = null, onShape, zoom = 1, snap = false, locked = false }: Props) {
+export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFrameAddMedia, cropId = null, onCrop, shapeId = null, onShape, zoom = 1, snap = false, lockFrames = false }: Props) {
   const pageRef = useRef<HTMLDivElement>(null);
   const moveableRef = useRef<Moveable>(null);
   const [live, setLive] = useState<PageLayout | null>(null);
@@ -52,7 +52,7 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
     onShape?.(null);
   };
   const selected = layout.elements.find((e) => e.id === selectedId) ?? null;
-  const pinned = locked || !!selected?.pinned;
+  const pinned = !!selected?.pinned || (lockFrames && selected?.type === 'frame');
   const finishCrop = () => {
     if (cropId && cropLive) onCommit(updateElement(layout, cropId, { crop: cropLive }));
     onCrop?.(null);
@@ -114,7 +114,7 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
     const frameId = add?.closest('[data-el]')?.getAttribute('data-el');
     // A selected, unpinned frame's tap comes through Moveable's click instead; a pinned one has no Moveable gesture
     // (dragging is off), so its tap is handled here like an unselected frame's.
-    const pinnedFrame = locked || !!layout.elements.find((x) => x.id === frameId)?.pinned;
+    const pinnedFrame = lockFrames || !!layout.elements.find((x) => x.id === frameId)?.pinned;
     if (add && frameId && (frameId !== selectedId || pinnedFrame) && onFrameAddMedia) {
       const x0 = e.clientX, y0 = e.clientY;
       const up = (u: PointerEvent) => {

@@ -6,9 +6,9 @@ import { newEffect, newMangaText, newPanel, updateElement } from '../editor/layo
 export type MangaPicker = 'bubble' | 'lines';
 type Add = (el: PageElement) => void;
 
-export function MangaButtons({ picker, toggle, add, selected }: { picker: string | null; toggle(p: MangaPicker): void; add: Add; selected: PageElement | null }) {
+export function MangaButtons({ picker, toggle, add, selected, noPanel = false }: { picker: string | null; toggle(p: MangaPicker): void; add: Add; selected: PageElement | null; noPanel?: boolean }) {
   return <>
-    <button type="button" onClick={() => add(newPanel())}>Panel</button>
+    {!noPanel && <button type="button" onClick={() => add(newPanel())}>Panel</button>}
     <button type="button" aria-expanded={picker === 'bubble'} onClick={() => toggle('bubble')}>Bubble</button>
     <button type="button" onClick={() => add(newMangaText('narration'))}>Narration</button>
     <button type="button" onClick={() => add(newMangaText('sfx'))}>Sound effect</button>

@@ -66,7 +66,7 @@ export function registerPages(app: FastifyInstance, pool: pg.Pool): void {
     const page = await pool.query('select album_id, layout from pages where id = $1', [req.params.id]);
     if (!page.rows[0]) return reply.code(404).send({ error: 'not found' });
     if (req.guestAlbumId && (page.rows[0].album_id !== req.guestAlbumId || !guestEditAllowed(page.rows[0].layout, layout))) {
-      return reply.code(403).send({ error: 'Link sửa chỉ cho thay ảnh trong khung và sửa chữ.' });
+      return reply.code(403).send({ error: 'Link sửa không cho thêm, xoá hay sửa khung/panel, hay ẩn trang.' });
     }
 
     const mediaIds = [...new Set(layout.elements.flatMap((e) => (e.type === 'frame' && e.mediaId ? [e.mediaId] : [])))];

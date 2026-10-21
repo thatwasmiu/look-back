@@ -648,7 +648,7 @@ test('Hide page keeps the page in the editor, marks it, saves hidden, and Done p
   expect(screen.queryByText(/Trang này đang ẩn/)).toBeNull();
 });
 
-test('guest (edit link): no tools to add, move, delete or restyle; text and photos stay editable', async () => {
+test('guest (edit link): page and frame tools are gone; text, stickers and the rest stay editable', async () => {
   const user = userEvent.setup();
   const els: PageElement[] = [
     { type: 'frame', id: 'f1', x: 0.1, y: 0.1, w: 0.5, h: 0.4, rotation: 0, z: 1, frameStyle: 'polaroid', mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } },
@@ -657,21 +657,29 @@ test('guest (edit link): no tools to add, move, delete or restyle; text and phot
   const b: AlbumBundle = { ...bundle, album: { ...bundle.album, editExpiresAt: new Date(Date.now() + 3600_000).toISOString() },
     pages: bundle.pages.map((p, i) => (i === 0 ? { ...p, layout: { ...p.layout, elements: els } } : p)) };
   const { container } = render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={b} api={okApi()} guest /></MemoryRouter>);
-  for (const name of ['Bubble', 'Text', 'Sticker', 'Background', 'Duplicate', 'Add page', 'Delete page', 'Hide page', 'Move page right']) {
+  // Structure and album settings: owner only.
+  for (const name of ['Frame', 'Background', 'Add page', 'Delete page', 'Hide page', 'Move page right', '📌 Pin all']) {
     expect(screen.queryByRole('button', { name }), name).toBeNull();
   }
   expect(screen.queryByRole('link', { name: '← Done' })).toBeNull();
   expect(screen.queryByRole('button', { name: /Rename album/ })).toBeNull();
   expect(screen.getByText(/Link sửa · đến/)).toBeTruthy();
-  // Selecting an element gives no move/resize handles, and Delete does nothing.
-  fireEvent.pointerDown(container.querySelector('[data-el="t1"]')!);
-  expect(container.querySelector('.moveable-control')).toBeNull();
+  // Everything else is there.
+  for (const name of ['Text', 'Sticker', 'Tape', 'Paper', 'Effect']) expect(screen.getByRole('button', { name }), name).toBeTruthy();
+  // A frame can't be deleted, duplicated, pinned or restyled…
+  fireEvent.pointerDown(container.querySelector('[data-el="f1"]')!);
+  expect(screen.queryByRole('button', { name: /Duplicate/ })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Frame style' })).toBeNull();
+  expect(screen.queryByRole('button', { name: /Pin/ })).toBeNull();
+  expect((screen.getByRole('button', { name: 'Delete' }) as HTMLButtonElement).disabled).toBe(true);
   await user.keyboard('{Delete}');
-  expect(container.querySelector('[data-el="t1"]')).not.toBeNull();
-  // Text still edits in place; frames still offer "+ add".
-  fireEvent.doubleClick(container.querySelector('[data-el="t1"]')!);
-  expect(container.querySelector('[data-el="t1"] .text-editing')).not.toBeNull();
-  expect(container.querySelector('[data-el="f1"] .slot-empty')).not.toBeNull();
+  expect(container.querySelector('[data-el="f1"]')).not.toBeNull();
+  expect(container.querySelector('[data-el="f1"] .slot-empty')).not.toBeNull(); // still takes a photo
+  // …but text can.
+  fireEvent.pointerDown(container.querySelector('[data-el="t1"]')!);
+  expect(screen.getByRole('button', { name: /Duplicate/ })).toBeTruthy();
+  await user.keyboard('{Delete}');
+  expect(container.querySelector('[data-el="t1"]')).toBeNull();
   // The page arrow on the last page doesn't offer a new page.
   await user.click(screen.getByRole('button', { name: 'Next page' }));
   expect(screen.queryByRole('button', { name: 'New page' })).toBeNull();
