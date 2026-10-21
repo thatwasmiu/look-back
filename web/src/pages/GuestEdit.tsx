@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import type { AlbumBundle } from '@scrapbook/shared';
 import { api } from '../api';
 import { forgetGuestLink, rememberGuestLink, useLinkManifest } from '../guestLink';
+import { useT } from '../i18n';
 import { EditorView } from './Editor';
 
 // /e/<token>: an album's edit link. No password: opening it starts a guest session for that one album, and the
@@ -11,6 +12,7 @@ export default function GuestEdit() {
   const { token = '' } = useParams();
   const [bundle, setBundle] = useState<AlbumBundle | null>(null);
   const [failed, setFailed] = useState(false);
+  const t = useT();
   useLinkManifest('e', token);
   useEffect(() => {
     api.openEditLink(token).then(
@@ -21,8 +23,8 @@ export default function GuestEdit() {
   return (
     <main className="editor">
       {failed
-        ? <p role="alert" className="empty">Link sửa đã hết hạn hoặc đã bị thu hồi. Nhờ chủ album gửi link mới nhé.</p>
-        : <p className="empty">Đang mở album…</p>}
+        ? <p role="alert" className="empty">{t('This edit link has expired or was revoked. Ask the album owner for a new one.')}</p>
+        : <p className="empty">{t('Opening the album…')}</p>}
     </main>
   );
 }

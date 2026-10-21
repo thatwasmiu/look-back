@@ -3,6 +3,7 @@
 // turned back by the element's rotation before they become box units.
 import { useRef, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import type { FrameEl } from '@scrapbook/shared';
+import { useT } from '../i18n';
 
 export type Shape = [number, number][];
 export const SQUARE: Shape = [[0, 0], [1, 0], [1, 1], [0, 1]];
@@ -11,6 +12,7 @@ const clamp01 = (v: number) => Math.min(1, Math.max(0, Math.round(v * 1000) / 10
 const KEYS: Record<string, [number, number]> = { ArrowLeft: [-STEP, 0], ArrowRight: [STEP, 0], ArrowUp: [0, -STEP], ArrowDown: [0, STEP] };
 
 export function ShapeOverlay({ el, onChange, onDone }: { el: FrameEl; onChange(s: Shape): void; onDone(): void }) {
+  const t = useT();
   const ref = useRef<HTMLDivElement>(null);
   const shape: Shape = el.shape ?? SQUARE;
   const drag = useRef<{ i: number; x: number; y: number; from: [number, number] } | null>(null);
@@ -38,7 +40,7 @@ export function ShapeOverlay({ el, onChange, onDone }: { el: FrameEl; onChange(s
         <polygon points={shape.map(([x, y]) => `${x * 100},${y * 100}`).join(' ')} />
       </svg>
       {shape.map(([x, y], i) => (
-        <button key={i} type="button" className="shape-handle" aria-label={`Corner ${i + 1}`} style={{ left: `${x * 100}%`, top: `${y * 100}%` }}
+        <button key={i} type="button" className="shape-handle" aria-label={t('Corner {n}', { n: i + 1 })} style={{ left: `${x * 100}%`, top: `${y * 100}%` }}
           onKeyDown={onKey(i)}
           onPointerDown={(e) => {
             e.stopPropagation();
@@ -49,8 +51,8 @@ export function ShapeOverlay({ el, onChange, onDone }: { el: FrameEl; onChange(s
           }} />
       ))}
       <div className="crop-actions" style={{ rotate: `${-el.rotation}deg` }}>
-        <button type="button" onClick={() => onChange(SQUARE)}>Reset</button>
-        <button type="button" className="crop-done" onClick={onDone}>Done</button>
+        <button type="button" onClick={() => onChange(SQUARE)}>{t('Reset')}</button>
+        <button type="button" className="crop-done" onClick={onDone}>{t('Done')}</button>
       </div>
     </div>
   );

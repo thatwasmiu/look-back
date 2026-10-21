@@ -23,7 +23,7 @@ test('print view: one sheet per page, then the print dialog opens once by itself
   expect(await screen.findByRole('heading', { name: 'Đà Lạt' })).toBeTruthy();
   expect(container.querySelectorAll('.print-sheet')).toHaveLength(3);
   await waitFor(() => expect(print).toHaveBeenCalledTimes(1), { timeout: 2000 });
-  expect(screen.getByRole('button', { name: 'In / Lưu PDF' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Print / Save PDF' })).toBeTruthy();
 });
 
 test('print leaves hidden pages out', async () => {

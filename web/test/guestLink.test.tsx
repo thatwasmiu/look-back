@@ -45,7 +45,7 @@ test('an expired edit link is forgotten', async () => {
   localStorage.setItem('lb.guestLink', `/e/${T}`);
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(404, { error: 'not found' })));
   app(`/e/${T}`);
-  await screen.findByText(/hết hạn hoặc đã bị thu hồi/);
+  await screen.findByText(/expired or was revoked/);
   expect(lastGuestLink()).toBeNull();
 });
 
@@ -53,7 +53,7 @@ test('login: continue with the last shared album, or paste a link or code', asyn
   localStorage.setItem('lb.guestLink', `/e/${T}`);
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(404, {})));
   app('/login');
-  await userEvent.click(screen.getByRole('button', { name: 'Mở album được chia sẻ lần trước' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Open the last shared album' }));
   expect(screen.getByTestId('where').textContent).toBe(`/e/${T}`);
 });
 
@@ -61,8 +61,8 @@ test('login: a pasted view link opens it; a bare code tries edit first, then vie
   const fetchMock = vi.fn().mockResolvedValue(json(404, {}));
   vi.stubGlobal('fetch', fetchMock);
   app('/login');
-  await userEvent.type(screen.getByLabelText('Link hoặc mã chia sẻ'), T);
-  await userEvent.click(screen.getByRole('button', { name: 'Mở' }));
+  await userEvent.type(screen.getByLabelText('Shared link or code'), T);
+  await userEvent.click(screen.getByRole('button', { name: 'Open' }));
   expect(await screen.findByTestId('where')).toHaveProperty('textContent', `/s/${T}`);
   expect(fetchMock).toHaveBeenCalledWith(`/api/edit/${T}`, expect.anything());
 });
@@ -70,7 +70,7 @@ test('login: a pasted view link opens it; a bare code tries edit first, then vie
 test('login: rubbish in the code box says so', async () => {
   vi.stubGlobal('fetch', vi.fn());
   app('/login');
-  await userEvent.type(screen.getByLabelText('Link hoặc mã chia sẻ'), 'abc');
-  await userEvent.click(screen.getByRole('button', { name: 'Mở' }));
-  expect(screen.getByText(/Link hoặc mã không đúng/)).toBeTruthy();
+  await userEvent.type(screen.getByLabelText('Shared link or code'), 'abc');
+  await userEvent.click(screen.getByRole('button', { name: 'Open' }));
+  expect(screen.getByText(/doesn't look right/)).toBeTruthy();
 });

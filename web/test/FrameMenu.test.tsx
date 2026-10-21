@@ -70,9 +70,9 @@ test('"Chụp theo khung" opens the in-app camera for that frame', async () => {
   await user.click(screen.getByRole('button', { name: '+ add' }));
   await user.click(screen.getByRole('button', { name: /Shoot in the frame/ }));
   expect(screen.queryByRole('dialog', { name: 'Add photo or video' })).toBeNull();
-  expect(screen.getByRole('dialog', { name: 'Chụp theo khung' })).toBeTruthy();
-  await user.click(screen.getByRole('button', { name: 'Đóng' }));
-  expect(screen.queryByRole('dialog', { name: 'Chụp theo khung' })).toBeNull();
+  expect(screen.getByRole('dialog', { name: 'Shoot in the frame' })).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: 'Close' }));
+  expect(screen.queryByRole('dialog', { name: 'Shoot in the frame' })).toBeNull();
 });
 
 test('inside Zalo on iPhone the frame camera is left out (it would open as a fullscreen player) with a hint', async () => {

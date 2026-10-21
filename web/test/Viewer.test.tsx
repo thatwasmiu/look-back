@@ -173,6 +173,6 @@ test('hidden pages are skipped; Edit still opens the right page in the editor', 
 test('every page hidden: the viewer says so instead of breaking', async () => {
   const allHidden = { ...bundle, pages: bundle.pages.map((p) => ({ ...p, layout: { ...p.layout, hidden: true } })) };
   setup(vi.fn().mockResolvedValue(json(200, allHidden)));
-  expect(await screen.findByText(/Mọi trang đều đang ẩn/)).toBeTruthy();
+  expect(await screen.findByText(/Every page is hidden/)).toBeTruthy();
   expect(screen.getByRole('link', { name: 'Edit' }).getAttribute('href')).toBe('/albums/a1/edit?page=1');
 });

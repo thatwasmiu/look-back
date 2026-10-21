@@ -30,5 +30,5 @@ test('a share link opens the album read-only: no login, no Edit, no link to the 
 test('a dead or wrong link says so instead of sending people to the login page', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(404, { error: 'not found' })));
   open('dead');
-  expect(await screen.findByText(/không còn được chia sẻ/)).toBeTruthy(); // quiet request: no redirect to /login
+  expect(await screen.findByText(/isn't shared any more/)).toBeTruthy(); // quiet request: no redirect to /login
 });

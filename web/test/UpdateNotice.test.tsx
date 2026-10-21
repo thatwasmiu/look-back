@@ -10,8 +10,8 @@ const serverHas = (version: string) => vi.stubGlobal('fetch', vi.fn(async () => 
 test('a different build on the server shows the update modal; "Để sau" hides it', async () => {
   serverHas('202610200900');
   render(<UpdateNotice current="202610190800" />);
-  expect(await screen.findByRole('dialog', { name: 'Có bản cập nhật mới' })).toBeTruthy();
-  await userEvent.click(screen.getByRole('button', { name: 'Để sau' }));
+  expect(await screen.findByRole('dialog', { name: 'A new version is ready' })).toBeTruthy();
+  await userEvent.click(screen.getByRole('button', { name: 'Later' }));
   expect(screen.queryByRole('dialog')).toBeNull();
 });
 

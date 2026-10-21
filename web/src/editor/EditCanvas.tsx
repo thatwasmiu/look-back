@@ -6,6 +6,7 @@ import { PageRenderer } from '../render/PageRenderer';
 import { ShapeOverlay, type Shape } from '../manga/ShapeOverlay';
 import { textCss } from '../render/textStyle';
 import { assignMedia, updateElement } from './layoutOps';
+import { useT } from '../i18n';
 
 type Props = {
   layout: PageLayout; media: Map<string, MediaDTO>;
@@ -255,6 +256,7 @@ const MIN_SCALE = 0.25;
 function CropOverlay({ el, media, onChange, onDone, onRemove }: {
   el: FrameEl; media: MediaDTO | undefined; onChange(c: Crop): void; onDone(): void; onRemove(): void;
 }) {
+  const t = useT();
   const ref = useRef<HTMLDivElement>(null);
   const cur = useRef(el.crop); // latest crop, ahead of re-renders
   const pts = useRef(new Map<number, { x: number; y: number }>());
@@ -330,13 +332,13 @@ function CropOverlay({ el, media, onChange, onDone, onRemove }: {
       {/* Counter-rotated so the controls stay level under a tilted frame. */}
       <div className={`crop-actions${above ? ' above' : ''}`} ref={actionsRef} style={{ rotate: `${-el.rotation}deg` }}>
         <label className="crop-size">Size
-          <input type="range" aria-label="Photo size" min={MIN_SCALE} max={5} step={0.01} value={el.crop.scale}
+          <input type="range" aria-label={t('Photo size')} min={MIN_SCALE} max={5} step={0.01} value={el.crop.scale}
             onChange={(e) => set(pan({ ...cur.current, scale: Number(e.target.value) }, 0, 0))} />
         </label>
-        <button type="button" onClick={() => set({ x: 0.5, y: 0.5, scale: fitScale() })} title="Show the whole photo">Fit</button>
-        <button type="button" onClick={() => set({ x: 0.5, y: 0.5, scale: 1 })} title="Fill the frame">Fill</button>
-        <button type="button" className="crop-remove" onClick={onRemove}>Remove photo</button>
-        <button type="button" className="crop-done" onClick={onDone}>Done</button>
+        <button type="button" onClick={() => set({ x: 0.5, y: 0.5, scale: fitScale() })} title={t('Show the whole photo')}>{t('Fit')}</button>
+        <button type="button" onClick={() => set({ x: 0.5, y: 0.5, scale: 1 })} title={t('Fill the frame')}>{t('Fill')}</button>
+        <button type="button" className="crop-remove" onClick={onRemove}>{t('Remove photo')}</button>
+        <button type="button" className="crop-done" onClick={onDone}>{t('Done')}</button>
       </div>
     </div>
   );

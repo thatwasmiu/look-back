@@ -28,5 +28,5 @@ test('an edit link opens the album in the guest editor', async () => {
 
 test('an expired or revoked link says so', async () => {
   open(vi.fn().mockResolvedValue(json(404, { error: 'not found' })));
-  expect(await screen.findByText(/hết hạn hoặc đã bị thu hồi/)).toBeTruthy();
+  expect(await screen.findByText(/expired or was revoked/)).toBeTruthy();
 });

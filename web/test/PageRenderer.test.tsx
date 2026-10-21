@@ -33,7 +33,7 @@ test('element geometry maps to percentages and rotation', () => {
 
 test('processing media shows chip and no display image', () => {
   const { container } = setup([frame('m1')], [media('m1', { status: 'processing', variants: null })]);
-  expect(screen.getByText('đang xử lý…')).toBeTruthy();
+  expect(screen.getByText('processing…')).toBeTruthy();
   expect(container.querySelector('img[src$="/display.webp"]')).toBeNull();
 });
 
@@ -44,7 +44,7 @@ test('processing media never loads display even if variants are present', () => 
 
 test('failed media shows upload failed', () => {
   const { container } = setup([frame('m1')], [media('m1', { status: 'failed', variants: null })]);
-  expect(screen.getByText('tải lên lỗi')).toBeTruthy();
+  expect(screen.getByText('upload failed')).toBeTruthy();
   expect(container.querySelector('img')).toBeNull();
 });
 
@@ -109,7 +109,7 @@ test('a processing photo shows the picked file (local preview) under the chip un
   setLocalPreview('m9', new Blob(['x'], { type: 'image/jpeg' }));
   const { container, unmount } = setup([frame('m9')], [media('m9', { status: 'processing', variants: null })], 'edit');
   expect(container.querySelector('img.local-preview')).not.toBeNull();
-  expect(screen.getByText('đang xử lý…')).toBeTruthy();
+  expect(screen.getByText('processing…')).toBeTruthy();
   unmount();
   dropLocalPreview('m9');
   const again = setup([frame('m9')], [media('m9', { status: 'processing', variants: null })], 'edit');

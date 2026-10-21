@@ -1,8 +1,11 @@
+import { useT } from '../i18n';
+
 // Shown in a frame whose photo / video can't be loaded (e.g. its storage bucket is down): a little crying face
 // instead of a broken image. Original art in the style of the app's stickers.
 export function MediaUnavailable() {
+  const t = useT();
   return (
-    <div className="media-unavailable" role="img" aria-label="Ảnh tạm thời không tải được">
+    <div className="media-unavailable" role="img" aria-label={t("This photo can't load right now")}>
       <svg viewBox="0 0 100 100" aria-hidden>
         <circle cx="50" cy="50" r="40" fill="#fff4e0" stroke="#4a3b2c" strokeWidth="4" />
         <circle cx="30" cy="58" r="7" fill="#f6b8b0" opacity=".7" />
@@ -14,7 +17,7 @@ export function MediaUnavailable() {
         {/* wobbly mouth */}
         <path d="M41 72q4.5-5 9 0q4.5 5 9 0" fill="none" stroke="#4a3b2c" strokeWidth="3.5" strokeLinecap="round" />
       </svg>
-      <span>Ảnh tạm thời không tải được</span>
+      <span>{t("This photo can't load right now")}</span>
     </div>
   );
 }

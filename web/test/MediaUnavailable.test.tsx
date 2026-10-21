@@ -9,7 +9,7 @@ afterEach(cleanup);
 test('a photo that fails to load shows the crying placeholder', () => {
   const { container } = render(<BlurImage blurDataUrl={null} src="/media/x/display.webp" objectPosition="50% 50%" scale={1} />);
   fireEvent.error(container.querySelector('img')!);
-  expect(screen.getByText('Ảnh tạm thời không tải được')).toBeTruthy();
+  expect(screen.getByText("This photo can't load right now")).toBeTruthy();
   expect(container.querySelector('img.sharp')).toBeNull();
 });
 

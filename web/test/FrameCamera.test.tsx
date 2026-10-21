@@ -47,7 +47,7 @@ test('opens the back camera, shows the frame outline, a photo is cropped and han
   render(<FrameCamera frame={frame({ frameStyle: 'circle' })} onCapture={onCapture} onClose={() => {}} />);
   await waitFor(() => expect(gum).toHaveBeenCalledWith({ video: { facingMode: 'environment', width: { ideal: 3840 }, height: { ideal: 2160 } }, audio: false }));
   expect(document.querySelector('.camera-window.shape-circle')).not.toBeNull();
-  await user.click(screen.getByRole('button', { name: 'Chụp' }));
+  await user.click(screen.getByRole('button', { name: 'Shoot' }));
   const file = onCapture.mock.calls[0][0] as File;
   expect(file.type).toBe('image/jpeg');
   expect(file.name).toMatch(/^camera-\d+\.jpg$/);
@@ -60,9 +60,9 @@ test('video mode records with sound and hands over the recording', async () => {
   render(<FrameCamera frame={frame()} onCapture={onCapture} onClose={() => {}} />);
   await user.click(screen.getByRole('radio', { name: 'Video' }));
   await waitFor(() => expect(gum).toHaveBeenLastCalledWith({ video: { facingMode: 'environment', width: { ideal: 3840 }, height: { ideal: 2160 } }, audio: true }));
-  await user.click(screen.getByRole('button', { name: 'Quay' }));
+  await user.click(screen.getByRole('button', { name: 'Record' }));
   expect(recorders[0].start).toHaveBeenCalled();
-  await user.click(screen.getByRole('button', { name: 'Dừng' }));
+  await user.click(screen.getByRole('button', { name: 'Stop' }));
   const file = onCapture.mock.calls[0][0] as File;
   expect(file.type).toBe('video/mp4');
   expect(file.name).toMatch(/^camera-\d+\.mp4$/);
@@ -73,9 +73,9 @@ test('switching camera reopens with the front camera; closing releases it', asyn
   const onClose = vi.fn();
   render(<FrameCamera frame={frame()} onCapture={() => {}} onClose={onClose} />);
   await waitFor(() => expect(gum).toHaveBeenCalled());
-  await user.click(screen.getByRole('button', { name: 'Đổi camera' }));
+  await user.click(screen.getByRole('button', { name: 'Switch camera' }));
   await waitFor(() => expect(gum).toHaveBeenLastCalledWith({ video: { facingMode: 'user', width: { ideal: 3840 }, height: { ideal: 2160 } }, audio: false }));
-  await user.click(screen.getByRole('button', { name: 'Đóng' }));
+  await user.click(screen.getByRole('button', { name: 'Close' }));
   expect(onClose).toHaveBeenCalled();
   expect(stop).toHaveBeenCalled();
 });
@@ -134,7 +134,7 @@ test('flash (torch) toggles only where the camera has one', async () => {
   const apply = withTrack({ torch: true });
   const user = userEvent.setup();
   render(<FrameCamera frame={frame()} onCapture={() => {}} onClose={() => {}} />);
-  const btn = await screen.findByRole('button', { name: '⚡ Đèn' });
+  const btn = await screen.findByRole('button', { name: '⚡ Light' });
   await user.click(btn);
   expect(apply).toHaveBeenLastCalledWith({ advanced: [{ torch: true }] });
   expect(btn.getAttribute('aria-pressed')).toBe('true');
@@ -144,7 +144,7 @@ test('flash (torch) toggles only where the camera has one', async () => {
   withTrack({});
   render(<FrameCamera frame={frame()} onCapture={() => {}} onClose={() => {}} />);
   await screen.findByRole('slider', { name: 'Zoom' });
-  expect(screen.queryByRole('button', { name: '⚡ Đèn' })).toBeNull();
+  expect(screen.queryByRole('button', { name: '⚡ Light' })).toBeNull();
 });
 
 test('frameWindowShape measures the photo area: its proportions and corner rounding (as percentages)', async () => {
@@ -178,7 +178,7 @@ function orientation(portrait: boolean) {
 test('a wide frame held upright asks to turn the phone sideways', async () => {
   orientation(true);
   render(<FrameCamera frame={frame()} windowShape={{ aspect: 2.5, radius: '0px' }} onCapture={() => {}} onClose={() => {}} />);
-  expect((await screen.findByRole('note')).textContent).toContain('Xoay ngang điện thoại');
+  expect((await screen.findByRole('note')).textContent).toContain('Turn the phone sideways');
 });
 
 test('no hint once the phone is sideways, or for a frame that fits', async () => {
@@ -196,7 +196,7 @@ test('no hint once the phone is sideways, or for a frame that fits', async () =>
 test('a tall frame held sideways asks to turn the phone upright', async () => {
   orientation(false);
   render(<FrameCamera frame={frame()} windowShape={{ aspect: 0.5, radius: '0px' }} onCapture={() => {}} onClose={() => {}} />);
-  expect((await screen.findByRole('note')).textContent).toContain('Xoay dọc điện thoại');
+  expect((await screen.findByRole('note')).textContent).toContain('Turn the phone upright');
 });
 
 test('leaving the app releases the camera; coming back opens it again (iOS kills the stream in the background)', async () => {

@@ -8,9 +8,11 @@ import { BackgroundEffectView } from '../render/effects';
 import { PageRenderer } from '../render/PageRenderer';
 import { planPreload, runPreload } from '../viewer/preload';
 import { nextIndex, prevIndex, visiblePages } from '../viewer/spread';
+import { useT } from '../i18n';
 import { useFlip, useSpread } from '../viewer/useFlip';
 
 export default function Viewer() {
+  const t = useT();
   const { id = '' } = useParams();
   const [bundle, setBundle] = useState<AlbumBundle | null>(id === EXAMPLE_ALBUM_ID ? exampleAlbum : null);
   const [loadError, setLoadError] = useState(false);
@@ -26,8 +28,8 @@ export default function Viewer() {
   if (bundle) return <Book bundle={bundle} />;
   return (
     <main className="viewer">
-      <header className="viewer-bar"><Link to="/">← Albums</Link></header>
-      {loadError && <p role="alert" className="empty">Không tải được album <button onClick={load}>Retry</button></p>}
+      <header className="viewer-bar"><Link to="/">← {t('Albums')}</Link></header>
+      {loadError && <p role="alert" className="empty">{t("Couldn't load the album")} <button onClick={load}>{t('Retry')}</button></p>}
     </main>
   );
 }
@@ -37,6 +39,7 @@ const slotOf = (i: number, spread: boolean, rtl = false) => (!spread ? 'single' 
 
 // `shared`: opened from a public share link — read-only, no way into the owner's app.
 export function Book({ bundle, shared = false }: { bundle: AlbumBundle; shared?: boolean }) {
+  const t = useT();
   const { album } = bundle;
   const pages = useMemo(() => bundle.pages.filter((p) => !p.layout.hidden), [bundle.pages]); // hidden: editor only
   const total = pages.length;
@@ -70,14 +73,14 @@ export function Book({ bundle, shared = false }: { bundle: AlbumBundle; shared?:
     <main className={`viewer desk-${album.backgroundColor}`}>
       <BackgroundEffectView kind={album.backgroundEffect} />
       <header className="viewer-bar">
-        {!shared && <Link to="/">← Albums</Link>}
+        {!shared && <Link to="/">← {t('Albums')}</Link>}
         <h1>{album.title}</h1>
         {musicSrc && <Music src={musicSrc} />}
         {total > 0 && <span className="counter">{visible.map((i) => i + 1).join('–')} / {total}</span>}
-        {!shared && album.id !== EXAMPLE_ALBUM_ID && <Link className="btn secondary" to={`/albums/${album.id}/print`} title="In hoặc lưu thành PDF">PDF</Link>}
-        {!shared && album.id !== EXAMPLE_ALBUM_ID && <Link className="btn" to={`/albums/${album.id}/edit?page=${Math.max(1, bundle.pages.indexOf(pages[visible[0] ?? 0]) + 1)}`}>Edit</Link>}
+        {!shared && album.id !== EXAMPLE_ALBUM_ID && <Link className="btn secondary" to={`/albums/${album.id}/print`} title={t('Print or save as PDF')}>PDF</Link>}
+        {!shared && album.id !== EXAMPLE_ALBUM_ID && <Link className="btn" to={`/albums/${album.id}/edit?page=${Math.max(1, bundle.pages.indexOf(pages[visible[0] ?? 0]) + 1)}`}>{t('Edit')}</Link>}
       </header>
-      {total === 0 ? <p className="empty">{bundle.pages.length ? 'Mọi trang đều đang ẩn.' : 'Chưa có trang nào.'}</p> : (
+      {total === 0 ? <p className="empty">{t(bundle.pages.length ? 'Every page is hidden.' : 'No pages yet.')}</p> : (
         <div className="stage">
           <div className={`book${spread ? ' spread' : ''}${visible.some((i) => slot(i) === 'left') ? ' has-left' : ''}${turn ? (forwardOnScreen ? ' fwd' : ' back') : ''}`} {...swipe}>
             {pages.map((p, i) => {
@@ -96,7 +99,7 @@ export function Book({ bundle, shared = false }: { bundle: AlbumBundle; shared?:
             {/* Edges by screen side; in rtl the left one goes forward. */}
             {(['prev', 'next'] as const).map((side) => {
               const forward = (side === 'next') !== rtl;
-              return <button key={side} type="button" className={`edge edge-${side}`} aria-label={forward ? 'Next page' : 'Previous page'}
+              return <button key={side} type="button" className={`edge edge-${side}`} aria-label={t(forward ? 'Next page' : 'Previous page')}
                 disabled={forward ? visible[visible.length - 1] === total - 1 : visible[0] === 0} onClick={() => go(forward ? 1 : -1)} />;
             })}
           </div>
@@ -109,6 +112,7 @@ export function Book({ bundle, shared = false }: { bundle: AlbumBundle; shared?:
 // Background music, looped. Browsers only allow sound after the viewer interacts, so it starts on the first tap
 // or key press anywhere (a flip, usually); the ♪ button pauses and resumes it.
 function Music({ src }: { src: string }) {
+  const t = useT();
   const ref = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const play = () => { void ref.current?.play()?.catch(() => {}); };
@@ -127,7 +131,7 @@ function Music({ src }: { src: string }) {
     <>
       <audio ref={ref} src={src} loop preload="auto" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} />
       <button type="button" className={`music-btn${playing ? ' on' : ''}`} aria-pressed={playing}
-        aria-label={playing ? 'Pause music' : 'Play music'} title={playing ? 'Pause music' : 'Play music'}
+        aria-label={t(playing ? 'Pause music' : 'Play music')} title={t(playing ? 'Pause music' : 'Play music')}
         onClick={() => (ref.current?.paused ? play() : ref.current?.pause())}>♪</button>
     </>
   );

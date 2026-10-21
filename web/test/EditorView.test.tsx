@@ -94,7 +94,7 @@ test('an upload id arriving early goes into its frame (uploading… chip); a fra
   let placed: boolean | void = undefined;
   act(() => { placed = onCreated!('u1', 'f1'); });
   expect(placed).toBe(true);
-  expect(container.querySelector('.edit-page [data-frame-id=f1] .chip')?.textContent).toBe('đang tải…');
+  expect(container.querySelector('.edit-page [data-frame-id=f1] .chip')?.textContent).toBe('uploading…');
   act(() => { placed = onCreated!('u2', 'gone'); });
   expect(placed).toBe(false);
 });
@@ -110,7 +110,7 @@ test("after a reload, 'uploading' media from the bundle is polled until it settl
     const b: AlbumBundle = { ...bundle, media: [row('uploading')], pages: [{ ...bundle.pages[0], layout: { background: 'paper-cream', elements: [{ ...frameEmpty, mediaId: 'u1' }] } }] };
     const uploader = (() => ({ items: [], add: vi.fn(), retry: vi.fn() })) as never;
     const { container } = render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={b} api={api} uploader={uploader} /></MemoryRouter>);
-    expect(container.querySelector('[data-frame-id=f1] .chip')?.textContent).toBe('đang tải…');
+    expect(container.querySelector('[data-frame-id=f1] .chip')?.textContent).toBe('uploading…');
     await act(() => vi.advanceTimersByTimeAsync(60_000));
     expect(getMedia).toHaveBeenCalledWith('u1');
     expect(container.querySelector('[data-frame-id=f1] .chip')).toBeNull();
@@ -128,10 +128,10 @@ test('a 4xx after the early frame assign leaves the media shown as failed, not s
   const ui = () => <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={b} api={api} uploader={uploader} /></MemoryRouter>;
   const { container, rerender } = render(ui());
   act(() => { onCreated!('u1', 'f1'); });
-  expect(container.querySelector('[data-frame-id=f1] .chip')?.textContent).toBe('đang tải…');
+  expect(container.querySelector('[data-frame-id=f1] .chip')?.textContent).toBe('uploading…');
   items = [{ localId: 'l1', name: 'a.jpg', progress: 0.5, mediaId: 'u1', state: 'error', error: 'gone', retryable: false }];
   rerender(ui());
-  expect(container.querySelector('[data-frame-id=f1] .chip')?.textContent).toBe('tải lên lỗi');
+  expect(container.querySelector('[data-frame-id=f1] .chip')?.textContent).toBe('upload failed');
 });
 
 test('Frame opens a list of styles; with a frame selected, Frame style switches it', async () => {

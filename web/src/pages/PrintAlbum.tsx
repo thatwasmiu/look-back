@@ -2,11 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { AlbumBundle } from '@scrapbook/shared';
 import { api } from '../api';
+import { useT } from '../i18n';
 import { PageRenderer } from '../render/PageRenderer';
 
 // Export: every page one per sheet, then the browser's own print dialog — "Save as PDF" there (on iPhone:
 // Share → Save to Files). Fonts, stickers and photos print exactly as drawn. Videos show their poster.
 export default function PrintAlbum() {
+  const t = useT();
   const { id = '' } = useParams();
   const [bundle, setBundle] = useState<AlbumBundle | null>(null);
   const [failed, setFailed] = useState(false);
@@ -34,14 +36,14 @@ export default function PrintAlbum() {
     return () => { alive = false; };
   }, [bundle]);
 
-  if (failed) return <main className="print-album"><p className="error">Không tải được album. <Link to="/">← Albums</Link></p></main>;
-  if (!bundle) return <main className="print-album"><p>Đang tải…</p></main>;
+  if (failed) return <main className="print-album"><p className="error">{t("Couldn't load the album")}. <Link to="/">← {t('Albums')}</Link></p></main>;
+  if (!bundle) return <main className="print-album"><p>{t('Loading…')}</p></main>;
   return (
     <main className="print-album" ref={root}>
       <header className="print-bar">
-        <Link to={`/albums/${id}`}>← Back</Link>
+        <Link to={`/albums/${id}`}>← {t('Back')}</Link>
         <h1>{bundle.album.title}</h1>
-        <button type="button" disabled={!ready} onClick={() => window.print()}>{ready ? 'In / Lưu PDF' : 'Đang chuẩn bị ảnh…'}</button>
+        <button type="button" disabled={!ready} onClick={() => window.print()}>{t(ready ? 'Print / Save PDF' : 'Getting the photos ready…')}</button>
       </header>
       {bundle.pages.filter((p) => !p.layout.hidden).map((p) => (
         <section key={p.id} className="print-sheet">

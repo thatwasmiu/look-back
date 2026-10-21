@@ -5,6 +5,7 @@ import { BlurImage } from './BlurImage';
 import { VideoPlayer } from './VideoPlayer';
 import { PanelFrame } from '../manga/render';
 import { LocalPreview } from '../localPreview';
+import { t } from '../i18n';
 
 // Deckle edge for 'torn' frames: deterministic jitter so every render (and every frame) matches.
 const TORN_CLIP = (() => {
@@ -33,7 +34,7 @@ export function FrameView({ el, media, mode, active }: Props) {
 }
 
 function content(el: FrameEl, m: MediaDTO | undefined, mode: 'view' | 'edit', active: boolean): ReactNode {
-  if (!el.mediaId) return mode === 'edit' ? <div className="slot-empty">+ add</div> : <div className="slot-paper" />;
+  if (!el.mediaId) return mode === 'edit' ? <div className="slot-empty">+ {t('add')}</div> : <div className="slot-paper" />;
   if (!m) return <div className="slot-paper" />;
   const objectPosition = `${el.crop.x * 100}% ${el.crop.y * 100}%`;
   const v = m.variants;
@@ -46,7 +47,7 @@ function content(el: FrameEl, m: MediaDTO | undefined, mode: 'view' | 'edit', ac
     return <>{poster(m, objectPosition, el.crop.scale)}<span className="play-badge" aria-hidden>▶</span></>;
   }
   // Not ready: blur (and a video poster if the worker made one) — never the display image.
-  const chip = m.status === 'failed' ? 'tải lên lỗi' : m.status === 'uploading' ? 'đang tải…' : 'đang xử lý…';
+  const chip = t(m.status === 'failed' ? 'upload failed' : m.status === 'uploading' ? 'uploading…' : 'processing…');
   return (
     <>
       {poster(m, objectPosition, el.crop.scale)}

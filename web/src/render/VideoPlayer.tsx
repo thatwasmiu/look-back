@@ -3,6 +3,7 @@ import type { Crop, MediaDTO } from '@scrapbook/shared';
 import { mediaUrl } from '../mediaUrl';
 import { BlurImage } from './BlurImage';
 import { MediaUnavailable } from './MediaUnavailable';
+import { useT } from '../i18n';
 
 type Props = { media: MediaDTO; active: boolean; crop?: Crop; autoPlay?: boolean; trim?: { start: number; end: number } };
 
@@ -12,6 +13,7 @@ type Props = { media: MediaDTO; active: boolean; crop?: Crop; autoPlay?: boolean
 // trim: play only start..end — it starts at `start`, and at `end` loops (autoplay) or stops back at `start`.
 // Any fatal playback error shows the crying placeholder (MediaUnavailable).
 export function VideoPlayer({ media, active, crop = { x: 0.5, y: 0.5, scale: 1 }, autoPlay = false, trim }: Props) {
+  const t = useT();
   const [started, setStarted] = useState(false);
   const [silent, setSilent] = useState(false); // started by autoplay
   const [failed, setFailed] = useState(false);
@@ -82,7 +84,7 @@ export function VideoPlayer({ media, active, crop = { x: 0.5, y: 0.5, scale: 1 }
     : <div className="slot-paper" />;
   if (failed) return <MediaUnavailable />;
   return (
-    <button type="button" className="video-poster" aria-label="Play video" onClick={() => { setSilent(false); setStarted(true); }}>
+    <button type="button" className="video-poster" aria-label={t('Play video')} onClick={() => { setSilent(false); setStarted(true); }}>
       {cover}
       <span className="play-badge" aria-hidden>▶</span>
     </button>

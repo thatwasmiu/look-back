@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import type { FrameEl } from '@scrapbook/shared';
+import { useT } from '../i18n';
 
 // "Chụp theo khung" (phones): an in-app camera whose preview shows the frame's own shape and proportions, so the
 // owner composes the shot for that frame. A photo is cropped to the outlined area; a video is recorded whole (the frame
@@ -40,8 +41,8 @@ function usePortrait(): boolean {
   }, () => (typeof matchMedia === 'function' ? matchMedia(PORTRAIT).matches : true));
 }
 export const rotateHint = (aspect: number, portrait: boolean) =>
-  portrait && aspect >= 1.25 ? 'Xoay ngang điện thoại để chụp đủ khung rộng'
-    : !portrait && aspect <= 0.8 ? 'Xoay dọc điện thoại để chụp đủ khung cao' : null;
+  portrait && aspect >= 1.25 ? 'Turn the phone sideways to fit the wide frame'
+    : !portrait && aspect <= 0.8 ? 'Turn the phone upright to fit the tall frame' : null;
 
 // Width / height of the frame on the page (pages are 3:4) — fallback when the photo area can't be measured.
 export const frameAspect = (f: FrameEl) => (f.w * 3) / (f.h * 4);
@@ -56,6 +57,7 @@ export const inlineVideoBlocked = (ua = typeof navigator === 'undefined' ? '' : 
   /Zalo/i.test(ua) && /iPhone|iPad|iPod/i.test(ua);
 
 export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame: FrameEl; windowShape?: WindowShape | null; onCapture(file: File): void; onClose(): void }) {
+  const t = useT();
   const [mode, setMode] = useState<Mode>('photo');
   const [facing, setFacing] = useState<Facing>('environment');
   const [error, setError] = useState<string | null>(null);
@@ -107,8 +109,8 @@ export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame:
         void v.play().catch(() => {});
       }
     }, (e: Error) => {
-      if (!cancelled) setError(`${e.name === 'NotAllowedError' ? 'Bạn chưa cho phép dùng camera.' : 'Không mở được camera.'} Hãy dùng nút Take photo/video.`);
-    }) ?? setError('Trình duyệt này không mở được camera. Hãy dùng nút Take photo/video.');
+      if (!cancelled) setError(`${t(e.name === 'NotAllowedError' ? "You haven't allowed the camera." : "Couldn't open the camera.")} ${t('Use the “Take photo/video” button instead.')}`);
+    }) ?? setError(`${t("This browser can't open the camera.")} ${t('Use the “Take photo/video” button instead.')}`);
     return () => { cancelled = true; release(); };
   }, [facing, mode, session]);
 
@@ -201,7 +203,7 @@ export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame:
   const stopRecording = () => { setRecording(false); recorder.current?.stop(); };
 
   return (
-    <div className="camera" role="dialog" aria-label="Chụp theo khung"
+    <div className="camera" role="dialog" aria-label={t('Shoot in the frame')}
       onPointerDown={onPointer} onPointerMove={onPointer} onPointerUp={onPointer} onPointerCancel={onPointer}>
       <video ref={videoRef} className="camera-feed" style={{ transform: feedTransform }} autoPlay playsInline muted />
       <div ref={windowRef} className={`camera-window shape-${shape}`} style={{ aspectRatio: String(aspect), '--aspect': aspect, ...(windowShape && shape !== 'heart' && shape !== 'panel' && { borderRadius: windowShape.radius }) } as React.CSSProperties}>
@@ -221,14 +223,14 @@ export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame:
           </svg>
         )}
       </div>
-      {hint && !error && <p className="camera-hint" role="note"><span aria-hidden>📱↻</span> {hint} <small>(tắt khoá xoay màn hình nếu đang bật)</small></p>}
+      {hint && !error && <p className="camera-hint" role="note"><span aria-hidden>📱↻</span> {t(hint)} <small>({t('turn off rotation lock if it is on')})</small></p>}
       {error && <p className="camera-error" role="alert">{error}</p>}
       {recording && <p className="camera-timer" role="status"><span className="rec-dot" aria-hidden />{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}</p>}
       <div className="camera-top">
-        <button type="button" className="camera-round" aria-label="Đóng" onClick={() => { if (recording) recorder.current?.stop(); release(); onClose(); }}>✕</button>
-        <div className="mode-switch" role="radiogroup" aria-label="Chế độ">
+        <button type="button" className="camera-round" aria-label={t('Close')} onClick={() => { if (recording) recorder.current?.stop(); release(); onClose(); }}>✕</button>
+        <div className="mode-switch" role="radiogroup" aria-label={t('Mode')}>
           {(['photo', 'video'] as const).map((m) => (
-            <button key={m} type="button" role="radio" aria-label={m === 'photo' ? 'Ảnh' : 'Video'} aria-checked={mode === m} disabled={recording} onClick={() => setMode(m)}>{m === 'photo' ? '📷 Ảnh' : '🎬 Video'}</button>
+            <button key={m} type="button" role="radio" aria-label={t(m === 'photo' ? 'Photo' : 'Video')} aria-checked={mode === m} disabled={recording} onClick={() => setMode(m)}>{m === 'photo' ? `📷 ${t('Photo')}` : `🎬 ${t('Video')}`}</button>
           ))}
         </div>
       </div>
@@ -240,11 +242,11 @@ export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame:
         </label>
       )}
       <div className="camera-bottom">
-        <button type="button" className="camera-round camera-flip" aria-label="Đổi camera" disabled={recording} onClick={() => setFacing(facing === 'environment' ? 'user' : 'environment')}><FlipIcon /></button>
-        {mode === 'photo' ? <button type="button" className="camera-shutter" aria-label="Chụp" onClick={shoot}><span aria-hidden>♥</span></button>
-          : recording ? <button type="button" className="camera-shutter recording" aria-label="Dừng" onClick={stopRecording}><span aria-hidden /></button>
-            : <button type="button" className="camera-shutter rec" aria-label="Quay" onClick={record}><span aria-hidden /></button>}
-        {hw.torch && <button type="button" className="camera-round camera-torch" aria-label="⚡ Đèn" aria-pressed={torch} onClick={toggleTorch}><BoltIcon /></button>}
+        <button type="button" className="camera-round camera-flip" aria-label={t('Switch camera')} disabled={recording} onClick={() => setFacing(facing === 'environment' ? 'user' : 'environment')}><FlipIcon /></button>
+        {mode === 'photo' ? <button type="button" className="camera-shutter" aria-label={t('Shoot')} onClick={shoot}><span aria-hidden>♥</span></button>
+          : recording ? <button type="button" className="camera-shutter recording" aria-label={t('Stop')} onClick={stopRecording}><span aria-hidden /></button>
+            : <button type="button" className="camera-shutter rec" aria-label={t('Record')} onClick={record}><span aria-hidden /></button>}
+        {hw.torch && <button type="button" className="camera-round camera-torch" aria-label={t('⚡ Light')} aria-pressed={torch} onClick={toggleTorch}><BoltIcon /></button>}
       </div>
     </div>
   );

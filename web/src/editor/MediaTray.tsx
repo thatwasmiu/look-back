@@ -3,6 +3,7 @@ import type { MediaDTO } from '@scrapbook/shared';
 import { mediaUrl } from '../mediaUrl';
 import { ACCEPT, type UploadItem } from './useUpload';
 import { LocalPreview } from '../localPreview';
+import { useT } from '../i18n';
 
 type Props = {
   media: MediaDTO[]; items: UploadItem[]; coverMediaId: string | null;
@@ -12,7 +13,7 @@ type Props = {
   onDelete?(mediaId: string): void; onSetCover?(mediaId: string): void; // absent: no ★ / 🗑 (edit-link guests)
 };
 
-const chip: Partial<Record<MediaDTO['status'], string>> = { uploading: 'đang tải…', processing: 'đang xử lý…', failed: 'tải lên lỗi' };
+const chip: Partial<Record<MediaDTO['status'], string>> = { uploading: 'uploading…', processing: 'processing…', failed: 'upload failed' };
 export const thumbOf = (m: MediaDTO) => (m.status === 'ready' && (m.variants?.thumb ?? m.variants?.poster)) || null;
 
 // Frame under the pointer on the editing page (not the page-strip thumbnails), or null.
@@ -21,6 +22,7 @@ const frameAt = (x: number, y: number) =>
 
 // Laptop: side panel. Phone: a tab above the bottom toolbar that opens a horizontal strip (see CSS).
 export function MediaTray({ media, items, coverMediaId, onUpload, onRetry, onPick, onDrop, onDelete, onSetCover }: Props) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [ghost, setGhost] = useState<{ x: number; y: number; m: MediaDTO } | null>(null);
   const dragged = useRef(false); // swallow the click that ends a drag
@@ -64,7 +66,7 @@ export function MediaTray({ media, items, coverMediaId, onUpload, onRetry, onPic
 
   const ghostSrc = ghost && thumbOf(ghost.m);
   return (
-    <aside className={`tray${open ? ' open' : ''}`} aria-label="Album media"
+    <aside className={`tray${open ? ' open' : ''}`} aria-label={t('Album media')}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files.length) onUpload([...e.dataTransfer.files]); }}>
       <div className="tray-head">
@@ -81,8 +83,8 @@ export function MediaTray({ media, items, coverMediaId, onUpload, onRetry, onPic
             <span className="tray-name" title={u.name}>{u.name}</span>
             {u.state === 'error'
               ? <><span className="tray-error" role="alert">{u.error}</span>
-                {u.retryable !== false && <button type="button" onClick={() => onRetry(u.localId)}>Retry</button>}</>
-              : <progress value={u.progress} max={1} aria-label={`Uploading ${u.name}`} />}
+                {u.retryable !== false && <button type="button" onClick={() => onRetry(u.localId)}>{t('Retry')}</button>}</>
+              : <progress value={u.progress} max={1} aria-label={t('Uploading {name}', { name: u.name })} />}
             {u.notice && <span className="tray-notice">{u.notice}</span>}
           </li>
         ))}
@@ -90,20 +92,20 @@ export function MediaTray({ media, items, coverMediaId, onUpload, onRetry, onPic
           const src = thumbOf(m);
           return (
             <li key={m.id} className="tray-item">
-              <button type="button" className="tray-thumb" aria-label={`${m.kind} ${m.id.slice(0, 8)}, ${chip[m.status] ?? 'ready'}`}
+              <button type="button" className="tray-thumb" aria-label={`${t(m.kind)} ${m.id.slice(0, 8)}, ${t(chip[m.status] ?? 'ready')}`}
                 style={!src && m.blurDataUrl ? { backgroundImage: `url("${m.blurDataUrl}")` } : undefined}
                 onPointerDown={(e) => startDrag(e, m)}
                 onClick={() => { if (!dragged.current) onPick(m.id); }}>
                 {src ? <img src={mediaUrl(src)} alt="" draggable={false} /> : <LocalPreview id={m.id} />}
                 {m.kind === 'video' && <span className="tray-video" aria-hidden>▶</span>}
-                {chip[m.status] && <span className={m.status === 'failed' ? 'chip chip-error' : 'chip'}>{chip[m.status]}</span>}
-                {m.id === coverMediaId && <span className="tray-cover">cover</span>}
+                {chip[m.status] && <span className={m.status === 'failed' ? 'chip chip-error' : 'chip'}>{t(chip[m.status] ?? '')}</span>}
+                {m.id === coverMediaId && <span className="tray-cover">{t('cover')}</span>}
               </button>
               {onSetCover && onDelete && <div className="tray-actions">
-                <button type="button" title="Set as album cover" aria-label="Set as album cover" disabled={m.id === coverMediaId}
+                <button type="button" title={t('Set as album cover')} aria-label={t('Set as album cover')} disabled={m.id === coverMediaId}
                   onClick={() => onSetCover(m.id)}>★</button>
-                <button type="button" title="Delete from album" aria-label="Delete from album"
-                  onClick={() => window.confirm('Xóa ảnh/video này khỏi album? Nó sẽ bị gỡ khỏi mọi trang.') && onDelete(m.id)}>🗑</button>
+                <button type="button" title={t('Delete from album')} aria-label={t('Delete from album')}
+                  onClick={() => window.confirm(t('Delete this photo/video from the album? It is removed from every page.')) && onDelete(m.id)}>🗑</button>
               </div>}
             </li>
           );
