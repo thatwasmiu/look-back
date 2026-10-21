@@ -25,14 +25,14 @@ function serve(s: DriveStatus, handlers: Record<string, () => Response> = {}) {
 
 test('not configured shows the setup link', async () => {
   serve(status({ configured: false, connected: false, email: null }));
-  const link = await screen.findByRole('link', { name: 'Hướng dẫn cài đặt' });
+  const link = await screen.findByRole('link', { name: 'Setup guide' });
   expect(link.getAttribute('href')).toContain('docs/google-drive-backup.md');
-  expect(screen.queryByRole('button', { name: 'Kết nối Google Drive' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Connect Google Drive' })).toBeNull();
 });
 
 test('not connected offers Kết nối Google Drive', async () => {
   serve(status({ connected: false, email: null }));
-  expect(await screen.findByRole('button', { name: 'Kết nối Google Drive' })).toBeTruthy();
+  expect(await screen.findByRole('button', { name: 'Connect Google Drive' })).toBeTruthy();
 });
 
 test('connected shows email, schedule and last run; changing schedule PATCHes', async () => {
@@ -40,26 +40,26 @@ test('connected shows email, schedule and last run; changing schedule PATCHes', 
   const calls = serve(status({}));
   expect(await screen.findByText(/owner@example.com/)).toBeTruthy();
   expect(screen.getByText(/1\.0 GB/)).toBeTruthy();
-  expect(screen.getByRole('radio', { name: 'Hằng tuần' }).getAttribute('aria-checked')).toBe('true');
-  await user.click(screen.getByRole('radio', { name: 'Hằng ngày' }));
+  expect(screen.getByRole('radio', { name: 'Weekly' }).getAttribute('aria-checked')).toBe('true');
+  await user.click(screen.getByRole('radio', { name: 'Daily' }));
   await waitFor(() => expect(calls.find((c) => c.method === 'PATCH')?.body).toEqual({ schedule: 'daily' }));
 });
 
 test('running shows progress and disables Backup ngay', async () => {
   serve(status({ status: 'running', bytesSent: 512 * 2 ** 20 }));
-  expect(await screen.findByText(/Đang backup… 512 MB/)).toBeTruthy();
-  expect(screen.getByRole('button', { name: 'Backup ngay' })).toHaveProperty('disabled', true);
+  expect(await screen.findByText(/Backing up… 512 MB/)).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Back up now' })).toHaveProperty('disabled', true);
 });
 
 test('needs-reconnect shows the reason and Kết nối lại', async () => {
   serve(status({ status: 'needs-reconnect', message: 'Quyền truy cập Drive đã hết — bấm Kết nối lại.' }));
   expect(await screen.findByText('Quyền truy cập Drive đã hết — bấm Kết nối lại.')).toBeTruthy();
-  expect(screen.getByRole('button', { name: 'Kết nối lại' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Reconnect' })).toBeTruthy();
 });
 
 test('Backup ngay 409 shows "Đang backup…"', async () => {
   const user = userEvent.setup();
   serve(status({}), { 'POST /api/manage/drive/run': () => new Response(JSON.stringify({ error: 'Đang backup…' }), { status: 409 }) });
-  await user.click(await screen.findByRole('button', { name: 'Backup ngay' }));
+  await user.click(await screen.findByRole('button', { name: 'Back up now' }));
   expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Đang backup…');
 });

@@ -33,21 +33,21 @@ function serve(locations: StorageLocation[], handlers: Record<string, (body: unk
 
 test('locations list has no secret and shows status copy', async () => {
   serve([loc({ id: 'l1', name: 'R2', status: 'error', statusMessage: 'InvalidAccessKeyId' }), loc({ id: 'l2', name: 'B2', status: 'needs-keys' })]);
-  expect(await screen.findByText(/Không kết nối được: InvalidAccessKeyId/)).toBeTruthy();
-  expect(screen.getByText(/cần nhập lại khoá/)).toBeTruthy();
+  expect(await screen.findByText(/Can't connect: InvalidAccessKeyId/)).toBeTruthy();
+  expect(screen.getByText(/keys needed again/)).toBeTruthy();
 });
 
 test('adding shows the server error and keeps the form', async () => {
   const user = userEvent.setup();
   serve([], { 'POST /api/manage/locations': () => new Response(JSON.stringify({ error: 'put: 403 InvalidAccessKeyId' }), { status: 400 }) });
-  await user.click(await screen.findByRole('button', { name: '+ Thêm nơi lưu' }));
-  await user.type(screen.getByLabelText('Tên'), 'R2');
+  await user.click(await screen.findByRole('button', { name: '+ Add a location' }));
+  await user.type(screen.getByLabelText('Name'), 'R2');
   await user.clear(screen.getByLabelText('Endpoint'));
   await user.type(screen.getByLabelText('Endpoint'), 'https://acc.r2.cloudflarestorage.com');
   await user.type(screen.getByLabelText('Bucket'), 'photos');
   await user.type(screen.getByLabelText('Access key ID'), 'AK');
   await user.type(screen.getByLabelText('Secret key'), 'SK');
-  await user.click(screen.getByRole('button', { name: 'Lưu' }));
+  await user.click(screen.getByRole('button', { name: 'Save' }));
   expect(await screen.findByText('put: 403 InvalidAccessKeyId')).toBeTruthy();
   expect((screen.getByLabelText('Bucket') as HTMLInputElement).value).toBe('photos');
 });
@@ -55,10 +55,10 @@ test('adding shows the server error and keeps the form', async () => {
 test('drop needs the exact name', async () => {
   const user = userEvent.setup();
   const calls = serve([loc({ id: 'l1', name: 'R2', files: 3 })], { 'POST /api/manage/locations/l1/drop': () => new Response(JSON.stringify({ dropped: 3 })) });
-  await user.click(await screen.findByRole('button', { name: 'Bỏ nơi lưu này' }));
-  const go = screen.getByRole('button', { name: 'Bỏ nơi lưu' });
+  await user.click(await screen.findByRole('button', { name: 'Drop this location' }));
+  const go = screen.getByRole('button', { name: 'Drop location' });
   expect(go).toHaveProperty('disabled', true);
-  await user.type(screen.getByLabelText('Tên nơi lưu'), 'R2');
+  await user.type(screen.getByLabelText('Location name'), 'R2');
   expect(go).toHaveProperty('disabled', false);
   await user.click(go);
   await waitFor(() => expect(calls.find((c) => c.url === '/api/manage/locations/l1/drop')?.body).toEqual({ confirmName: 'R2' }));
@@ -69,8 +69,8 @@ test('move selected files; a refusal is shown verbatim', async () => {
   const calls = serve([loc({ id: 'l1', name: 'R2' })], {
     'POST /api/manage/move': () => new Response(JSON.stringify({ error: 'Vượt giới hạn dung lượng của R2' }), { status: 409 }),
   });
-  await user.click(await screen.findByLabelText('Chọn tất cả'));
-  await user.click(screen.getByRole('button', { name: 'Chuyển sang…' }));
+  await user.click(await screen.findByLabelText('Select all'));
+  await user.click(screen.getByRole('button', { name: 'Move to…' }));
   await user.click(screen.getByRole('menuitem', { name: 'R2' }));
   await waitFor(() => expect(calls.find((c) => c.url === '/api/manage/move')?.body).toEqual({ mediaIds: ['f1', 'f2'], to: 'l1' }));
   expect(await screen.findByText('Vượt giới hạn dung lượng của R2')).toBeTruthy();

@@ -26,11 +26,11 @@ test('shows only the last 4 chars of the saved key', async () => {
 
 test('saving a key sends it once and clears the input', async () => {
   const calls = serve({ 'GET /api/manage/ai': () => ({ hasKey: false, last4: null, model: 'gemini-3.8-flash' }) });
-  expect(await screen.findByText('Chưa có key')).toBeTruthy();
+  expect(await screen.findByText('No key yet')).toBeTruthy();
   const input = screen.getByLabelText('Gemini API key') as HTMLInputElement;
   expect(input.type).toBe('password');
   await userEvent.type(input, 'AIzaSyTESTKEY-0123456789wxyz');
-  await userEvent.click(screen.getByRole('button', { name: 'Lưu key' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Save key' }));
   await waitFor(() => expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({ key: 'AIzaSyTESTKEY-0123456789wxyz' }));
   expect(input.value).toBe('');
   expect(await screen.findByText(/••••abcd/)).toBeTruthy();
@@ -38,6 +38,6 @@ test('saving a key sends it once and clears the input', async () => {
 
 test('Thử shows the result', async () => {
   serve({ 'POST /api/manage/ai/test': () => ({ ok: false, error: 'Key Gemini không hợp lệ.' }) });
-  await userEvent.click(await screen.findByRole('button', { name: 'Thử' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Test' }));
   expect(await screen.findByText('Key Gemini không hợp lệ.')).toBeTruthy();
 });

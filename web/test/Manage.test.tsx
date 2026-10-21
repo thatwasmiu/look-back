@@ -32,7 +32,7 @@ test('/manage: storage, backup link, unused files by default; deleting asks firs
     return new Response(JSON.stringify(info), { status: 200 });
   }));
   render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><Manage /></MemoryRouter>);
-  expect(await screen.findByText(/còn trống/)).toBeTruthy();
+  expect(await screen.findByText(/VPS disk: used/)).toBeTruthy();
   expect(screen.getByText('60 GB', { selector: 'b' })).toBeTruthy();
   expect(screen.getByRole('link', { name: '⬇ Download backup' }).getAttribute('href')).toBe('/api/manage/backup');
   // Default filter: not used anywhere (the failed upload counts too).
@@ -40,10 +40,10 @@ test('/manage: storage, backup link, unused files by default; deleting asks firs
   expect(screen.getByText('bad1.jpg')).toBeTruthy();
   expect(screen.queryByText('used1.jpg')).toBeNull();
 
-  await user.click(screen.getByLabelText('Chọn tất cả'));
-  await user.click(screen.getByRole('button', { name: /^Xóa 2 file/ }));
-  expect(screen.getByRole('alert').textContent).toContain('Không hoàn tác được');
-  await user.click(screen.getByRole('button', { name: 'Xóa' }));
+  await user.click(screen.getByLabelText('Select all'));
+  await user.click(screen.getByRole('button', { name: /^Delete 2 files/ }));
+  expect(screen.getByRole('alert').textContent).toContain("can't be undone");
+  await user.click(screen.getByRole('button', { name: 'Delete' }));
   await waitFor(() => expect(calls.filter((c) => c.startsWith('DELETE'))).toEqual(['DELETE /api/media/old1', 'DELETE /api/media/bad1']));
   await waitFor(() => expect(calls.filter((c) => c === 'GET /api/manage')).toHaveLength(2)); // reloaded after deleting
 });
