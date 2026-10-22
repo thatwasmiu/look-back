@@ -249,3 +249,24 @@ test('self-timer: cycles off → 3 → 5 → 10 s; the shot is taken after the c
     expect(onCapture).toHaveBeenCalledTimes(1);
   } finally { vi.useRealTimers(); }
 });
+
+test('a preview paused by the browser (phone turned) plays again; a camera muted for long is opened again', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  try {
+    const listeners: Record<string, () => void> = {};
+    const track = { stop, muted: false, addEventListener: (k: string, f: () => void) => { listeners[k] = f; } };
+    gum.mockImplementation(async () => ({ getTracks: () => [track], getVideoTracks: () => [track] }));
+    const play = vi.fn(() => Promise.resolve());
+    HTMLMediaElement.prototype.play = play;
+    const { container } = render(<FrameCamera frame={frame()} onCapture={() => {}} onClose={() => {}} />);
+    await waitFor(() => expect(gum).toHaveBeenCalledTimes(1));
+    const video = container.querySelector('video')!;
+    Object.defineProperty(video, 'paused', { value: true, configurable: true });
+    play.mockClear();
+    fireEvent(video, new Event('pause'));
+    expect(play).toHaveBeenCalled();
+    track.muted = true;
+    await act(async () => { listeners.mute(); vi.advanceTimersByTime(1600); });
+    await waitFor(() => expect(gum).toHaveBeenCalledTimes(2));
+  } finally { vi.useRealTimers(); }
+});

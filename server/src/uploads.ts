@@ -7,7 +7,7 @@ import type { FastifyInstance } from 'fastify';
 import type pg from 'pg';
 import type PgBoss from 'pg-boss';
 import type { Config } from './config.js';
-import { JOB_PROCESS_MEDIA, type ProcessMediaJob } from './queue.js';
+import { JOB_PROCESS_MEDIA, processPriority, type ProcessMediaJob } from './queue.js';
 
 const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime', 'video/webm',
   'audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/aac', 'audio/ogg'];
@@ -54,7 +54,9 @@ export function registerUploads(app: FastifyInstance, config: Config, pool: pg.P
     async onUploadFinish(_req, upload) {
       await pool.query(`update media set status='processing' where id=$1`, [upload.id]);
       const job: ProcessMediaJob = { mediaId: upload.id, uploadPath: join(config.uploadDir, upload.id) };
-      await boss.send(JOB_PROCESS_MEDIA, job);
+      // Photos jump ahead of videos in the queue: a batch of photos is ready in seconds, not after every video's
+      // ffmpeg run that happened to be uploaded first.
+      await boss.send(JOB_PROCESS_MEDIA, job, { priority: processPriority(upload.metadata?.filetype) });
       return {};
     },
   });

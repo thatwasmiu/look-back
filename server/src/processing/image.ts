@@ -1,7 +1,11 @@
 import sharp from 'sharp';
+import { availableParallelism } from 'node:os';
 import { copyFile, mkdir } from 'node:fs/promises';
 import type { Variants } from '@scrapbook/shared';
 import { absPath, keyFor } from '../storage';
+
+// Leave a core for the api and the database while photos are resized (by default sharp takes every core).
+sharp.concurrency(Math.max(1, availableParallelism() - 1));
 
 export type ProcessResult = {
   width: number | null; height: number | null; durationSec: number | null; blurDataUrl: string | null; variants: Variants;

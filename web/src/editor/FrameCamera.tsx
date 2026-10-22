@@ -100,6 +100,16 @@ export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame:
       const t = s.getVideoTracks?.()[0] ?? null;
       track.current = t;
       t?.addEventListener?.('ended', () => { if (stream.current === s) { stream.current = null; setSession((n) => n + 1); } });
+      // iOS mutes the camera for a moment on rotation, Control Center, a notification…; muted for longer, it rarely
+      // comes back by itself (the preview stays black): open it again.
+      let muteTimer: ReturnType<typeof setTimeout> | undefined;
+      t?.addEventListener?.('mute', () => {
+        clearTimeout(muteTimer);
+        muteTimer = setTimeout(() => {
+          if (stream.current === s && t.muted && recorder.current?.state !== 'recording') { release(); setSession((n) => n + 1); }
+        }, 1500);
+      });
+      t?.addEventListener?.('unmute', () => { clearTimeout(muteTimer); void videoRef.current?.play().catch(() => {}); });
       const caps = (t?.getCapabilities?.() ?? {}) as { zoom?: { min: number; max: number; step?: number }; torch?: boolean };
       setHw({ zoom: caps.zoom ? { min: caps.zoom.min, max: caps.zoom.max, step: caps.zoom.step || 0.1 } : null, torch: !!caps.torch });
       setZoomState(caps.zoom?.min ?? 1);
@@ -118,6 +128,22 @@ export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame:
     }) ?? setError(`${t("This browser can't open the camera.")} ${t('Use the “Take photo/video” button instead.')}`);
     return () => { cancelled = true; release(); };
   }, [facing, mode, session]);
+
+  // Turning the phone (or the browser pausing the preview on its own) can leave the live preview paused on black:
+  // play it again.
+  useEffect(() => {
+    const v = videoRef.current;
+    const resume = () => { if (stream.current && document.visibilityState === 'visible' && v?.paused) void v.play().catch(() => {}); };
+    const later = () => setTimeout(resume, 300); // after the rotation's relayout
+    v?.addEventListener('pause', resume);
+    window.addEventListener('orientationchange', later);
+    window.addEventListener('resize', later);
+    return () => {
+      v?.removeEventListener('pause', resume);
+      window.removeEventListener('orientationchange', later);
+      window.removeEventListener('resize', later);
+    };
+  }, []);
 
   // Leaving the app (switching apps, locking the phone): let go of the camera; coming back: open it again.
   useEffect(() => {

@@ -171,7 +171,7 @@ Errors are `{ error: string }`; user-facing ones are Vietnamese (the web shows t
 
 | Job / timer | Code | What it does |
 |---|---|---|
-| `process-media` (pg-boss, 1 at a time, retry 1, 4 h expiry) | processing/run.ts | By kind: **image** — auto-rotate, `display.webp` (2048 px), `display.avif`, `thumb.webp` (400 px), blur data URL; **video** — probe, HLS renditions (`VIDEO_RENDITIONS`, 4 s segments, `nice` ffmpeg), `poster.webp`, original copy; **audio** — AAC `audio.m4a`. Sets `status`, `variants`, `bytes`; on failure `status=failed` and removes partial files. |
+| `process-media` (pg-boss, 1 at a time, retry 1, 4 h expiry; photos have priority 10, so they go before queued videos/music; sharp uses all cores but one) | processing/run.ts | By kind: **image** — auto-rotate, `display.webp` (2048 px), `display.avif`, `thumb.webp` (400 px), blur data URL; **video** — probe, HLS renditions (`VIDEO_RENDITIONS`, 4 s segments, `nice` ffmpeg), `poster.webp`, original copy; **audio** — AAC `audio.m4a`. Sets `status`, `variants`, `bytes`; on failure `status=failed` and removes partial files. |
 | `move-media` (no retry) | moveMedia.ts | See §6.2. |
 | every 10 min | mediaFiles.runPendingDeletes | Delete queued bucket prefixes; on error `attempts+1`, `last_error`, location marked `error`. |
 | every hour | uploads.cleanupAbandonedUploads | Mark abandoned uploads failed and delete their temp files. |
@@ -243,6 +243,8 @@ Vietnamese (missing entries fall back to English; `{name}` placeholders). `useT(
   shows "Trang vừa được người khác sửa — đã tải bản mới". Different pages never clash. Other people's changes are
   not pushed live: a page shows what was loaded until a save is refused or the album is reopened. Emptying frames
   after a media delete doesn't bump the version.
+- **Frame camera, black preview:** a preview paused by the browser (rotation, resize) is played again; a camera
+  track muted for over 1.5 s (iOS interruptions) is opened again.
 - **Frame camera self-timer:** ⏱ cycles off / 3 / 5 / 10 s; Shoot or Record then counts down on screen, tapping
   again cancels.
 - **Uploads** (`useUpload.ts`): one app-wide Uppy + tus instance (survives leaving the editor), resumable, local
@@ -395,13 +397,17 @@ The host proxy must allow large request bodies on `/api/uploads` (`client_max_bo
   desk colour at 1080×1350 (post 4:5) or 1080×1920 (story/TikTok 9:16), photographed with html-to-image (JPEG 0.92,
   `<picture>` AVIF sources dropped), then `navigator.share({files})` or download. Facebook sharer link when there is
   a view link (owner's share link, or the `/s/` link a viewer came in by). Not on the example album. Videos show
-  their poster; a bucket photo without CORS makes the export fail with a message.
+  their poster; a bucket photo without CORS makes the export fail with a message. On Safari/iPhone each picture is
+  drawn three times (the first draws miss the photos). **Make video** (`viewer/slideshow.ts`, where the browser can
+  record): the same pictures, 3 s each with a 0.6 s cross-fade and a slow 5 % zoom, drawn on a canvas and recorded
+  in real time with MediaRecorder, the album's music mixed in (looped, faded out; skipped if it can't be fetched).
+  MP4 where supported (Safari, recent Chrome), else WebM with a note that Instagram may refuse it.
 - Zalo's preview crawler user agent is not documented; if it ever says iPhone/Android, Zalo previews fall back to the
   app's generic card.
 - Media on a hidden page is only left out of the share bundle; its URL still works for a share-cookie holder who
   already knows it (ids are random UUIDs).
-- Sessions expire 1 day after login (`@fastify/secure-session`'s default `expiry`); the cookie's 30-day max age has
-  no effect. Setting `expiry` would keep the owner signed in longer.
+- The owner's login lasts 30 days (`expiry`) and is re-issued once a day while used, so it only runs out after 30
+  days without opening the app.
 - Server error messages are Vietnamese only; the rest of the UI is Vietnamese/English.
 - Inside in-app browsers (Zalo, Messenger) the app can't be installed and, on iPhone, the frame camera can't run.
 - A page switch while in crop/shape mode saves the page first, so that pending crop/shape is not kept.

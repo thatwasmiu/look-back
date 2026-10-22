@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { hashPassword, verifyPassword } from '../src/auth.js';
 import { testApp } from './helpers.js';
 
@@ -27,6 +27,21 @@ describe('auth', () => {
     const sc = String(res.headers['set-cookie']);
     expect(sc).toContain('sid=');
     expect(sc).toContain('HttpOnly');
+  });
+
+  it('a login lasts past one day (not the plugin default) and is renewed by use; 30 idle days end it', async () => {
+    const cookie = await t.login();
+    const now = Date.now();
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(now + 2 * 864e5);
+      const used = await t.app.inject({ url: '/api/albums', headers: { cookie } });
+      expect(used.statusCode).toBe(200);
+      const renewed = String(used.headers['set-cookie']).match(/sid=[^;]+/)![0];
+      vi.setSystemTime(now + 31 * 864e5); // 29 days after the renewal: still in
+      expect((await t.app.inject({ url: '/api/albums', headers: { cookie: renewed } })).statusCode).toBe(200);
+      expect((await t.app.inject({ url: '/api/albums', headers: { cookie } })).statusCode).toBe(401); // never renewed
+    } finally { vi.useRealTimers(); }
   });
 
   it('unknown /api route without cookie → 401', async () => {

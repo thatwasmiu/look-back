@@ -559,6 +559,7 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .social-pages { display: flex; flex-wrap: wrap; gap: .3rem .9rem; margin: .4rem 0 .6rem; }
 .social-shots { min-width: 0; display: flex; gap: .4rem; overflow-x: auto; padding: .3rem 0; }
 .social-shots img { height: 7rem; border-radius: 6px; box-shadow: 0 2px 6px #0003; }
+.social-video { width: 100%; max-height: 50vh; border-radius: 8px; background: #000; }
 .social-stage { position: fixed; left: -100000px; top: 0; pointer-events: none; }
 .social-stage *, .social-stage *::before, .social-stage *::after { transition: none !important; animation-play-state: paused !important; }
 .social-frame { position: relative; overflow: hidden; background: radial-gradient(ellipse 90% 80% at 50% 45%, var(--desk-a, #8a6a4c), var(--desk-b, #5b412e)); }

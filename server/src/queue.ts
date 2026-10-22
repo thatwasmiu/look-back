@@ -2,6 +2,8 @@ import PgBoss from 'pg-boss';
 
 export const JOB_PROCESS_MEDIA = 'process-media';
 export type ProcessMediaJob = { mediaId: string; uploadPath: string };
+// pg-boss runs higher priorities first: photos (seconds each) before videos and music (ffmpeg, minutes).
+export const processPriority = (mime?: string | null) => (mime?.startsWith('image/') ? 10 : 0);
 export const JOB_MOVE_MEDIA = 'move-media';
 export type MoveMediaJob = { mediaId: string; to: string | null }; // to: a location id, null = the VPS disk
 export const JOB_DRIVE_BACKUP = 'drive-backup';

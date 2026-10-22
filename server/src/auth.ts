@@ -26,14 +26,19 @@ export async function verifyPassword(pw: string, stored: string): Promise<boolea
 
 declare module '@fastify/secure-session' {
   // driveState: OAuth state while connecting Google Drive. guest: an album's edit link opened in this browser.
-  interface SessionData { owner: true; driveState?: string; guest?: { albumId: string; token: string } }
+  // seen: day number of the owner's last request, to keep an active login alive (see the guard).
+  interface SessionData { owner: true; seen?: number; driveState?: string; guest?: { albumId: string; token: string } }
 }
+
+const SESSION_DAYS = 30;
 
 export function registerAuth(app: FastifyInstance, config: Config, pool: pg.Pool): void {
   app.register(secureSession, {
     cookieName: 'sid',
     key: createHash('sha256').update(config.sessionSecret).digest(), // 32 bytes
-    cookie: { path: '/', httpOnly: true, sameSite: 'lax', secure: config.cookieSecure, maxAge: 30 * 24 * 3600 },
+    // 30 days (the plugin's default is 1 day: the owner had to log in again every day), renewed by use below.
+    expiry: SESSION_DAYS * 24 * 3600,
+    cookie: { path: '/', httpOnly: true, sameSite: 'lax', secure: config.cookieSecure, maxAge: SESSION_DAYS * 24 * 3600 },
   });
   app.register(rateLimit, { global: false });
 
@@ -54,7 +59,12 @@ export function registerAuth(app: FastifyInstance, config: Config, pool: pg.Pool
       // Public: login, health, a share link's album, and the media check (it decides itself, below).
       if (key === 'POST /api/auth/login' || key === 'GET /api/health' || key === 'GET /api/share/:token' || key === 'GET /api/auth/check'
         || key === 'GET /api/share/:token/preview' || key === 'GET /api/share/:token/preview.jpg' || key === 'GET /api/edit/:token' || key === 'GET /api/manifest/:kind/:token') return;
-      if (req.session.get('owner')) return;
+      if (req.session.get('owner')) {
+        // Rolling login: once a day, re-issue the cookie, so it only runs out after 30 days without opening the app.
+        const day = Math.floor(Date.now() / 864e5);
+        if (req.session.get('seen') !== day) req.session.set('seen', day);
+        return;
+      }
       if (guestRoute(req.method, route)) {
         req.guestAlbumId = await guestAlbum(pool, req);
         if (req.guestAlbumId) return;

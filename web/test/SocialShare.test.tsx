@@ -67,3 +67,8 @@ test('a viewer of a share link can post that link on Facebook too', () => {
   render(<SocialShare bundle={bundle()} onClose={() => {}} viewLink="https://lookback.test/s/abc" />);
   expect(screen.getByRole('link', { name: /Facebook/ }).getAttribute('href')).toContain(encodeURIComponent('https://lookback.test/s/abc'));
 });
+
+test('Make video is only offered where the browser can record one', () => {
+  render(<SocialShare bundle={bundle()} onClose={() => {}} />);
+  expect(screen.queryByRole('button', { name: 'Make video' })).toBeNull(); // jsdom records nothing
+});

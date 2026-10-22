@@ -3,6 +3,8 @@ import { toJpeg } from 'html-to-image';
 import type { AlbumBundle } from '@scrapbook/shared';
 import { useT } from '../i18n';
 import { PageRenderer } from '../render/PageRenderer';
+import { mediaUrl } from '../mediaUrl';
+import { canRecordVideo, recordSlideshow, SLIDE_SEC } from './slideshow';
 
 // "Share to social": every visible page as a picture sized for a feed post (4:5) or a story / TikTok (9:16) — the
 // page centred on the album's desk colour, so nothing gets cropped — handed to the phone's share menu (Instagram,
@@ -56,15 +58,19 @@ export function SocialShare({ bundle, onClose, viewLink }: { bundle: AlbumBundle
   const [busy, setBusy] = useState<string | null>(null);
   const [shots, setShots] = useState<Shot[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [video, setVideo] = useState<{ file: File; url: string } | null>(null);
+  const canVideo = useMemo(canRecordVideo, []);
   const [staging, setStaging] = useState(false);
   const stage = useRef<HTMLDivElement>(null);
   const chosen = pages.filter((p) => picked.has(p.id));
   const name = (i: number) => `${bundle.album.title}-${i + 1}.jpg`;
   const shareLink = viewLink ?? (bundle.album.shareToken ? `${location.origin}/s/${bundle.album.shareToken}` : null);
 
-  const make = async () => {
+  const reset = () => { setShots(null); setVideo((v) => { if (v) URL.revokeObjectURL(v.url); return null; }); };
+  // The pictures of the chosen pages; null (with the error shown) when they can't be made.
+  const render = async (): Promise<Shot[] | null> => {
     setError(null);
-    setShots(null);
+    reset();
     setStaging(true);
     await new Promise((ok) => setTimeout(ok, 0)); // let the stage render
     const out: Shot[] = [];
@@ -82,20 +88,49 @@ export function SocialShare({ bundle, onClose, viewLink }: { bundle: AlbumBundle
         for (let d = 0; d < DRAWS; d++) url = await toJpeg(frame, opts);
         out.push({ name: name(i), url });
       }
-      setShots(out);
+      return out;
     } catch {
       setError(t("Couldn't make the images. A photo kept in a bucket without CORS can't be drawn — move it to the VPS or turn on CORS."));
+      return null;
     } finally {
       setBusy(null);
       setStaging(false);
     }
   };
+  const make = async () => setShots(await render());
+  const music = bundle.album.musicMediaId ? media.get(bundle.album.musicMediaId) : undefined;
+  const makeVideo = async () => {
+    const pics = await render();
+    if (!pics) return;
+    const { w, h } = FORMATS[format];
+    try {
+      setBusy(t('Recording the video… {n}/{total} s', { n: 0, total: pics.length * SLIDE_SEC }));
+      const file = await recordSlideshow({
+        pictures: pics.map((p) => p.url), width: w, height: h, name: bundle.album.title,
+        musicUrl: music?.status === 'ready' && music.variants?.audio ? mediaUrl(music.variants.audio) : null,
+        onProgress: (n, total) => setBusy(t('Recording the video… {n}/{total} s', { n, total })),
+      });
+      setVideo({ file, url: URL.createObjectURL(file) });
+    } catch {
+      setError(t("Couldn't record the video in this browser."));
+    } finally {
+      setBusy(null);
+    }
+  };
 
-  const files = () => (shots ?? []).map((s) => dataUrlToFile(s.url, s.name));
+  const files = () => (video ? [video.file] : (shots ?? []).map((s) => dataUrlToFile(s.url, s.name)));
   const nav = navigator as Navigator & { canShare?(d: ShareData): boolean };
-  const canShareFiles = !!shots?.length && typeof nav.canShare === 'function' && typeof nav.share === 'function' && nav.canShare({ files: files() });
+  const made = !!shots?.length || !!video;
+  const canShareFiles = made && typeof nav.canShare === 'function' && typeof nav.share === 'function' && nav.canShare({ files: files() });
   const shareFiles = () => nav.share({ files: files(), title: bundle.album.title }).catch(() => {});
   const download = () => {
+    if (video) {
+      const a = document.createElement('a');
+      a.href = video.url;
+      a.download = video.file.name;
+      a.click();
+      return;
+    }
     for (const s of shots ?? []) {
       const a = document.createElement('a');
       a.href = s.url;
@@ -113,23 +148,26 @@ export function SocialShare({ bundle, onClose, viewLink }: { bundle: AlbumBundle
         <h2 id="social-h">{t('Share to social media')}</h2>
         <div className="mode-switch" role="radiogroup" aria-label={t('Size')}>
           {(['post', 'story'] as const).map((f) => (
-            <button key={f} type="button" role="radio" aria-checked={format === f} disabled={!!busy} onClick={() => { setFormat(f); setShots(null); }}>
+            <button key={f} type="button" role="radio" aria-checked={format === f} disabled={!!busy} onClick={() => { setFormat(f); reset(); }}>
               {t(f === 'post' ? 'Post 4:5 (Instagram, Facebook)' : 'Story / TikTok 9:16')}
             </button>
           ))}
         </div>
-        <p className="manage-hint">{t('One image per page; Instagram takes up to 20 in a post, TikTok 35. Videos show their cover.')}</p>
+        <p className="manage-hint">{t('One image per page; Instagram takes up to 20 in a post, TikTok 35. Videos show their cover.')}
+          {canVideo && <> {t("Or one video: 3 s per page, with the album's music.")}</>}</p>
         <div className="social-pages">
           {pages.map((p, i) => (
             <label key={p.id}>
               <input type="checkbox" checked={picked.has(p.id)} disabled={!!busy}
-                onChange={() => { setShots(null); setPicked((s) => { const n = new Set(s); if (n.has(p.id)) n.delete(p.id); else n.add(p.id); return n; }); }} />
+                onChange={() => { reset(); setPicked((s) => { const n = new Set(s); if (n.has(p.id)) n.delete(p.id); else n.add(p.id); return n; }); }} />
               {t('Page {n}', { n: i + 1 })}
             </label>
           ))}
         </div>
         {error && <p role="alert" className="error">{error}</p>}
         {busy && <p role="status">{busy}</p>}
+        {video && <video className="social-video" src={video.url} controls playsInline />}
+        {video && !video.file.type.includes('mp4') && <p className="manage-hint">{t('This browser records WebM; Instagram may not take it — Safari or Chrome make MP4.')}</p>}
         {shots && <div className="social-shots">{shots.map((s) => <img key={s.name} src={s.url} alt={s.name} />)}</div>}
         <div className="modal-actions">
           {shareLink && (
@@ -137,7 +175,10 @@ export function SocialShare({ bundle, onClose, viewLink }: { bundle: AlbumBundle
               {t('Share the view link on Facebook')}
             </a>
           )}
-          {!shots
+          {!made && canVideo && (
+            <button type="button" className="secondary" disabled={!!busy || !chosen.length} onClick={() => void makeVideo()}>{t('Make video')}</button>
+          )}
+          {!made
             ? <button type="button" disabled={!!busy || !chosen.length} onClick={() => void make()}>{t('Make images')}</button>
             : canShareFiles
               ? <button type="button" onClick={() => void shareFiles()}>{t('Share…')}</button>
