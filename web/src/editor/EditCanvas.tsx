@@ -268,9 +268,9 @@ function TextEditor({ el, onDone }: { el: TextEl; onDone(text: string): void }) 
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-// Crop mode: drag pans (the photo follows the finger), wheel / pinch zooms. Pointer deltas are rotated into the
-// frame's own axes. With cover-fit and scale about the crop point (BlurImage), the image's left edge sits at
-// -crop.x * (renderedWidth - windowWidth), so a pan of dx px is Δcrop.x = -dx / (renderedWidth - windowWidth).
+// Crop mode: drag moves the photo freely (it follows the finger, past the frame's edges too, in any direction
+// whatever the photo's proportions), wheel / pinch zooms. Pointer deltas are rotated into the frame's own axes and
+// kept as crop.ox/oy, a share of the frame window; crop.x/y stay the point the photo zooms about.
 const MIN_SCALE = 0.25;
 
 function CropOverlay({ el, media, onChange, onDone, onRemove }: {
@@ -290,10 +290,9 @@ function CropOverlay({ el, media, onChange, onDone, onRemove }: {
     const dx = sx * Math.cos(a) - sy * Math.sin(a);
     const dy = sx * Math.sin(a) + sy * Math.cos(a);
     const w = win.offsetWidth, h = win.offsetHeight;
-    const iw = media?.width || w, ih = media?.height || h;
-    const k = Math.max(w / iw, h / ih) * c.scale;
-    const rx = iw * k - w, ry = ih * k - h;
-    return { ...c, x: rx > 0.5 ? clamp(c.x - dx / rx, 0, 1) : c.x, y: ry > 0.5 ? clamp(c.y - dy / ry, 0, 1) : c.y };
+    if (!w || !h || (!dx && !dy)) return c;
+    const r = (v: number) => Math.round(clamp(v, -1, 1) * 10000) / 10000;
+    return { ...c, ox: r((c.ox ?? 0) + dx / w), oy: r((c.oy ?? 0) + dy / h) };
   };
   // Controls sit under the frame; a frame near the bottom of the visible stage gets them above it instead.
   const actionsRef = useRef<HTMLDivElement>(null);

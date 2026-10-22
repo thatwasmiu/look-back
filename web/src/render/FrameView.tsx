@@ -40,26 +40,26 @@ function content(el: FrameEl, m: MediaDTO | undefined, mode: 'view' | 'edit', ac
   const v = m.variants;
   if (m.status === 'ready' && m.kind === 'image' && v?.display) {
     return <BlurImage blurDataUrl={m.blurDataUrl} src={mediaUrl(v.display)}
-      srcAvif={v.displayAvif && mediaUrl(v.displayAvif)} objectPosition={objectPosition} scale={el.crop.scale} />;
+      srcAvif={v.displayAvif && mediaUrl(v.displayAvif)} objectPosition={objectPosition} scale={el.crop.scale} shift={el.crop} />;
   }
   if (m.status === 'ready' && m.kind === 'video' && v?.hls) {
     if (mode === 'view') return <VideoPlayer media={m} active={active} crop={el.crop} trim={el.trim} autoPlay />;
-    return <>{poster(m, objectPosition, el.crop.scale)}<span className="play-badge" aria-hidden>▶</span></>;
+    return <>{poster(m, objectPosition, el.crop.scale, el.crop)}<span className="play-badge" aria-hidden>▶</span></>;
   }
   // Not ready: blur (and a video poster if the worker made one) — never the display image.
   const chip = t(m.status === 'failed' ? 'upload failed' : m.status === 'uploading' ? 'uploading…' : 'processing…');
   return (
     <>
-      {poster(m, objectPosition, el.crop.scale)}
+      {poster(m, objectPosition, el.crop.scale, el.crop)}
       <LocalPreview id={m.id} objectPosition={objectPosition} />
       <span className={m.status === 'failed' ? 'chip chip-error' : 'chip'}>{chip}</span>
     </>
   );
 }
 
-function poster(m: MediaDTO, objectPosition: string, scale: number): ReactNode {
+function poster(m: MediaDTO, objectPosition: string, scale: number, shift?: { ox?: number; oy?: number }): ReactNode {
   if (m.kind === 'video' && m.variants?.poster) {
-    return <BlurImage blurDataUrl={m.blurDataUrl} src={mediaUrl(m.variants.poster)} objectPosition={objectPosition} scale={scale} />;
+    return <BlurImage blurDataUrl={m.blurDataUrl} src={mediaUrl(m.variants.poster)} objectPosition={objectPosition} scale={scale} shift={shift} />;
   }
   if (m.blurDataUrl) {
     return <div className="blur-image"><div className="blur-layer" aria-hidden style={{ backgroundImage: `url("${m.blurDataUrl}")`, backgroundPosition: objectPosition }} /></div>;

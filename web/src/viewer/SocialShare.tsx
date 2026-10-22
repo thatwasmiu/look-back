@@ -39,6 +39,11 @@ async function settled(root: HTMLElement, maxMs = 3000): Promise<void> {
   }
 }
 
+// Safari (every iPhone browser) paints the photos inside html-to-image's SVG only from the second draw on: the first
+// pictures come out with empty frames. There each picture is drawn a few times and the last one kept.
+const webkit = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent) && /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium/.test(navigator.userAgent);
+const DRAWS = webkit ? 3 : 1;
+
 type Shot = { name: string; url: string };
 
 // viewLink: the album's view-only link, if there is one (the owner's share link, or the link a viewer came in by).
@@ -69,10 +74,13 @@ export function SocialShare({ bundle, onClose, viewLink }: { bundle: AlbumBundle
         setBusy(t('Making image {n}/{total}…', { n: i + 1, total: frames.length }));
         await settled(frame);
         const { w, h } = FORMATS[format];
-        out.push({ name: name(i), url: await toJpeg(frame, { quality: 0.92, pixelRatio: 1, width: w, height: h, cacheBust: false,
+        const opts = { quality: 0.92, pixelRatio: 1, width: w, height: h, cacheBust: false,
           // html-to-image inlines an <img>'s src but not a <picture>'s AVIF <source>, which the picture would then
           // prefer and can't load: drop the sources.
-          filter: (n) => n.nodeName !== 'SOURCE' }) });
+          filter: (n: HTMLElement) => n.nodeName !== 'SOURCE' };
+        let url = '';
+        for (let d = 0; d < DRAWS; d++) url = await toJpeg(frame, opts);
+        out.push({ name: name(i), url });
       }
       setShots(out);
     } catch {

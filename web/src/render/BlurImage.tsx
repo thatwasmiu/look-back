@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import { MediaUnavailable } from './MediaUnavailable';
 
-type Props = { blurDataUrl: string | null; src: string; srcAvif?: string; alt?: string; objectPosition: string; scale: number };
+type Props = { blurDataUrl: string | null; src: string; srcAvif?: string; alt?: string; objectPosition: string; scale: number; shift?: { ox?: number; oy?: number } };
 
 // Blur layer is a CSS background, so it can never render a broken-image icon.
 // The sharp <picture> fades in on load; if it can't load (file gone, its storage bucket down) the frame shows the
 // crying placeholder instead.
-export function BlurImage({ blurDataUrl, src, srcAvif, alt = '', objectPosition, scale }: Props) {
+export function BlurImage({ blurDataUrl, src, srcAvif, alt = '', objectPosition, scale, shift }: Props) {
   const [loaded, setLoaded] = useState<string | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   // Scale about the crop point: zoomed in, crop.x/y ∈ [0,1] still pans edge to edge of the photo.
-  const transform = `scale(${scale})`;
+  // A free shift (crop.ox/oy) moves the photo by a share of the frame, whatever its size.
+  const transform = `${shift?.ox || shift?.oy ? `translate(${(shift.ox ?? 0) * 100}%, ${(shift.oy ?? 0) * 100}%) ` : ''}scale(${scale})`;
   const transformOrigin = objectPosition;
   return (
     <div className="blur-image">

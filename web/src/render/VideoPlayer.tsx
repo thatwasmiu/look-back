@@ -80,7 +80,7 @@ export function VideoPlayer({ media, active, crop = { x: 0.5, y: 0.5, scale: 1 }
     return <video ref={ref} className="video" poster={poster} style={{ objectPosition }} playsInline controls loop={silent && !trim} onError={() => setFailed(true)} />;
   }
   const cover = poster
-    ? <BlurImage blurDataUrl={media.blurDataUrl} src={poster} objectPosition={objectPosition} scale={crop.scale} />
+    ? <BlurImage blurDataUrl={media.blurDataUrl} src={poster} objectPosition={objectPosition} scale={crop.scale} shift={crop} />
     : <div className="slot-paper" />;
   if (failed) return <MediaUnavailable />;
   return (

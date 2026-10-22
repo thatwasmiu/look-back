@@ -134,6 +134,27 @@ test('crop mode Size slider can make the photo smaller than the frame; Fill rese
   expect((getByRole('slider', { name: 'Photo size' }) as HTMLInputElement).value).toBe('1');
 });
 
+test('crop mode drag moves the photo freely, on the axis where it exactly fills the frame and past the edges', () => {
+  const filled: PageLayout = { background: 'paper-cream', elements: [
+    { type: 'frame', id: 'f1', x: 0.1, y: 0.1, w: 0.4, h: 0.3, rotation: 0, z: 1, frameStyle: 'plain', mediaId: 'm1', crop: { x: 0.5, y: 0.5, scale: 1 } },
+  ] };
+  const onCommit = vi.fn();
+  const { container, getByRole } = render(<EditCanvas layout={filled} media={new Map()} selectedId="f1" onSelect={() => {}} onCommit={onCommit} cropId="f1" onCrop={() => {}} />);
+  const win = container.querySelector<HTMLElement>('.frame-window')!;
+  Object.defineProperty(win, 'offsetWidth', { value: 200 });
+  Object.defineProperty(win, 'offsetHeight', { value: 100 });
+  const overlay = container.querySelector<HTMLElement>('.crop-overlay')!;
+  overlay.setPointerCapture = () => {};
+  // jsdom has no PointerEvent (clientX would be dropped): pointer-typed MouseEvents carry the coordinates.
+  const ptr = (type: string, x: number, y: number) => new MouseEvent(type, { bubbles: true, clientX: x, clientY: y });
+  fireEvent(overlay, ptr('pointerdown', 100, 100));
+  fireEvent(overlay, ptr('pointermove', 150, 130));
+  fireEvent(overlay, ptr('pointermove', 600, 130)); // far past the edge: held at one frame width
+  fireEvent(overlay, ptr('pointerup', 600, 130));
+  fireEvent.click(getByRole('button', { name: 'Done' }));
+  expect(onCommit).toHaveBeenLastCalledWith(expect.objectContaining({ elements: [expect.objectContaining({ crop: { x: 0.5, y: 0.5, scale: 1, ox: 1, oy: 0.3 } })] }));
+});
+
 test('one tap on "+ add" of an unselected frame opens the picker (no select first)', async () => {
   vi.useFakeTimers();
   try {
