@@ -10,6 +10,9 @@
   --hand-plain: 'Patrick Hand', cursive; /* small sizes: script gets hard to read */
 }
 * { box-sizing: border-box; }
+/* No pinch / double-tap zoom of the whole app on phones: it left the toolbars off screen. Pinches inside the app
+   (resizing an item, crop, camera zoom) are handled by those components and still work. */
+html { touch-action: pan-x pan-y; }
 body {
   margin: 0; min-height: 100vh; color: var(--ink);
   background: var(--paper) radial-gradient(circle at 20% 10%, #f6efe0, var(--paper) 60%);
@@ -127,7 +130,7 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 /* Largest 3:4 page (or 3:2 spread) that fits the stage with a gutter: never scroll to see a page. */
 .book {
   position: relative; aspect-ratio: 3 / 4; width: min(calc(100cqw - 32px), calc((100cqh - 32px) * .75));
-  perspective: 2400px; touch-action: pan-y pinch-zoom;
+  perspective: 2400px; touch-action: pan-y;
 }
 .book.spread { aspect-ratio: 3 / 2; width: min(calc(100cqw - 64px), calc((100cqh - 48px) * 1.5)); }
 .leaf { position: absolute; top: 0; left: 0; width: 100%; z-index: 1; }

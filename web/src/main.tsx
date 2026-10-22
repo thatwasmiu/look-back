@@ -13,4 +13,7 @@ import './cqPolyfill';
 // Offline viewing (public/sw.js). Production only: in dev it would serve stale modules.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) void navigator.serviceWorker.register('/sw.js').catch(() => {});
 
+// iPhone Safari ignores user-scalable=no: stop its own pinch-zoom gesture (pinches inside the app use pointer events).
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);
