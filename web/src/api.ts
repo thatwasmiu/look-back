@@ -1,7 +1,7 @@
 import type { AlbumBundle, AlbumDesign, AlbumMode, ReadingDirection, AlbumDTO, BackgroundColor, BackgroundEffect, AlbumSummary, MediaDTO, PageDTO, PageLayout } from '@scrapbook/shared';
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(public status: number, message: string, public data?: any) {
     super(message);
   }
 }
@@ -18,7 +18,7 @@ async function req<T>(method: string, path: string, body?: unknown, quiet = fals
   if (res.status === 401 && !quiet) window.location.assign('/login'); // the only 401 redirect
   if (!res.ok) {
     const data = await res.json().catch(() => null);
-    throw new ApiError(res.status, data?.error ?? data?.message ?? res.statusText);
+    throw new ApiError(res.status, data?.error ?? data?.message ?? res.statusText, data);
   }
   return res.status === 204 ? (undefined as T) : res.json();
 }
@@ -50,8 +50,9 @@ export const api = {
   getShared: (token: string) => req<AlbumBundle>('GET', `/share/${encodeURIComponent(token)}`, undefined, true),
   addPage: (albumId: string, templateId: string, position?: number) =>
     req<PageDTO>('POST', `/albums/${albumId}/pages`, { templateId, position }),
-  savePage: (id: string, layout: PageLayout, opts?: { keepalive?: boolean }) =>
-    req<PageDTO>('PUT', `/pages/${id}`, { layout }, false, opts?.keepalive),
+  // base: the page version this edit started from (PageDTO.updatedAt); a newer one on the server → 409 { page }.
+  savePage: (id: string, layout: PageLayout, opts?: { keepalive?: boolean; base?: string }) =>
+    req<PageDTO>('PUT', `/pages/${id}`, { layout, baseUpdatedAt: opts?.base }, false, opts?.keepalive),
   deletePage: (id: string) => req<void>('DELETE', `/pages/${id}`),
   reorderPages: (albumId: string, pageIds: string[]) => req<void>('PUT', `/albums/${albumId}/page-order`, { pageIds }),
   getMedia: (id: string) => req<MediaDTO>('GET', `/media/${id}`),

@@ -49,6 +49,7 @@ export const frameAspect = (f: FrameEl) => (f.w * 3) / (f.h * 4);
 const shapeOf = (f: FrameEl) => (f.frameStyle === 'circle' ? 'circle' : f.frameStyle === 'heart' ? 'heart' : f.shape ? 'panel' : 'rect');
 const HI_RES = { width: { ideal: 3840 }, height: { ideal: 2160 } };
 const VIDEO_TYPES = ['video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+const DELAYS = [0, 3, 5, 10] as const; // self-timer, seconds
 const HEART = 'M50 88C10 60 0 38 0 24 0 10 11 0 25 0c11 0 20 6 25 15C55 6 64 0 75 0c14 0 25 10 25 24 0 14-10 36-50 64z';
 
 // Zalo's in-app browser on iPhone can't play video inside the page: the live camera opens in iOS's fullscreen
@@ -75,6 +76,10 @@ export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame:
   const pointers = useRef(new Map<number, number>()); // pointerId → x, for pinch
   const pinch = useRef<{ d: number; z: number } | null>(null);
   const recorder = useRef<MediaRecorder | null>(null);
+  // Self-timer: the shutter (or Record) starts a countdown; tapping it again during the countdown cancels.
+  const [delay, setDelay] = useState<(typeof DELAYS)[number]>(0);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const pending = useRef<(() => void) | null>(null);
   const aspect = windowShape?.aspect ?? frameAspect(frame);
   const hint = rotateHint(aspect, usePortrait());
   const maskId = `cam-mask-${useId().replace(/:/g, '')}`;
@@ -131,6 +136,20 @@ export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame:
     const t = setInterval(() => setSeconds((n) => n + 1), 1000);
     return () => clearInterval(t);
   }, [recording]);
+
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown === 0) { setCountdown(null); pending.current?.(); pending.current = null; return; }
+    const t = setTimeout(() => setCountdown((n) => (n === null ? null : n - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [countdown]);
+  const cancelCountdown = () => { pending.current = null; setCountdown(null); };
+  const later = (action: () => void) => () => {
+    if (countdown !== null) return cancelCountdown();
+    if (!delay) return action();
+    pending.current = action;
+    setCountdown(delay);
+  };
 
   const zoomRange = hw.zoom ?? { min: 1, max: 4, step: 0.1 };
   const digital = !hw.zoom;
@@ -225,14 +244,19 @@ export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame:
       </div>
       {hint && !error && <p className="camera-hint" role="note"><span aria-hidden>📱↻</span> {t(hint)} <small>({t('turn off rotation lock if it is on')})</small></p>}
       {error && <p className="camera-error" role="alert">{error}</p>}
+      {countdown !== null && <p className="camera-countdown" role="status" aria-live="assertive">{countdown}</p>}
       {recording && <p className="camera-timer" role="status"><span className="rec-dot" aria-hidden />{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}</p>}
       <div className="camera-top">
-        <button type="button" className="camera-round" aria-label={t('Close')} onClick={() => { if (recording) recorder.current?.stop(); release(); onClose(); }}>✕</button>
+        <button type="button" className="camera-round" aria-label={t('Close')} onClick={() => { cancelCountdown(); if (recording) recorder.current?.stop(); release(); onClose(); }}>✕</button>
         <div className="mode-switch" role="radiogroup" aria-label={t('Mode')}>
           {(['photo', 'video'] as const).map((m) => (
-            <button key={m} type="button" role="radio" aria-label={t(m === 'photo' ? 'Photo' : 'Video')} aria-checked={mode === m} disabled={recording} onClick={() => setMode(m)}>{m === 'photo' ? `📷 ${t('Photo')}` : `🎬 ${t('Video')}`}</button>
+            <button key={m} type="button" role="radio" aria-label={t(m === 'photo' ? 'Photo' : 'Video')} aria-checked={mode === m} disabled={recording} onClick={() => { cancelCountdown(); setMode(m); }}>{m === 'photo' ? `📷 ${t('Photo')}` : `🎬 ${t('Video')}`}</button>
           ))}
         </div>
+        <button type="button" className="camera-round camera-delay" aria-label={t('Self-timer')} aria-pressed={delay > 0} disabled={recording || countdown !== null}
+          onClick={() => setDelay(DELAYS[(DELAYS.indexOf(delay) + 1) % DELAYS.length])}>
+          {delay ? `${delay}s` : <TimerIcon />}
+        </button>
       </div>
       {canZoom && (
         <label className="camera-zoom">
@@ -243,9 +267,9 @@ export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame:
       )}
       <div className="camera-bottom">
         <button type="button" className="camera-round camera-flip" aria-label={t('Switch camera')} disabled={recording} onClick={() => setFacing(facing === 'environment' ? 'user' : 'environment')}><FlipIcon /></button>
-        {mode === 'photo' ? <button type="button" className="camera-shutter" aria-label={t('Shoot')} onClick={shoot}><span aria-hidden>♥</span></button>
+        {mode === 'photo' ? <button type="button" className="camera-shutter" aria-label={t(countdown !== null ? 'Cancel' : 'Shoot')} onClick={later(shoot)}><span aria-hidden>♥</span></button>
           : recording ? <button type="button" className="camera-shutter recording" aria-label={t('Stop')} onClick={stopRecording}><span aria-hidden /></button>
-            : <button type="button" className="camera-shutter rec" aria-label={t('Record')} onClick={record}><span aria-hidden /></button>}
+            : <button type="button" className="camera-shutter rec" aria-label={t(countdown !== null ? 'Cancel' : 'Record')} onClick={later(record)}><span aria-hidden /></button>}
         {hw.torch && <button type="button" className="camera-round camera-torch" aria-label={t('⚡ Light')} aria-pressed={torch} onClick={toggleTorch}><BoltIcon /></button>}
       </div>
     </div>
@@ -261,6 +285,15 @@ function FlipIcon() {
       <path d="M20 14.5a8 8 0 0 1-14.2 3.6" />
       <path d="M5.4 21.2v-3.6H9" />
       <circle cx="12" cy="12" r="2.4" />
+    </svg>
+  );
+}
+
+function TimerIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="13.5" r="7.5" />
+      <path d="M12 9.5v4l2.5 2M9.5 2.5h5" />
     </svg>
   );
 }

@@ -9,7 +9,7 @@ type Save = (id: string, l: PageLayout, opts?: { keepalive?: boolean }) => Promi
 // A pageId change means "a different page was loaded": its layout becomes the baseline. A failed save stays
 // pending (with its own page id) until a later flush succeeds. Tab hidden / unmount flush with fetch keepalive.
 export function useAutosave(pageId: string, layout: PageLayout, save: Save, delayMs = 1000):
-  { status: SaveStatus; flush(opts?: { keepalive?: boolean }): Promise<boolean> } {
+  { status: SaveStatus; flush(opts?: { keepalive?: boolean }): Promise<boolean>; reset(layout: PageLayout): void } {
   const [status, setStatus] = useState<SaveStatus>('saved');
   const base = useRef({ pageId, layout });
   const pending = useRef<{ id: string; layout: PageLayout } | null>(null);
@@ -39,6 +39,13 @@ export function useAutosave(pageId: string, layout: PageLayout, save: Save, dela
     return chain.current;
   }, []);
 
+  // The page was replaced from outside (someone else's newer version): it is the baseline now, unsaved edits dropped.
+  const reset = useCallback((l: PageLayout) => {
+    base.current = { pageId: base.current.pageId, layout: l };
+    if (pending.current?.id === base.current.pageId) pending.current = null;
+    clearTimeout(timer.current);
+  }, []);
+
   useEffect(() => {
     if (base.current.pageId !== pageId) {
       base.current = { pageId, layout };
@@ -59,5 +66,5 @@ export function useAutosave(pageId: string, layout: PageLayout, save: Save, dela
     return () => { document.removeEventListener('visibilitychange', onHide); void flush({ keepalive: true }); };
   }, [flush]);
 
-  return { status, flush };
+  return { status, flush, reset };
 }

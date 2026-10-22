@@ -58,6 +58,21 @@ describe('pages', () => {
     expect((await call('PUT', '/api/pages/nope', { layout: {} })).statusCode).toBe(400);
   });
 
+  it('save with a stale version is refused with the page as it is now; old clients without a version still save', async () => {
+    const a = await newAlbum();
+    const p = (await addPage(a.id)).json();
+    expect(p.updatedAt).toEqual(expect.any(String));
+    const layout = (n: number) => ({ background: 'paper-white', elements: [frame(`f${n}`, null)] });
+    const first = await call('PUT', `/api/pages/${p.id}`, { layout: layout(1), baseUpdatedAt: p.updatedAt });
+    expect(first.statusCode).toBe(200);
+    const stale = await call('PUT', `/api/pages/${p.id}`, { layout: layout(2), baseUpdatedAt: p.updatedAt });
+    expect(stale.statusCode).toBe(409);
+    expect(stale.json().page.layout.elements[0].id).toBe('f1');
+    expect(stale.json().page.updatedAt).toBe(first.json().updatedAt);
+    expect((await call('PUT', `/api/pages/${p.id}`, { layout: layout(3), baseUpdatedAt: first.json().updatedAt })).statusCode).toBe(200);
+    expect((await call('PUT', `/api/pages/${p.id}`, { layout: layout(4) })).statusCode).toBe(200);
+  });
+
   it('delete page compacts positions', async () => {
     const a = await newAlbum();
     await addPage(a.id);

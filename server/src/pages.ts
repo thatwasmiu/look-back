@@ -5,7 +5,10 @@ import type pg from 'pg';
 import { instantiateTemplate, pageLayoutSchema, type PageDTO } from '@scrapbook/shared';
 import { uuidParams } from './albums.js';
 
-export const toPageDTO = (r: any): PageDTO => ({ id: r.id, albumId: r.album_id, position: r.position, layout: r.layout });
+export const toPageDTO = (r: any): PageDTO => ({
+  id: r.id, albumId: r.album_id, position: r.position, layout: r.layout,
+  ...(r.updated_at && { updatedAt: new Date(r.updated_at).toISOString() }),
+});
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -59,7 +62,9 @@ export function registerPages(app: FastifyInstance, pool: pg.Pool): void {
     },
   );
 
-  app.put<{ Params: { id: string }; Body: { layout?: unknown } }>('/api/pages/:id', { schema: uuidParams }, async (req, reply) => {
+  // baseUpdatedAt (optional): the version the editor started from. Someone else saved the page since → 409 with the
+  // page as it is now, nothing written.
+  app.put<{ Params: { id: string }; Body: { layout?: unknown; baseUpdatedAt?: unknown } }>('/api/pages/:id', { schema: uuidParams }, async (req, reply) => {
     const parsed = pageLayoutSchema.safeParse(req.body?.layout);
     if (!parsed.success) return reply.code(400).send({ error: 'invalid layout', issues: parsed.error.issues });
     const layout = parsed.data;
@@ -75,10 +80,18 @@ export function registerPages(app: FastifyInstance, pool: pg.Pool): void {
         (await pool.query('select count(*)::int as n from media where album_id = $1 and id = any($2::uuid[])', [page.rows[0].album_id, mediaIds])).rows[0].n === mediaIds.length;
       if (!ok) return reply.code(400).send({ error: 'frame references media outside this album' });
     }
+    const base = typeof req.body?.baseUpdatedAt === 'string' && !Number.isNaN(Date.parse(req.body.baseUpdatedAt)) ? req.body.baseUpdatedAt : null;
+    // Versions travel as ISO strings (milliseconds); the column keeps microseconds — compare to the millisecond.
     const { rows } = await pool.query(
-      'update pages set layout = $2, updated_at = now() where id = $1 returning *',
-      [req.params.id, JSON.stringify(layout)],
+      `update pages set layout = $2, updated_at = now() where id = $1
+         and ($3::timestamptz is null or date_trunc('milliseconds', updated_at) = date_trunc('milliseconds', $3::timestamptz)) returning *`,
+      [req.params.id, JSON.stringify(layout), base],
     );
+    if (!rows[0]) {
+      const now = await pool.query('select * from pages where id = $1', [req.params.id]);
+      if (!now.rows[0]) return reply.code(404).send({ error: 'not found' });
+      return reply.code(409).send({ error: 'Trang vừa được người khác sửa.', page: toPageDTO(now.rows[0]) });
+    }
     return toPageDTO(rows[0]);
   });
 

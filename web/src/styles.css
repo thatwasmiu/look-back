@@ -493,6 +493,10 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .camera-round { display: grid; place-items: center; }
 .camera-flip { position: absolute; left: 22px; }
 .camera-torch { position: absolute; right: 22px; }
+.camera-delay { font-family: inherit; font-size: 1rem; font-weight: 700; }
+.camera-delay[aria-pressed='true'] { background: var(--cam-pink); color: #fff; }
+.camera-countdown { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0; pointer-events: none;
+  font-size: 9rem; font-weight: 700; color: #fff; text-shadow: 0 4px 24px rgba(0,0,0,.55); }
 .camera-torch[aria-pressed='true'] { background: #ffe066; box-shadow: 0 0 18px #ffe066; }
 .camera-top .mode-switch { margin: 0; background: var(--cam-cream); border-radius: 99px; padding: .25rem; gap: .2rem; }
 .camera-top .mode-switch button { white-space: nowrap; border-radius: 99px; background: transparent; color: var(--cam-ink); font-family: inherit; font-size: 1rem; padding: .35rem .9rem; }

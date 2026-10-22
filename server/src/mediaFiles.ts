@@ -48,7 +48,8 @@ export async function deleteMediaRows(c: pg.PoolClient, ids: string[]): Promise<
     for (const p of pages.rows as { id: string; layout: PageLayout }[]) {
       if (!p.layout.elements.some((e) => e.type === 'frame' && e.mediaId && gone.has(e.mediaId))) continue;
       const layout = { ...p.layout, elements: p.layout.elements.map((e) => (e.type === 'frame' && e.mediaId && gone.has(e.mediaId) ? { ...e, mediaId: null } : e)) };
-      await c.query('update pages set layout = $2, updated_at = now() where id = $1', [p.id, JSON.stringify(layout)]);
+      // Not a new version: the editor that deleted the media empties the same frames itself and saves on top.
+      await c.query('update pages set layout = $2 where id = $1', [p.id, JSON.stringify(layout)]);
     }
     await c.query(`update albums set cover_media_id = case when cover_media_id = any($2) then null else cover_media_id end,
       music_media_id = case when music_media_id = any($2) then null else music_media_id end, updated_at = now() where id = $1`, [albumId, [...gone]]);

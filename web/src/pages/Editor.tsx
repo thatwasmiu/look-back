@@ -162,13 +162,35 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
   latest.current = { pages, cur, layout, busy };
   const nav = useRef({ switchTo: (_i: number): Promise<void> => Promise.resolve() }); // filled below; read by the key handler
 
+  // Each page's version as last loaded/saved here. Someone else (the owner and an edit-link guest, two devices)
+  // saved the page since → the server refuses; their version replaces ours here, with a note, instead of overwriting.
+  const versions = useRef(new Map(bundle.pages.flatMap((p) => (p.updatedAt ? [[p.id, p.updatedAt] as const] : []))));
+  const takeTheirs = useRef((_p: PageDTO) => {});
   // Never send a layout the server would reject: a validation failure shows as the "Save failed" status.
-  const save = useCallback((id: string, l: PageLayout, opts?: { keepalive?: boolean }) => {
+  const save = useCallback(async (id: string, l: PageLayout, opts?: { keepalive?: boolean }) => {
     const r = pageLayoutSchema.safeParse(l);
-    if (!r.success) { console.error('invalid layout', r.error.issues); return Promise.reject(r.error); }
-    return api.savePage(id, r.data, opts);
+    if (!r.success) { console.error('invalid layout', r.error.issues); throw r.error; }
+    const base = versions.current.get(id);
+    try {
+      const saved = await api.savePage(id, r.data, base ? { ...opts, base } : opts);
+      if (saved?.updatedAt) versions.current.set(id, saved.updatedAt);
+      return saved;
+    } catch (e) {
+      if (!(e instanceof ApiError && e.status === 409 && e.data?.page)) throw e;
+      takeTheirs.current(e.data.page as PageDTO);
+    }
   }, [api]);
-  const { status, flush } = useAutosave(page?.id ?? '', layout, save);
+  const { status, flush, reset } = useAutosave(page?.id ?? '', layout, save);
+  takeTheirs.current = (p) => {
+    if (p.updatedAt) versions.current.set(p.id, p.updatedAt);
+    setPages((ps) => ps.map((x) => (x.id === p.id ? { ...x, layout: p.layout } : x)));
+    if (latest.current.pages[latest.current.cur]?.id === p.id) {
+      reset(p.layout);
+      setHist(initHistory(p.layout));
+      setSelectedId(null);
+    }
+    setOpError(tr('Someone else just changed this page — their version is loaded.'));
+  };
 
   // `coalesce`: consecutive commits with the same key within 500 ms (arrow-key repeats, dragging the colour
   // picker) replace the last history entry instead of pushing one each.

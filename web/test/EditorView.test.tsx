@@ -716,3 +716,24 @@ test('guest Pin all pins what they may edit, never the frames (the server would 
   expect(saved.elements.find((e) => e.id === 'f1')?.pinned).toBeUndefined();
 });
 
+
+test('someone else saved the page meanwhile: their version is loaded with a note, ours is not sent again', async () => {
+  const { ApiError } = await import('../src/api');
+  const theirs = { id: 'p0', albumId: 'a1', position: 0, updatedAt: '2026-10-22T10:00:01.000Z',
+    layout: { background: 'paper-white' as const, elements: [{ type: 'sticker' as const, id: 'their-sticker', x: 0.1, y: 0.1, w: 0.2, h: 0.2, rotation: 0, z: 1, stickerId: 'heart' }] } };
+  const api: EditorApi = { ...okApi(),
+    savePage: vi.fn().mockRejectedValueOnce(new ApiError(409, 'Trang vừa được người khác sửa.', { page: theirs })).mockResolvedValue({}) };
+  const user = userEvent.setup();
+  const versioned = { ...bundle, pages: bundle.pages.map((p) => ({ ...p, updatedAt: '2026-10-22T10:00:00.000Z' })) };
+  const { container } = render(
+    <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={versioned} api={api} /></MemoryRouter>,
+  );
+  await addVia(user, 'Text');
+  expect((await screen.findByRole('alert')).textContent).toContain('Someone else just changed this page');
+  expect(api.savePage).toHaveBeenCalledWith('p0', expect.anything(), { base: '2026-10-22T10:00:00.000Z' });
+  await waitFor(() => expect(container.querySelector('.edit-page .el-text')).toBeNull());
+  expect(container.querySelector('.edit-page .el-sticker')).not.toBeNull();
+  await new Promise((ok) => setTimeout(ok, 1500));
+  expect(api.savePage).toHaveBeenCalledTimes(1); // their version isn't saved back over itself
+  expect(screen.getByRole('status').textContent).toBe('Saved');
+});

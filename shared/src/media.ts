@@ -9,7 +9,8 @@ export type MediaDTO = {
   blurDataUrl: string | null; variants: Variants | null; error: string | null
   name?: string | null // the uploaded file's name (shown for music)
 }
-export type PageDTO = { id: string; albumId: string; position: number; layout: PageLayout }
+// updatedAt: the page's version; a save sends the one it started from and is refused (409) if the page has changed since.
+export type PageDTO = { id: string; albumId: string; position: number; layout: PageLayout; updatedAt?: string }
 export type AlbumDTO = { id: string; title: string; coverMediaId: string | null; backgroundEffect: BackgroundEffect; backgroundColor: BackgroundColor
   shareToken: string | null // secret share-link code; only ever sent to the owner
   editToken?: string | null; editExpiresAt?: string | null // temporary edit link (owner only); null once expired

@@ -221,3 +221,31 @@ test('a stream that the phone ends is reopened', async () => {
   act(() => listeners.ended());
   await waitFor(() => expect(gum).toHaveBeenCalledTimes(2));
 });
+
+test('self-timer: cycles off → 3 → 5 → 10 s; the shot is taken after the countdown, and tapping again cancels', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  try {
+    const onCapture = vi.fn();
+    render(<FrameCamera frame={frame()} onCapture={onCapture} onClose={() => {}} />);
+    const timer = screen.getByRole('button', { name: 'Self-timer' });
+    fireEvent.click(timer);
+    expect(timer.textContent).toBe('3s');
+    fireEvent.click(timer); fireEvent.click(timer);
+    expect(timer.textContent).toBe('10s');
+    fireEvent.click(timer);
+    expect(timer.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(timer); // 3 s
+    fireEvent.click(screen.getByRole('button', { name: 'Shoot' }));
+    expect(screen.getByRole('status').textContent).toBe('3');
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' })); // cancelled
+    await act(async () => { vi.advanceTimersByTime(4000); });
+    expect(onCapture).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Shoot' }));
+    const tick = () => act(async () => { vi.advanceTimersByTime(1000); });
+    await tick(); await tick();
+    expect(screen.getByRole('status').textContent).toBe('1');
+    expect(onCapture).not.toHaveBeenCalled();
+    await tick();
+    expect(onCapture).toHaveBeenCalledTimes(1);
+  } finally { vi.useRealTimers(); }
+});

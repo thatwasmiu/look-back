@@ -237,6 +237,14 @@ Vietnamese (missing entries fall back to English; `{name}` placeholders). `useT(
 - **Frame menu** ("+ add" on an empty frame): an actions row (Shoot in the frame · Take photo/video · Upload — the
   first two on phones only, the frame camera left out inside Zalo on iPhone with a hint) above the album's photos.
 - **Autosave** (`useAutosave.ts`): debounced `PUT /api/pages/:id`, retried on failure; leaving a page waits for it.
+- **Two people on one page** (owner + guest, two devices): pages carry a version (`PageDTO.updatedAt`); a save sends
+  the version it started from (`baseUpdatedAt`) and the server writes only if it still matches, else **409** with the
+  page as it is now. The editor then loads that version (undo history reset, unsaved edits on that page dropped) and
+  shows "Trang vừa được người khác sửa — đã tải bản mới". Different pages never clash. Other people's changes are
+  not pushed live: a page shows what was loaded until a save is refused or the album is reopened. Emptying frames
+  after a media delete doesn't bump the version.
+- **Frame camera self-timer:** ⏱ cycles off / 3 / 5 / 10 s; Shoot or Record then counts down on screen, tapping
+  again cancels.
 - **Uploads** (`useUpload.ts`): one app-wide Uppy + tus instance (survives leaving the editor), resumable, local
   preview while uploading/processing (`localPreview.tsx`), camera capture on phones, polling until ready.
 

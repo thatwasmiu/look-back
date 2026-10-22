@@ -64,3 +64,5 @@ a phone should be able to install it as an app that opens that album.
 
 - Guests get **Pin all**: it pins what they may edit (text, stickers, bubbles…), never frames/panels.
 - People who open a view link can use **Share to social** too; its Facebook link posts that view link.
+- Owner and guest editing at once: a save over a newer version of the page is refused (409) and the editor loads
+  that version with a note, instead of overwriting.
