@@ -2,8 +2,19 @@
 // container gets --cqw / --cqh as px, which the compiled styles use instead of cqw / cqh (see vite.config.ts).
 // Keep the selector list in step with the `container-type: size` rules in the CSS.
 const CONTAINERS = '.page, .stage, .edit-stage, .frame-swatch, .bg-swatch, .effect-swatch';
+const needed = typeof CSS !== 'undefined' && !CSS.supports('width', '1cqw');
 
-if (typeof CSS !== 'undefined' && !CSS.supports('width', '1cqw') && typeof ResizeObserver !== 'undefined') {
+// Set the units right now for the containers in `root` (the observer below fills them in a frame later): Share to
+// social photographs its off-screen pages at once, and on iOS < 16 their words came out the wrong size.
+export function applyContainerUnits(root: ParentNode): void {
+  if (!needed) return;
+  root.querySelectorAll<HTMLElement>(CONTAINERS).forEach((el) => {
+    el.style.setProperty('--cqw', `${el.clientWidth / 100}px`);
+    el.style.setProperty('--cqh', `${el.clientHeight / 100}px`);
+  });
+}
+
+if (needed && typeof ResizeObserver !== 'undefined') {
   const ro = new ResizeObserver((entries) => {
     for (const { target, contentRect } of entries) {
       (target as HTMLElement).style.setProperty('--cqw', `${contentRect.width / 100}px`);

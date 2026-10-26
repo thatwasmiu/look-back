@@ -4,6 +4,7 @@ import { MODES, PHOTO_FILTER_CSS, type AlbumBundle, type FrameEl, type PageLayou
 import { useT } from '../i18n';
 import { PageRenderer } from '../render/PageRenderer';
 import { mediaUrl } from '../mediaUrl';
+import { applyContainerUnits } from '../cqPolyfill';
 import { BOOMERANG_SEC, boomerangOrder, canRecordVideo, recordSlideshow, SLIDE_SEC, type Picture } from './slideshow';
 
 // "Share to social": every visible page as a picture sized for a feed post (4:5), a story / TikTok (9:16) — the
@@ -45,10 +46,22 @@ async function settled(root: HTMLElement, maxMs = 3000): Promise<void> {
   }
 }
 
-// Safari (every iPhone browser) paints the photos inside html-to-image's SVG only from the second draw on: the first
-// pictures come out with empty frames. There each picture is drawn a few times and the last one kept.
+// Safari (every iPhone browser) paints the photos inside html-to-image's SVG only once it has decoded them, which can
+// take several draws (older iPhones: more): the first pictures come out with empty frames. There a picture is drawn
+// again, a moment apart, until it stops growing (no photo was added since the last draw), at most MAX_DRAWS times.
 const webkit = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent) && /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium/.test(navigator.userAgent);
-const DRAWS = webkit ? 3 : 1;
+const MAX_DRAWS = webkit ? 8 : 1;
+export async function drawSettled(draw: () => Promise<string>, max = MAX_DRAWS, pauseMs = 250): Promise<string> {
+  let url = await draw();
+  for (let i = 1; i < max; i++) {
+    await new Promise((ok) => setTimeout(ok, pauseMs));
+    const next = await draw();
+    const grew = next.length > url.length * 1.01;
+    url = next.length >= url.length ? next : url; // keep the fuller picture
+    if (!grew && i >= 2) break;
+  }
+  return url;
+}
 
 type Shot = { name: string; url: string };
 
@@ -82,15 +95,14 @@ export function SocialShare({ bundle, onClose, viewLink }: { bundle: AlbumBundle
       const frames = [...stage.current?.querySelectorAll<HTMLElement>('.social-frame') ?? []];
       for (const [i, frame] of frames.entries()) {
         setBusy(t('Making image {n}/{total}…', { n: i + 1, total: frames.length }));
+        applyContainerUnits(frame); // iOS < 16: page-relative sizes (words, borders) before the picture is taken
         await settled(frame);
         const { w, h } = FORMATS[format];
         const opts = { quality: 0.92, pixelRatio: 1, width: w, height: h, cacheBust: false,
           // html-to-image inlines an <img>'s src but not a <picture>'s AVIF <source>, which the picture would then
           // prefer and can't load: drop the sources.
           filter: (n: HTMLElement) => n.nodeName !== 'SOURCE' };
-        let url = '';
-        for (let d = 0; d < DRAWS; d++) url = await toJpeg(frame, opts);
-        out.push({ name: name(i), url });
+        out.push({ name: name(i), url: await drawSettled(() => toJpeg(frame, opts)) });
       }
       return out;
     } catch {

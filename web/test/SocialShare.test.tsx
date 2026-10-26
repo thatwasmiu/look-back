@@ -74,3 +74,16 @@ test('Make video is only offered where the browser can record one', () => {
   render(<SocialShare bundle={bundle()} onClose={() => {}} />);
   expect(screen.queryByRole('button', { name: 'Make video' })).toBeNull(); // jsdom records nothing
 });
+
+test('on Safari a picture is drawn again until it stops growing (photos still decoding), keeping the fullest one', async () => {
+  const { drawSettled } = await import('../src/viewer/SocialShare');
+  const sizes = ['a'.repeat(100), 'a'.repeat(300), 'a'.repeat(600), 'a'.repeat(600), 'a'.repeat(600), 'a'.repeat(900)];
+  let n = 0;
+  const draw = vi.fn(async () => sizes[n++]);
+  const url = await drawSettled(draw, 8, 0);
+  expect(url).toHaveLength(600);
+  expect(draw).toHaveBeenCalledTimes(4); // stopped once a draw added nothing
+  const once = vi.fn(async () => 'x');
+  expect(await drawSettled(once, 1, 0)).toBe('x');
+  expect(once).toHaveBeenCalledTimes(1); // elsewhere: one draw
+});
