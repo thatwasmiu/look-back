@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, type CSSProperties } from 'react';
 import { toJpeg } from 'html-to-image';
 import { MODES, PHOTO_FILTER_CSS, type AlbumBundle, type FrameEl, type PageLayout } from '@scrapbook/shared';
 import { useT } from '../i18n';
-import { PageRenderer } from '../render/PageRenderer';
+import { SpaceTile, tileCount } from '../render/SpaceTile';
 import { mediaUrl } from '../mediaUrl';
 import { applyContainerUnits } from '../cqPolyfill';
 import { BOOMERANG_SEC, boomerangOrder, canRecordVideo, recordSlideshow, SLIDE_SEC, type Picture } from './slideshow';
@@ -68,7 +68,10 @@ type Shot = { name: string; url: string };
 // viewLink: the album's view-only link, if there is one (the owner's share link, or the link a viewer came in by).
 export function SocialShare({ bundle, onClose, viewLink }: { bundle: AlbumBundle; onClose(): void; viewLink?: string | null }) {
   const t = useT();
-  const pages = useMemo(() => bundle.pages.filter((p) => !p.layout.hidden), [bundle.pages]);
+  // One picture per page — a space gives one per tile of its length (a carousel: part 1, 2, … in order).
+  const pages = useMemo(() => bundle.pages.filter((p) => !p.layout.hidden)
+    .flatMap((p) => Array.from({ length: tileCount(p.layout) }, (_, tile) => ({ id: `${p.id}:${tile}`, layout: p.layout, tile }))), [bundle.pages]);
+  const parts = !!bundle.pages.some((p) => p.layout.space);
   const media = useMemo(() => new Map(bundle.media.map((m) => [m.id, m])), [bundle.media]);
   const [format, setFormat] = useState<SocialFormat>('post');
   const [picked, setPicked] = useState(() => new Set(pages.map((p) => p.id)));
@@ -128,7 +131,7 @@ export function SocialShare({ bundle, onClose, viewLink }: { bundle: AlbumBundle
   const makeBoomerang = async () => {
     setError(null);
     reset();
-    const shots = chosen.flatMap((p) => shotsOf(p.layout));
+    const shots = chosen.flatMap((p) => (p.tile ? [] : shotsOf(p.layout)));
     if (shots.length < 2) { setError(t('A boomerang needs at least two photos on the chosen pages.')); return; }
     const { w, h } = FORMATS[format];
     const order = boomerangOrder(shots);
@@ -206,7 +209,7 @@ export function SocialShare({ bundle, onClose, viewLink }: { bundle: AlbumBundle
             <label key={p.id}>
               <input type="checkbox" checked={picked.has(p.id)} disabled={!!busy}
                 onChange={() => { reset(); setPicked((s) => { const n = new Set(s); if (n.has(p.id)) n.delete(p.id); else n.add(p.id); return n; }); }} />
-              {t('Page {n}', { n: i + 1 })}
+              {t(parts ? 'Part {n}' : 'Page {n}', { n: i + 1 })}
             </label>
           ))}
         </div>
@@ -242,11 +245,11 @@ export function SocialShare({ bundle, onClose, viewLink }: { bundle: AlbumBundle
               {format === 'story' && <>
                 <div className="social-band social-title" style={{ height: fit.top }}>{bundle.album.title}</div>
                 <div className="social-band social-foot" style={{ top: fit.top + fit.height, height: h - fit.top - fit.height }}>
-                  {t('Page {n} / {total}', { n: pages.indexOf(p) + 1, total: pages.length })}
+                  {t(parts ? '{n} / {total}' : 'Page {n} / {total}', { n: pages.indexOf(p) + 1, total: pages.length })}
                 </div>
               </>}
               <div className="social-page" style={{ left: fit.left, top: fit.top, width: fit.width, height: fit.height } as CSSProperties}>
-                <PageRenderer layout={p.layout} media={media} mode="view" active={false} />
+                <SpaceTile layout={p.layout} media={media} index={p.tile} />
               </div>
             </div>
           ))}

@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ALBUM_MODES, MODES, type AlbumMode, type AlbumSummary, type ReadingDirection } from '@scrapbook/shared';
+import { ALBUM_MODES, MODES, spaceLayout, type AlbumMode, type SpaceShape, type AlbumSummary, type ReadingDirection } from '@scrapbook/shared';
 import { api, ApiError } from '../api';
 import { exampleAlbum, exampleCover } from '../example/lookBack';
 import { albumTemplates } from '../example/albumTemplates';
 import { stickers } from '../render/decor';
 import { PageRenderer } from '../render/PageRenderer';
+import { SpaceTile } from '../render/SpaceTile';
 import { LangSwitch, getLang, useT } from '../i18n';
 import { mediaUrl } from '../mediaUrl';
 import { QrCode } from '../QrCode';
@@ -26,6 +27,7 @@ const MODE_BUTTON: Record<AlbumMode, { label: string; blurb: string }> = {
   scrapbook: { label: 'New scrapbook album', blurb: 'Photos on paper, tape and stickers' },
   manga: { label: 'New manga album', blurb: 'Comic panels, speech bubbles and sound effects' },
   photobooth: { label: 'New photobooth album', blurb: 'Photo strips and booth prints, shot in a row' },
+  space: { label: 'New space album', blurb: 'One space, many photos: a long wall or a strip' },
 };
 
 // Cover photo if one is set; otherwise the album's first page stands in, drawn small.
@@ -34,7 +36,7 @@ function AlbumCover({ a }: { a: AlbumSummary }) {
   if (!a.coverPage) return <div className="blank" />;
   return (
     <div className="blank cover-page">
-      <PageRenderer layout={a.coverPage.layout} media={new Map(a.coverPage.media.map((m) => [m.id, m]))} mode="view" active={false} />
+      <SpaceTile layout={a.coverPage.layout} media={new Map(a.coverPage.media.map((m) => [m.id, m]))} />
     </div>
   );
 }
@@ -62,6 +64,7 @@ export default function AlbumList() {
   // page and their editor offers only Booth pages; they have their own templates and no AI.
   const [mode, setMode] = useState<AlbumMode>('scrapbook');
   const [direction, setDirection] = useState<ReadingDirection>('ltr');
+  const [shape, setShape] = useState<Extract<SpaceShape, 'vertical' | 'horizontal'>>('vertical'); // a space album's
   const pickMode = (m: AlbumMode) => { setMode(m); setFrom(''); };
   const info = MODES[mode];
   const sameMode = albums?.filter((a) => (a.mode ?? 'scrapbook') === mode) ?? [];
@@ -157,7 +160,10 @@ export default function AlbumList() {
     if (!title.trim()) return;
     try {
       const [kind, id] = from.split(':');
-      const design = kind === 'tpl' ? albumTemplates.find((t) => t.id === id)?.design(direction) : undefined;
+      const design = kind === 'tpl' ? albumTemplates.find((t) => t.id === id)?.design(direction)
+        // An empty space album: its one page, as a wall or a strip.
+        : info.space && !kind ? { backgroundColor: 'walnut' as const, backgroundEffect: 'none' as const, mode, pages: [spaceLayout(shape)] }
+        : undefined;
       const source = design ? { design } : kind === 'album' ? { fromAlbumId: id } : undefined;
       // A copied album keeps its own mode and direction (server side); a new manga album sends them.
       const a = await api.createAlbum(title.trim(), source, mode !== 'scrapbook' && kind !== 'album'
@@ -203,7 +209,7 @@ export default function AlbumList() {
         </span>
       </header>
       {/* One button per album mode on its own row, so every kind is visible up front; the dialog opens on that mode. */}
-      <div className="new-album-row" style={{ '--modes': ALBUM_MODES.length } as CSSProperties}>
+      <div className="new-album-row" style={{ '--modes': ALBUM_MODES.length, '--phone-cols': ALBUM_MODES.length === 4 ? 2 : Math.min(3, ALBUM_MODES.length) } as CSSProperties}>
         {ALBUM_MODES.map((m) => (
           <button key={m} type="button" aria-label={t(MODE_BUTTON[m].label)} onClick={() => { pickMode(m); setCreating(true); }}>
             <span className="new-album-name"><span className="plus" aria-hidden>＋</span> {MODES[m].name}</span>
@@ -252,6 +258,15 @@ export default function AlbumList() {
                 <button key={m} type="button" role="radio" aria-checked={mode === m} onClick={() => pickMode(m)}>{MODES[m].name}</button>
               ))}
             </div>
+            {info.space && (
+              <div className="mode-switch" role="radiogroup" aria-label={t('Shape')}>
+                {(['vertical', 'horizontal'] as const).map((sh) => (
+                  <button key={sh} type="button" role="radio" aria-checked={shape === sh} onClick={() => setShape(sh)}>
+                    {sh === 'vertical' ? '↕' : '↔'} {t(sh === 'vertical' ? 'Vertical wall' : 'Horizontal strip')}
+                  </button>
+                ))}
+              </div>
+            )}
             {info.readingDirection && (
               <div className="mode-switch" role="radiogroup" aria-label={t('Reading direction')}>
                 {(['ltr', 'rtl'] as const).map((d) => (

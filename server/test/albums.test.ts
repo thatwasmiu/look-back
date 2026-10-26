@@ -210,3 +210,20 @@ describe('albums', () => {
     expect((await call('PATCH', `/api/albums/${a.id}`, { backgroundColor: 'neon' })).statusCode).toBe(400);
   });
 });
+
+describe('space albums', () => {
+  it('a space album is its one page: created as a strip from the design, no second page, guests keep its shape', async () => {
+    const page = { background: 'paper-cream', space: { shape: 'horizontal', cols: 3, rows: 1 },
+      elements: [{ type: 'frame', id: 'f', x: 2.2, y: 0.2, w: 0.5, h: 0.4, rotation: 0, z: 1, frameStyle: 'plain', mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } }] };
+    const res = await call('POST', '/api/albums', { title: 'Đà Lạt', design: { backgroundColor: 'walnut', backgroundEffect: 'none', mode: 'space', pages: [page] } });
+    expect(res.statusCode).toBe(201);
+    expect(res.json().mode).toBe('space');
+    const b = (await call('GET', `/api/albums/${res.json().id}`)).json();
+    expect(b.pages).toHaveLength(1);
+    expect(b.pages[0].layout.space).toEqual({ shape: 'horizontal', cols: 3, rows: 1 });
+    expect((await call('POST', `/api/albums/${res.json().id}/pages`, { templateId: 'space-vertical' })).statusCode).toBe(400);
+    // an empty one starts as a wall
+    const empty = (await call('POST', '/api/albums', { title: 'Tường', mode: 'space' })).json();
+    expect((await call('GET', `/api/albums/${empty.id}`)).json().pages[0].layout.space.shape).toBe('vertical');
+  });
+});

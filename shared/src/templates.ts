@@ -1,4 +1,4 @@
-import type { FrameEl, PageElement, PageLayout, TapeEl, TextEl } from './layout'
+import type { FrameEl, PageElement, PageLayout, SpaceShape, TapeEl, TextEl } from './layout'
 import { mangaTemplates } from './mangaTemplates'
 import { STICKER_IDS } from './stickerIds'
 
@@ -307,8 +307,20 @@ export const templates: Template[] = ([
   ]),
 ] satisfies Template[]).map((t) => ({ ...t, ai: SCRAPBOOK_AI[t.id] }))
 
-// Scrapbook page templates first, then manga page layouts.
-export const findTemplate = (id: string): Template | undefined => templates.find((x) => x.id === id) ?? mangaTemplates.find((x) => x.id === id)
+// A space album's one page: an empty space of `len` tiles with the title at the top of the first.
+export const spaceLayout = (shape: SpaceShape, len = 3): PageLayout => ({
+  background: 'paper-cream',
+  space: { shape, cols: shape === 'horizontal' ? len : 1, rows: shape === 'vertical' ? len : 1 },
+  elements: [{ type: 'text', id: 'title', x: 0.1, y: 0.04, w: 0.8, h: 0.1, rotation: -1, z: 5, text: 'Tiêu đề', font: 'dancing-script', size: 0.07, color: '#3b2a1a' }],
+})
+export const spaceTemplates: Template[] = [
+  { id: 'space-vertical', name: 'Vertical wall', layout: spaceLayout('vertical') },
+  { id: 'space-horizontal', name: 'Horizontal strip', layout: spaceLayout('horizontal') },
+]
+
+// Scrapbook page templates first, then manga page layouts, then spaces.
+export const findTemplate = (id: string): Template | undefined =>
+  templates.find((x) => x.id === id) ?? mangaTemplates.find((x) => x.id === id) ?? spaceTemplates.find((x) => x.id === id)
 
 export function instantiateTemplate(id: string, newId: () => string): PageLayout {
   const t = findTemplate(id)

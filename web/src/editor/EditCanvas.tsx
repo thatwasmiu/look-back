@@ -84,9 +84,10 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
     pageRef.current!.querySelector<HTMLElement>('.page')!,
     ...[...pageRef.current!.querySelectorAll<HTMLElement>('.el-frame, .el-text')].filter((n) => n !== target),
   ] : [];
+  // One page's size in px — a tile's on a space, whose items are in tile units.
   const size = () => {
     const r = pageRef.current!.querySelector('.page')!.getBoundingClientRect();
-    return { W: r.width, H: r.height };
+    return { W: r.width / (layout.space?.cols ?? 1), H: r.height / (layout.space?.rows ?? 1) };
   };
   const begin = () => { start.current = selected; };
   // flushSync: Moveable re-measures the target right after each event, so the DOM must already be updated.
@@ -189,8 +190,8 @@ export function EditCanvas({ layout, media, selectedId, onSelect, onCommit, onFr
     : null;
 
   return (
-    <div className={`edit-page${editingId ? ' editing' : ''}`} ref={pageRef} onPointerDown={onPointerDown}
-      style={{ '--zoom': String(zoom) } as CSSProperties}
+    <div className={`edit-page${editingId ? ' editing' : ''}${layout.space ? ` edit-space space-${layout.space.shape}` : ''}`} ref={pageRef} onPointerDown={onPointerDown}
+      style={{ '--zoom': String(zoom), ...(layout.space && { aspectRatio: `${3 * layout.space.cols} / ${4 * layout.space.rows}` }) } as CSSProperties}
       onDoubleClick={(e) => startEditing((e.target as Element).closest('[data-el]')?.getAttribute('data-el') ?? null)}>
       <PageRenderer layout={shown} media={media} mode="edit" renderOverlay={renderOverlay} />
       <Moveable ref={moveableRef} target={target} className="editor-moveable" zoom={coarse ? 1.7 : 1}

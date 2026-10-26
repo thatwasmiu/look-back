@@ -193,6 +193,11 @@ describe('guestEditAllowed', () => {
     expect(guestEditAllowed(a, pinned)).toBe(false);
     const rotated = structuredClone(a); (rotated.elements[0] as { rotation: number }).rotation = 3;
     expect(guestEditAllowed(a, rotated)).toBe(false);
+    // a space's shape and size are structure too
+    const wall = { ...a, space: { shape: 'vertical' as const, cols: 1, rows: 3 } };
+    expect(guestEditAllowed(wall, structuredClone(wall))).toBe(true);
+    expect(guestEditAllowed(wall, { ...wall, space: { shape: 'vertical' as const, cols: 1, rows: 4 } })).toBe(false);
+    expect(guestEditAllowed(wall, { ...wall, space: { shape: 'horizontal' as const, cols: 3, rows: 1 } })).toBe(false);
   });
 });
 

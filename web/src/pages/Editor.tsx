@@ -168,8 +168,10 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
   const navigate = useNavigate();
   const layout = hist.present;
   // Async page ops read the state as it is after their awaits, not as it was when they started.
-  const latest = useRef({ pages, cur, layout, busy });
-  latest.current = { pages, cur, layout, busy };
+  // The mode's page limit reached (a space album: its one page): no "+ page".
+  const full = info.maxPages !== null && pages.length >= info.maxPages;
+  const latest = useRef({ pages, cur, layout, busy, full });
+  latest.current = { pages, cur, layout, busy, full };
   const nav = useRef({ switchTo: (_i: number): Promise<void> => Promise.resolve() }); // filled below; read by the key handler
 
   // Each page's version as last loaded/saved here. Someone else (the owner and an edit-link guest, two devices)
@@ -482,7 +484,7 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
         // Nothing selected: ← / → flip pages (→ on the last page offers a new one, like the round button).
         // With an item selected the arrows nudge it instead (below).
         const { cur: c, pages: ps } = latest.current;
-        if (e.key === 'ArrowRight') { e.preventDefault(); if (c < ps.length - 1) void nav.current.switchTo(c + 1); else if (!guest) setPicking(true); }
+        if (e.key === 'ArrowRight') { e.preventDefault(); if (c < ps.length - 1) void nav.current.switchTo(c + 1); else if (!guest && !latest.current.full) setPicking(true); }
         if (e.key === 'ArrowLeft' && c > 0) { e.preventDefault(); void nav.current.switchTo(c - 1); }
         return;
       }
@@ -550,6 +552,7 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
           status={status} save={() => void flush().then((ok) => ok && setOpError(null))}
           crop={() => setCropId(selectedId)} editShape={() => setShapeId(selectedId)} zoom={zoom} setZoom={setZoom} snap={snap} setSnap={setSnap} frameMedia={selected?.type === 'frame' && selected.mediaId ? media.get(selected.mediaId) ?? null : null} bgEffect={bgEffect} setBgEffect={setBgEffect} bgColor={bgColor} setBgColor={setBgColor}
           mode={mode} readingDirection={readingDirection} setReadingDirection={setReadingDirection}
+          albumPhotos={page?.layout.space ? [...trayMedia].reverse().filter((m) => m.status !== 'failed' && (m.kind === 'image' || m.kind === 'video')).map((m) => m.id) : undefined}
           music={musicId ? media.get(musicId) ?? null : null} onMusicFile={(f) => upload.add([f], MUSIC)} onMusicRemove={removeMusic} />
       )}
       <div className="edit-main">
@@ -567,7 +570,7 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
           {/* Next page; on the last page it offers a new one (same template picker as the strip's "+"). */}
           {page && (cur < pages.length - 1
             ? <button type="button" className="page-next" aria-label={tr('Next page')} title={tr('Next page')} onClick={() => void switchTo(cur + 1)}>→</button>
-            : !guest && <button type="button" className="page-next" aria-label={tr('New page')} title={tr('New page')} onClick={() => setPicking(true)}>+</button>)}
+            : !guest && !full && <button type="button" className="page-next" aria-label={tr('New page')} title={tr('New page')} onClick={() => setPicking(true)}>+</button>)}
           {canShootSet && !cameraFrame && (
             <span className="shoot-set-bar">
               <button type="button" className="shoot-set-btn" onClick={() => (setLayout ? shootSet(setLayout) : setShootPick(true))}>📸 {tr('Shoot a new set')}</button>
@@ -633,7 +636,8 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
       </div>
       {opError && <p role="alert" className="error op-error">{opError}</p>}
       {layout.hidden && <p className="hidden-note" role="status">{tr('This page is hidden — not shown when viewing, sharing or printing.')}</p>}
-      <nav className={`page-strip${pagesOpen ? ' open' : ''}`} aria-label={tr('Pages')}>
+      {/* A space album is its one page: no strip of pages. */}
+      {!info.space && <nav className={`page-strip${pagesOpen ? ' open' : ''}`} aria-label={tr('Pages')}>
         <button type="button" className="strip-tab" aria-expanded={pagesOpen} onClick={() => setPagesOpen((v) => !v)}>
           {tr('Pages')} ({pages.length}) <span aria-hidden>{pagesOpen ? '▾' : '▸'}</span>
         </button>
@@ -665,7 +669,7 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
           {!guest && <button type="button" className="thumb-add" aria-label={tr('Add page')} aria-expanded={picking} onClick={() => setPicking((v) => !v)}>+</button>}
         </div>
         )}
-      </nav>
+      </nav>}
       {confirmDelete && (
         <div className="inline-confirm" role="alertdialog" aria-label={tr('Delete page')}>
           {tr('Delete page {n}? Its photos stay in the album.', { n: cur + 1 })}

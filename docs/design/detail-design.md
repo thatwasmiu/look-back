@@ -258,6 +258,15 @@ Vietnamese (missing entries fall back to English; `{name}` placeholders). `useT(
   screen start screen with layouts, a thank-you after each set); guests of an edit link may `POST /api/albums/:id/pages`
   with a Booth layout (appended at the end; other modes → 403) and the Share box shows the edit link as a QR code
   (`qrcode`, drawn in the browser).
+- **Space albums** (mode `space`, round 1 of `docs/superpowers/specs/2026-10-26-space-mode-design.md`): one page with
+  `layout.space = { shape, cols, rows }` (vertical wall 1 × rows, horizontal strip cols × 1, ≤ 30 tiles of one 3:4
+  page). Items are in tile units; `PageRenderer` places them at x / cols, y / rows and sets `--cqw / --cqh` to one
+  tile (`calc(1cqw / cols)`; the iOS < 16 polyfill divides by `data-cols / data-rows`), so text and borders keep a
+  page's proportions. Editor: no page strip, the stage scrolls; **🧩 Space**: shape (tiles map across), Longer /
+  Shorter (`spaceOps.ts`, never below the items' reach), Arrange grid / scatter (seeded by photo id). Viewer:
+  `SpaceView` scrolls the space, tap a photo → `PhotoViewer`. `SpaceTile` cuts one tile for album cards, the share
+  carousel (one picture per tile) and print (one sheet per tile). The server refuses a second page (`maxPages`) and
+  guests can't change `space`.
 - **Frame camera self-timer:** ⏱ cycles off / 3 / 5 / 10 s; Shoot or Record then counts down on screen, tapping
   again cancels.
 - **Uploads** (`useUpload.ts`): one app-wide Uppy + tus instance (survives leaving the editor), resumable, local

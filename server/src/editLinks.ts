@@ -28,6 +28,7 @@ export async function guestAlbum(pool: pg.Pool, req: FastifyRequest): Promise<st
 // paper are free.
 export function guestEditAllowed(before: PageLayout, after: PageLayout): boolean {
   if (!!before.hidden !== !!after.hidden) return false;
+  if (canon(before.space ?? null) !== canon(after.space ?? null)) return false; // a space's shape and size are structure
   const frames = (l: PageLayout) => new Map(l.elements.flatMap((e) => (e.type === 'frame' ? [[e.id, e] as const] : [])));
   const b = frames(before), a = frames(after);
   if (a.size !== b.size) return false;

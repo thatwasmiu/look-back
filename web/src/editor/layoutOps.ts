@@ -1,23 +1,26 @@
 // Pure edits on a PageLayout: every function returns a new layout (or the same one when nothing changes).
-import type { EffectEl, FrameEl, PageElement, PageLayout, StickerEl, TapeEl, TextEl } from '@scrapbook/shared';
+import { MAX_TILES, type EffectEl, type FrameEl, type PageElement, type PageLayout, type StickerEl, type TapeEl, type TextEl } from '@scrapbook/shared';
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
-// Schema bounds: x,y ∈ [-0.5,1.5], w,h ∈ (0,1.5], rotation ∈ [-180,180].
-const clampGeometry = <E extends PageElement>(e: E): E => ({
+// Schema bounds: x,y ∈ [-0.5, size + 0.5], w,h ∈ (0, size + 0.5], rotation ∈ [-180,180]; size is 1 on a page and the
+// space's cols / rows in tiles (a space's items use tile units).
+const clampGeometry = <E extends PageElement>(e: E, cols = MAX_TILES, rows = MAX_TILES): E => ({
   ...e,
-  x: clamp(e.x, -0.5, 1.5), y: clamp(e.y, -0.5, 1.5),
-  w: clamp(e.w, 0.01, 1.5), h: clamp(e.h, 0.01, 1.5),
+  x: clamp(e.x, -0.5, cols + 0.5), y: clamp(e.y, -0.5, rows + 0.5),
+  w: clamp(e.w, 0.01, cols + 0.5), h: clamp(e.h, 0.01, rows + 0.5),
   rotation: e.rotation >= -180 && e.rotation <= 180 ? e.rotation : ((((e.rotation + 180) % 360) + 360) % 360) - 180,
 });
 
+const size = (l: PageLayout) => [l.space?.cols ?? 1, l.space?.rows ?? 1] as const;
+
 export function addElement(l: PageLayout, el: PageElement): PageLayout {
   const z = Math.max(0, ...l.elements.map((e) => e.z)) + 1;
-  return { ...l, elements: [...l.elements, { ...el, z }] };
+  return { ...l, elements: [...l.elements, clampGeometry({ ...el, z }, ...size(l))] };
 }
 
 export function updateElement(l: PageLayout, id: string, patch: Partial<PageElement>): PageLayout {
   if (!l.elements.some((e) => e.id === id)) return l;
-  return { ...l, elements: l.elements.map((e) => (e.id === id ? clampGeometry({ ...e, ...patch } as PageElement) : e)) };
+  return { ...l, elements: l.elements.map((e) => (e.id === id ? clampGeometry({ ...e, ...patch } as PageElement, ...size(l)) : e)) };
 }
 
 export function removeElement(l: PageLayout, id: string): PageLayout {

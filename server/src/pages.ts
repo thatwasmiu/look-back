@@ -56,6 +56,7 @@ export function registerPages(app: FastifyInstance, pool: pg.Pool): void {
         const info = MODES[a.rows[0].mode as AlbumMode] ?? MODES.scrapbook;
         if (guest && (!info.guestSets || !info.pageTemplates.some((t) => t.id === req.body.templateId))) return 'forbidden' as const;
         const { rows } = await c.query('select count(*)::int as n from pages where album_id = $1', [req.params.id]);
+        if (info.maxPages !== null && rows[0].n >= info.maxPages) return 'full' as const;
         const pos = guest ? rows[0].n : Math.min(req.body.position ?? rows[0].n, rows[0].n);
         await c.query('update pages set position = position + 1 where album_id = $1 and position >= $2', [req.params.id, pos]);
         const ins = await c.query(
@@ -65,6 +66,7 @@ export function registerPages(app: FastifyInstance, pool: pg.Pool): void {
         return ins.rows[0];
       });
       if (row === 'forbidden') return reply.code(403).send({ error: 'Link sửa không cho thêm trang ở album này.' });
+      if (row === 'full') return reply.code(400).send({ error: 'Album này chỉ có một trang.' });
       return row ? reply.code(201).send(toPageDTO(row)) : reply.code(404).send({ error: 'not found' });
     },
   );

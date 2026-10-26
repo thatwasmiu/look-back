@@ -251,6 +251,10 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .album-fx-option[aria-pressed='true'] { outline: 3px solid var(--accent); }
 .edit-stage { flex: 1; min-height: 0; container-type: size; display: grid; place-items: safe center; overflow: auto; isolation: isolate; /* Moveable's z-index stays under the tools */ }
 .edit-page { position: relative; width: calc(min(100cqw - 24px, (100cqh - 24px) * .75) * var(--zoom, 1)); touch-action: none; }
+/* A space: a wall as wide as the stage allows (scrolled down), a strip as tall as the stage (scrolled sideways). */
+.edit-page.space-vertical { width: calc(min(100cqw - 24px, 760px) * var(--zoom, 1)); align-self: start; }
+.edit-page.space-horizontal { width: auto; height: calc((100cqh - 24px) * var(--zoom, 1)); justify-self: start; }
+.edit-stage:has(.edit-space) { place-items: start center; }
 .el-text:has(.text-editing) > .text:not(.text-editing) { visibility: hidden; }
 /* Manga bubbles / narration / sound effects: the bubble or box stays; only its own drawn words hide while typing,
    and the typed text sits where they were (centred, same padding). */
@@ -595,6 +599,28 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .qr-hint { display: block; text-align: center; opacity: .8; }
 .shoot-next { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
 
+/* One page-sized tile cut out of a space (album card, carousel slide, printed sheet). */
+.space-tile { position: relative; width: 100%; aspect-ratio: 3 / 4; overflow: hidden; }
+.space-tile-inner { position: absolute; }
+/* ---- Space albums (viewer): one long page, scrolled; tap a photo to see it big ---- */
+.space-stage { display: block; overflow: auto; container-type: normal; padding: 16px; -webkit-overflow-scrolling: touch; }
+.space-vertical .space-board { width: min(100%, 760px); margin: 0 auto; }
+.space-horizontal { display: flex; align-items: stretch; overflow-y: hidden; }
+.space-horizontal .space-board { flex: none; height: 100%; width: auto; }
+.space-horizontal .space-board::after { content: ''; } /* keep the right padding inside the scroll area */
+.space-stage .el-frame { cursor: zoom-in; }
+.photo-viewer { position: fixed; inset: 0; z-index: 950; display: grid; place-items: center; background: #000d; touch-action: none; }
+.photo-viewer > img { max-width: 100vw; max-height: 100vh; object-fit: contain; user-select: none; }
+.photo-viewer-video { position: relative; width: min(100vw, 1200px); aspect-ratio: 16 / 9; max-height: 100vh; }
+.photo-viewer-count { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); color: #fff; font-size: .95rem; opacity: .85; }
+.photo-viewer-close { position: absolute; top: 10px; right: 10px; width: 2.6rem; height: 2.6rem; padding: 0; border-radius: 50%;
+  background: #fff2; color: #fff; font-size: 1.6rem; }
+.photo-viewer-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 3rem; height: 3rem; padding: 0; border-radius: 50%;
+  background: #fff2; color: #fff; font-size: 2rem; line-height: 1; }
+.photo-viewer-nav.prev { left: 10px; }
+.photo-viewer-nav.next { right: 10px; }
+.photo-viewer-nav:disabled { opacity: .25; }
+
 .new-album-row { display: grid; grid-template-columns: repeat(var(--modes, 3), minmax(0, 18rem)); gap: .75rem; margin: 0 0 1.25rem; }
 .new-album-row button { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: .15rem;
   padding: .7rem 1rem; text-align: left; border-radius: 10px; }
@@ -602,7 +628,7 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .new-album-row small { font-size: .85rem; opacity: .9; line-height: 1.25; }
 /* Phones: three equal buttons in one row, the name only (the description is the button's tooltip-free extra). */
 @media (max-width: 640px) {
-  .new-album-row { grid-template-columns: repeat(min(var(--modes, 3), 3), minmax(0, 1fr)); gap: .5rem; }
+  .new-album-row { grid-template-columns: repeat(var(--phone-cols, 3), minmax(0, 1fr)); gap: .5rem; }
   .new-album-row button { align-items: center; justify-content: center; padding: .6rem .35rem; text-align: center; }
   .new-album-name { display: flex; flex-direction: column; align-items: center; font-size: .95rem; line-height: 1.15; white-space: nowrap; }
   .new-album-name .plus { font-size: 1.3rem; line-height: 1; }

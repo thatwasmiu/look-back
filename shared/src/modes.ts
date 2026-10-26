@@ -1,5 +1,5 @@
 import type { AlbumMode } from './layout'
-import { templates, type Template } from './templates'
+import { spaceTemplates, templates, type Template } from './templates'
 import { mangaTemplates } from './mangaTemplates'
 
 // Everything that differs between album modes, in one place: a new mode is one more entry here (plus its id in
@@ -13,16 +13,23 @@ import { mangaTemplates } from './mangaTemplates'
 //  shootFirst: the editor leads with "Shoot a new set" (a new page shot in one go with the photobooth camera).
 //  boomerang: Share offers a boomerang video of each page's shots.
 //  guestSets: someone with the edit link may add pages (of pageTemplates, at the end) — each guest shoots their own set.
+//  maxPages: the most pages the album may have (null: no limit); the editor hides "+ page" and the server refuses more.
+//  space: the album's one page is a space (layout.space): scrolled through instead of turned like a book.
 export type ModeInfo = {
   name: string; firstPage: string; pageTemplates: Template[]; ai: boolean; readingDirection: boolean; photoFilters: boolean; shootFirst: boolean
-  boomerang: boolean; guestSets: boolean
+  boomerang: boolean; guestSets: boolean; maxPages: number | null; space: boolean
 }
+const BOOK = { maxPages: null, space: false } as const
 
 export const MODES: Record<AlbumMode, ModeInfo> = {
-  scrapbook: { name: 'Scrapbook', firstPage: 'cover', pageTemplates: templates, ai: true, readingDirection: false, photoFilters: false, shootFirst: false, boomerang: false, guestSets: false },
-  manga: { name: 'Manga', firstPage: 'manga-cover', pageTemplates: mangaTemplates, ai: true, readingDirection: true, photoFilters: false, shootFirst: false, boomerang: false, guestSets: false },
+  scrapbook: { name: 'Scrapbook', firstPage: 'cover', pageTemplates: templates, ai: true, readingDirection: false, photoFilters: false, shootFirst: false, boomerang: false, guestSets: false, ...BOOK },
+  manga: { name: 'Manga', firstPage: 'manga-cover', pageTemplates: mangaTemplates, ai: true, readingDirection: true, photoFilters: false, shootFirst: false, boomerang: false, guestSets: false, ...BOOK },
   photobooth: {
     name: 'Photobooth', firstPage: 'booth-strips-3', ai: false, readingDirection: false, photoFilters: true, shootFirst: true, boomerang: true, guestSets: true,
-    pageTemplates: templates.filter((t) => t.id.startsWith('booth-')),
+    pageTemplates: templates.filter((t) => t.id.startsWith('booth-')), ...BOOK,
+  },
+  space: {
+    name: 'Space', firstPage: 'space-vertical', pageTemplates: spaceTemplates, ai: false, readingDirection: false, photoFilters: false,
+    shootFirst: false, boomerang: false, guestSets: false, maxPages: 1, space: true,
   },
 }

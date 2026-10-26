@@ -5,6 +5,7 @@ import { Tape, fontFamily, frameStyleLabels, stickers, tapeStyles } from '../ren
 import { FrameView } from '../render/FrameView';
 import { mediaUrl } from '../mediaUrl';
 import { MangaAddItems, MangaPanelTools, MangaPickerContent, MangaTextTools, type MangaPicker } from '../manga/MangaTools';
+import { arrange, minLength, resizeSpace, setShape } from './spaceOps';
 import { addElement, assignMedia, bringForward, duplicate, newEffect, newFrame, newSticker, newTape, newText, removeElement, sendBackward, setFrameStyle, updateElement } from './layoutOps';
 import type { SaveStatus } from './useAutosave';
 import { TrimPanel } from './TrimPanel';
@@ -25,6 +26,7 @@ type Props = {
   music?: MediaDTO | null; onMusicFile?(f: File): void; onMusicRemove?(): void; // album background music
   mode?: AlbumMode; readingDirection?: ReadingDirection; setReadingDirection?(d: ReadingDirection): void; // manga albums
   guest?: boolean; // edit-link guest: no frame/panel tools, no album settings (the server refuses those changes)
+  albumPhotos?: string[]; // a space's 🧩 Arrange: the album's photos/videos (newest last), the ones not placed yet go on
 };
 
 const FILTER_NAME = { bw: 'Black & white', sepia: 'Sepia', film: 'Film', warm: 'Warm' } as const;
@@ -44,11 +46,12 @@ const statusLabel: Record<SaveStatus, string> = { saved: 'Saved', saving: 'Savin
 
 // Laptop: a bar above the page. Phone (coarse pointer or < 700px, see CSS): a sheet pinned to the bottom,
 // pickers open above it.
-export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo, status, save, crop, zoom, setZoom, snap, setSnap, frameMedia = null, bgEffect, setBgEffect, bgColor, setBgColor, editShape, music = null, onMusicFile, onMusicRemove, mode = 'scrapbook', readingDirection = 'ltr', setReadingDirection, guest = false }: Props) {
+export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo, status, save, crop, zoom, setZoom, snap, setSnap, frameMedia = null, bgEffect, setBgEffect, bgColor, setBgColor, editShape, music = null, onMusicFile, onMusicRemove, mode = 'scrapbook', readingDirection = 'ltr', setReadingDirection, guest = false, albumPhotos = [] }: Props) {
   const t = useT();
   const manga = mode === 'manga';
   // 'add': the "+ Add" list; picking a kind with choices (frames, stickers, bubbles…) opens that kind's list.
-  const [picker, setPicker] = useState<'add' | 'frame' | 'frameStyle' | 'sticker' | 'tape' | 'bg' | 'filter' | 'effect' | 'albumFx' | 'font' | 'trim' | MangaPicker | null>(null);
+  const [picker, setPicker] = useState<'add' | 'frame' | 'frameStyle' | 'sticker' | 'tape' | 'bg' | 'filter' | 'space' | 'effect' | 'albumFx' | 'font' | 'trim' | MangaPicker | null>(null);
+  const space = layout.space;
   const toggle = (p: typeof picker) => setPicker((cur) => (cur === p ? null : p));
   const ref = useRef<HTMLDivElement>(null);
   // Music preview while editing: the <audio> lives outside the picker, so it keeps playing once the picker closes.
@@ -174,6 +177,20 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
             <input type="color" className="ink-custom" aria-label={t('Text color')} value={text.color} onChange={(e) => setText({ color: e.target.value }, `color:${text.id}`)} />
             <small className="picker-hint">{t('double-tap text to edit')}</small>
           </>}
+          {picker === 'space' && space && <>
+            {/* A space: its shape, its length, and arranging the album's photos on it. */}
+            {(['vertical', 'horizontal'] as const).map((s) => (
+              <button key={s} type="button" aria-pressed={space.shape === s} onClick={() => commit(setShape(layout, s))}>
+                {s === 'vertical' ? '↕' : '↔'} {t(s === 'vertical' ? 'Vertical' : 'Horizontal')}
+              </button>
+            ))}
+            <button type="button" onClick={() => commit(resizeSpace(layout, 1))}>＋ {t(space.shape === 'horizontal' ? 'Wider' : 'Longer')}</button>
+            <button type="button" disabled={(space.shape === 'horizontal' ? space.cols : space.rows) <= minLength(layout)}
+              onClick={() => commit(resizeSpace(layout, -1))}>− {t(space.shape === 'horizontal' ? 'Narrower' : 'Shorter')}</button>
+            <button type="button" disabled={!albumPhotos.length} onClick={() => { commit(arrange(layout, albumPhotos, 'grid')); setPicker(null); }}>▦ {t('Arrange: grid')}</button>
+            <button type="button" disabled={!albumPhotos.length} onClick={() => { commit(arrange(layout, albumPhotos, 'scatter')); setPicker(null); }}>✶ {t('Arrange: scatter')}</button>
+            <small className="picker-hint">{t('Arrange puts the album\'s photos that are not on the space yet after what is there.')}</small>
+          </>}
           {picker === 'filter' && ([undefined, ...PHOTO_FILTERS] as const).map((f) => (
             <button key={f ?? 'none'} type="button" aria-pressed={layout.filter === f}
               onClick={() => { const { filter: _old, ...rest } = layout; commit(f ? { ...rest, filter: f } : rest); setPicker(null); }}>
@@ -193,6 +210,7 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
           <button type="button" className="add-btn" aria-label={t('Add')} aria-expanded={picker === 'add'} onClick={() => toggle('add')}>＋ {t('Add')}</button>
           {!manga && <button type="button" aria-expanded={picker === 'bg'} onClick={() => toggle('bg')}>{t('Paper')}</button>}
           {mode && MODES[mode].photoFilters && <button type="button" aria-expanded={picker === 'filter'} onClick={() => toggle('filter')}>{t('Filter')}</button>}
+          {space && !guest && <button type="button" aria-expanded={picker === 'space'} onClick={() => toggle('space')}>🧩 {t('Space')}</button>}
           {!guest && <button type="button" aria-expanded={picker === 'albumFx'} onClick={() => toggle('albumFx')}>{t('Background')}</button>}
           {musicPlaying && <button type="button" className="music-btn on" aria-label={t('Pause music')} title={t('Pause music')} onClick={toggleMusic}>♪</button>}
           {/* One way only: unpinning stays per item, so a stray tap can't unlock the whole page. */}

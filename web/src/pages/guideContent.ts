@@ -118,8 +118,16 @@ const vi: Guide = {
         '**🖥 Kiosk** (cạnh **Chụp bộ mới**): toàn màn hình cho máy tính bảng/laptop đặt ở tiệc — khách chọn bố cục, **Chạm để chụp**, mỗi bộ thành một trang, hiện **Cảm ơn!** rồi quay lại. ✕ để thoát.',
         'Tạo **link sửa** cho album photobooth: hộp Chia sẻ hiện **mã QR**. Khách quét bằng điện thoại để tự chụp một bộ vào album (chỉ thêm được trang Booth, vào cuối album).'] },
     ] },
+    { id: 'space', title: '11. Space', features: [
+      { h: 'Một không gian, thật nhiều ảnh', p: [
+        'Bấm **＋ Space**, chọn **Tường dọc** (cuộn xuống) hoặc **Dải ngang** (vuốt ngang). Album Space chỉ có một trang — một không gian dài.',
+        'Trong màn sửa, nút **🧩 Không gian**: **Dọc / Ngang** đổi dạng (ảnh giữ chỗ trong từng đoạn), **Dài hơn / Ngắn hơn** (không bao giờ cắt mất vật đang có), **Xếp ảnh: lưới** hoặc **Xếp ảnh: rải** đặt mọi ảnh của album chưa có trên không gian vào sau những gì đang có.'] },
+      { h: 'Xem và chia sẻ', p: [
+        'Khi xem: cuộn dọc hoặc vuốt ngang; chạm một ảnh để mở to, ← → hoặc vuốt để sang ảnh khác, × hoặc vuốt xuống để đóng.',
+        '**Chia sẻ** cắt không gian thành các phần cỡ một trang (**Phần 1, 2…**) — đăng thành một bài nhiều ảnh (carousel). **PDF** in mỗi phần một tờ.'] },
+    ] },
   ],
-  shortcutsTitle: '11. Phím tắt',
+  shortcutsTitle: '12. Phím tắt',
   shortcuts: [['← / →', 'Chuyển trang (khi không chọn vật nào)'], ['Mũi tên', 'Dịch vật đang chọn'], ['Delete / Backspace', 'Xoá vật đang chọn'],
     ['Ctrl+C / Ctrl+V', 'Sao chép / dán vật; Ctrl+V cũng dán ảnh'], ['Ctrl+Z / Ctrl+Shift+Z', 'Hoàn tác / làm lại'], ['Ctrl + cuộn chuột', 'Phóng to / thu nhỏ trang'], ['Esc', 'Đóng bảng chọn, hộp thoại']],
 };
@@ -236,8 +244,16 @@ const en: Guide = {
         '**🖥 Kiosk** (next to **Shoot a new set**): full screen for a tablet or laptop at a party — guests pick a layout, **Tap to shoot**, each set becomes a page, **Thank you!**, and back to the start. ✕ exits.',
         "Create an **edit link** for a photobooth album: the Share box shows a **QR code**. Guests scan it with their phones and shoot their own set into the album (Booth pages only, added at the end)."] },
     ] },
+    { id: 'space', title: '11. Space', features: [
+      { h: 'One space, lots of photos', p: [
+        'Tap **＋ Space**, pick **Vertical wall** (scrolled down) or **Horizontal strip** (swiped sideways). A space album has one page — one long space.',
+        "In the editor, **🧩 Space**: **Vertical / Horizontal** changes the shape (items keep their place in each part), **Longer / Shorter** (never cuts an item off), **Arrange: grid** or **Arrange: scatter** puts the album's photos that aren't on the space yet after what is there."] },
+      { h: 'Viewing and sharing', p: [
+        'Viewing: scroll down or swipe sideways; tap a photo to see it big, ← → or a swipe for the next, × or a swipe down to close.',
+        '**Share** cuts the space into page-sized parts (**Part 1, 2…**) — one post with several slides (a carousel). **PDF** prints one part per sheet.'] },
+    ] },
   ],
-  shortcutsTitle: '11. Shortcuts',
+  shortcutsTitle: '12. Shortcuts',
   shortcuts: [['← / →', 'Switch pages (nothing selected)'], ['Arrows', 'Nudge the selected item'], ['Delete / Backspace', 'Delete the selected item'],
     ['Ctrl+C / Ctrl+V', 'Copy / paste an item; Ctrl+V also pastes photos'], ['Ctrl+Z / Ctrl+Shift+Z', 'Undo / redo'], ['Ctrl + scroll', 'Zoom the page'], ['Esc', 'Close lists and dialogs']],
 };

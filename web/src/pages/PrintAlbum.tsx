@@ -4,6 +4,7 @@ import type { AlbumBundle } from '@scrapbook/shared';
 import { api } from '../api';
 import { useT } from '../i18n';
 import { PageRenderer } from '../render/PageRenderer';
+import { SpaceTile, tileCount } from '../render/SpaceTile';
 
 // Export: every page one per sheet, then the browser's own print dialog — "Save as PDF" there (on iPhone:
 // Share → Save to Files). Fonts, stickers and photos print exactly as drawn. Videos show their poster.
@@ -45,11 +46,13 @@ export default function PrintAlbum() {
         <h1>{bundle.album.title}</h1>
         <button type="button" disabled={!ready} onClick={() => window.print()}>{t(ready ? 'Print / Save PDF' : 'Getting the photos ready…')}</button>
       </header>
-      {bundle.pages.filter((p) => !p.layout.hidden).map((p) => (
-        <section key={p.id} className="print-sheet">
-          <PageRenderer layout={p.layout} media={media} mode="view" active={false} />
+      {/* One sheet per page; a space prints one sheet per tile of its length. */}
+      {bundle.pages.filter((p) => !p.layout.hidden).flatMap((p) => Array.from({ length: tileCount(p.layout) }, (_, i) => (
+        <section key={`${p.id}-${i}`} className="print-sheet">
+          {p.layout.space ? <SpaceTile layout={p.layout} media={media} index={i} />
+            : <PageRenderer layout={p.layout} media={media} mode="view" active={false} />}
         </section>
-      ))}
+      )))}
     </main>
   );
 }

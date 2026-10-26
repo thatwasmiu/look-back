@@ -816,3 +816,22 @@ test('photobooth: a set on a one-frame layout also ends with the date stamped an
     elements: expect.arrayContaining([expect.objectContaining({ id: 'd', text: expect.stringMatching(/^\d{2}\/\d{2}\/\d{4}$/) })]),
   }), undefined));
 });
+
+test('space album: no page strip or "+ page"; the Space tools change the length and arrange the photos', async () => {
+  const user = userEvent.setup();
+  const { spaceLayout } = await import('@scrapbook/shared');
+  const photo = (id: string) => ({ id, albumId: 'a1', kind: 'image' as const, status: 'ready' as const, width: 800, height: 600, durationSec: null, blurDataUrl: null, variants: { display: 'd.webp', original: 'o.jpg' }, error: null });
+  const b: AlbumBundle = { ...bundle, album: { ...bundle.album, mode: 'space' }, media: [photo('m1'), photo('m2')],
+    pages: [{ id: 'p0', albumId: 'a1', position: 0, layout: spaceLayout('vertical', 2) }] };
+  const api = okApi();
+  render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={b} api={api} /></MemoryRouter>);
+  expect(screen.queryByRole('navigation', { name: 'Pages' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'New page' })).toBeNull();
+  await user.click(screen.getByRole('button', { name: /Space/ }));
+  await user.click(screen.getByRole('button', { name: /Longer/ }));
+  await waitFor(() => expect(api.savePage).toHaveBeenLastCalledWith('p0', expect.objectContaining({ space: { shape: 'vertical', cols: 1, rows: 3 } }), undefined));
+  await user.click(screen.getByRole('button', { name: /Arrange: grid/ })); // the Space list stays open after Longer
+  await waitFor(() => expect(api.savePage).toHaveBeenLastCalledWith('p0', expect.objectContaining({
+    elements: expect.arrayContaining([expect.objectContaining({ mediaId: 'm1' }), expect.objectContaining({ mediaId: 'm2' })]),
+  }), undefined));
+});

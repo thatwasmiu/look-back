@@ -322,3 +322,18 @@ test('Photobooth is a mode of its own: booth templates, no AI; an empty one is c
   expect(body.mode).toBe('photobooth'); // the server starts it on a Booth strips page
   expect(body.design).toBeUndefined();
 });
+
+test('Space: a wall or a strip, made from the design; no AI', async () => {
+  const fetchMock = vi.fn().mockResolvedValueOnce(json(200, []))
+    .mockResolvedValueOnce(json(201, { id: 's1', title: 'Đà Lạt', coverMediaId: null, backgroundEffect: 'none', backgroundColor: 'walnut', shareToken: null, musicMediaId: null, mode: 'space', readingDirection: 'ltr' }));
+  setup(fetchMock);
+  await userEvent.click(await screen.findByRole('button', { name: 'New space album' }));
+  expect(screen.queryByRole('radio', { name: '✨ AI' })).toBeNull();
+  await userEvent.click(screen.getByRole('radio', { name: /Horizontal strip/ }));
+  await userEvent.type(screen.getByLabelText('Album title'), 'Đà Lạt');
+  await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+  const body = JSON.parse(fetchMock.mock.calls[1][1].body);
+  expect(body.design.mode).toBe('space');
+  expect(body.design.pages[0].space).toEqual({ shape: 'horizontal', cols: 3, rows: 1 });
+});

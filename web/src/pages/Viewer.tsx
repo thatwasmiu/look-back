@@ -6,6 +6,7 @@ import { mediaUrl } from '../mediaUrl';
 import { EXAMPLE_ALBUM_ID, exampleAlbum } from '../example/lookBack';
 import { BackgroundEffectView } from '../render/effects';
 import { PageRenderer } from '../render/PageRenderer';
+import { SpaceView } from '../viewer/SpaceView';
 import { planPreload, runPreload } from '../viewer/preload';
 import { nextIndex, prevIndex, visiblePages } from '../viewer/spread';
 import { useT } from '../i18n';
@@ -81,12 +82,14 @@ export function Book({ bundle, shared = false }: { bundle: AlbumBundle; shared?:
         {!shared && <Link to="/">← {t('Albums')}</Link>}
         <h1>{album.title}</h1>
         {musicSrc && <Music src={musicSrc} />}
-        {total > 0 && <span className="counter">{visible.map((i) => i + 1).join('–')} / {total}</span>}
+        {total > 0 && !pages[0].layout.space && <span className="counter">{visible.map((i) => i + 1).join('–')} / {total}</span>}
         {album.id !== EXAMPLE_ALBUM_ID && <button type="button" className="btn secondary" title={t('Share to social media')} aria-label={t('Share to social media')} onClick={() => setSocial(true)}>{t('Share')}</button>}
         {!shared && album.id !== EXAMPLE_ALBUM_ID && <Link className="btn secondary" to={`/albums/${album.id}/print`} title={t('Print or save as PDF')}>PDF</Link>}
         {!shared && album.id !== EXAMPLE_ALBUM_ID && <Link className="btn" to={`/albums/${album.id}/edit?page=${Math.max(1, bundle.pages.indexOf(pages[visible[0] ?? 0]) + 1)}`}>{t('Edit')}</Link>}
       </header>
-      {total === 0 ? <p className="empty">{t(bundle.pages.length ? 'Every page is hidden.' : 'No pages yet.')}</p> : (
+      {total === 0 ? <p className="empty">{t(bundle.pages.length ? 'Every page is hidden.' : 'No pages yet.')}</p> : pages[0].layout.space ? (
+        <SpaceView layout={pages[0].layout} media={media} />
+      ) : (
         <div className="stage">
           <div className={`book${spread ? ' spread' : ''}${visible.some((i) => slot(i) === 'left') ? ' has-left' : ''}${turn ? (forwardOnScreen ? ' fwd' : ' back') : ''}`} {...swipe}>
             {pages.map((p, i) => {
