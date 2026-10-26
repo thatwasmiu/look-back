@@ -128,7 +128,8 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
     api.updateAlbum(albumId, { backgroundColor: c }).catch(() => { setBgColorState(prev); setOpError(tr("Couldn't save the desk color.")); });
   };
   const mode = bundle.album.mode ?? 'scrapbook';
-  const pageTemplates = MODES[mode].pageTemplates; // e.g. a photobooth album offers only the Booth pages
+  const info = MODES[mode];
+  const pageTemplates = info.pageTemplates; // e.g. a photobooth album offers only the Booth pages
   const [readingDirection, setReadingDirectionState] = useState<ReadingDirection>(bundle.album.readingDirection ?? 'ltr');
   const setReadingDirection = (d: ReadingDirection) => {
     const prev = readingDirection;
@@ -307,7 +308,9 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
   // cameras.
   const [frameMenu, setFrameMenu] = useState<string | null>(null);
   // "Chụp theo khung" open for this frame; more: the page's other empty frames, in reading order (for Photobooth).
-  const [cameraFrame, setCameraFrame] = useState<{ frame: FrameEl; shape: WindowShape | null; more: CameraTarget[] } | null>(null);
+  // set: opened by "Shoot a new set" (photobooth: front camera, every empty frame, then "another set?").
+  const [cameraFrame, setCameraFrame] = useState<{ frame: FrameEl; shape: WindowShape | null; more: CameraTarget[]; set?: boolean } | null>(null);
+  const frameShape = (id: string) => frameWindowShape(document.querySelector<HTMLElement>(`.edit-page [data-frame-id="${id}"] .frame-window`));
   // camera: the phone-only "Take photo/video" (same input with capture, which opens the camera directly).
   const cameraPick = useRef<HTMLInputElement | null>(null);
   const uploadToFrame = (frameId: string, camera = false) => {
@@ -360,14 +363,17 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
   const switchTo = (i: number) => run("Couldn't switch pages.", async () => {
     if (await saved()) show(withCurrent(), i);
   });
-  const addPage = (templateId: string) => run("Couldn't add the page.", async () => {
+  // added: told the new page's id once it is shown (a photobooth set opens the camera on it).
+  const addPage = (templateId: string, added?: (pageId: string) => void) => run("Couldn't add the page.", async () => {
     setPicking(false);
     if (!(await saved())) return;
-    const at = latest.current.pages.length ? latest.current.cur + 1 : 0;
+    // A guest's page always goes at the end (the server puts it there).
+    const at = guest ? latest.current.pages.length : latest.current.pages.length ? latest.current.cur + 1 : 0;
     const p = await api.addPage(albumId, templateId, at);
     const ps = withCurrent();
     ps.splice(at, 0, p);
     show(ps, at);
+    added?.(p.id);
   });
   const deletePage = () => run("Couldn't delete the page.", async () => {
     const id = page?.id;
@@ -390,6 +396,51 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
     setCur(ps.findIndex((x) => x.id === curId));
     await api.reorderPages(albumId, ps.map((x) => x.id));
   });
+
+  // "Shoot a new set" (modes with shootFirst, i.e. photobooth): pick a layout (next sets reuse it), a new page with it,
+  // then the camera fills all its frames in one go; afterwards the date is stamped and it offers another set.
+  const [shootPick, setShootPick] = useState(() => info.shootFirst && (!guest || info.guestSets) && params.get('shoot') === '1');
+  const [setLayout, setSetLayout] = useState<string | null>(null);
+  const [shootOn, setShootOn] = useState<string | null>(null); // page id: open the set camera once it is shown
+  const [askNext, setAskNext] = useState(false);
+  const canShootSet = info.shootFirst && (!guest || info.guestSets) && !inlineVideoBlocked();
+  // Kiosk (a tablet or laptop at a party): a full screen "tap to shoot" with the layouts to choose from; each set
+  // becomes a page, a thank-you, then back to the start screen. Exit with ✕.
+  const [kiosk, setKiosk] = useState(false);
+  const [thanks, setThanks] = useState(false);
+  const startKiosk = () => {
+    setKiosk(true);
+    setSetLayout((l) => l ?? pageTemplates[0]?.id ?? null);
+    void document.documentElement.requestFullscreen?.().catch(() => {});
+  };
+  const stopKiosk = () => {
+    setKiosk(false);
+    setThanks(false);
+    if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
+  };
+  const shootSet = (templateId: string) => {
+    setSetLayout(templateId);
+    setShootPick(false);
+    setAskNext(false);
+    void addPage(templateId, setShootOn);
+  };
+  useEffect(() => {
+    if (!shootOn || shootOn !== page?.id) return;
+    const t = setTimeout(() => { // after the new page is laid out, so the frames' shapes can be measured
+      setShootOn(null);
+      const [first, ...rest] = otherEmptyFrames(latest.current.layout, '', readingDirection);
+      if (first) setCameraFrame({ frame: first, shape: frameShape(first.id), more: rest.map((e) => ({ frame: e, shape: frameShape(e.id) })), set: true });
+    }, 80);
+    return () => clearTimeout(t);
+  }, [shootOn, page?.id]);
+  const setDone = () => {
+    setCameraFrame(null);
+    const today = new Date().toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    commit((l) => ({ ...l, elements: l.elements.map((e) => (e.type === 'text' && e.text === 'dd/mm/yyyy' ? { ...e, text: today } : e)) }));
+    if (!kiosk) { setAskNext(true); return; }
+    setThanks(true);
+    setTimeout(() => setThanks(false), 4000);
+  };
 
   nav.current.switchTo = switchTo;
   const selected = layout.elements.find((e) => e.id === selectedId) ?? null;
@@ -517,6 +568,12 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
           {page && (cur < pages.length - 1
             ? <button type="button" className="page-next" aria-label={tr('Next page')} title={tr('Next page')} onClick={() => void switchTo(cur + 1)}>→</button>
             : !guest && <button type="button" className="page-next" aria-label={tr('New page')} title={tr('New page')} onClick={() => setPicking(true)}>+</button>)}
+          {canShootSet && !cameraFrame && (
+            <span className="shoot-set-bar">
+              <button type="button" className="shoot-set-btn" onClick={() => (setLayout ? shootSet(setLayout) : setShootPick(true))}>📸 {tr('Shoot a new set')}</button>
+              <button type="button" className="secondary kiosk-btn" title={tr('Full screen for a party: guests tap to shoot their own set')} onClick={startKiosk}>🖥 {tr('Kiosk')}</button>
+            </span>
+          )}
         </div>
         <MediaTray media={trayMedia} items={upload.items} coverMediaId={coverId}
           onUpload={(files) => upload.add(files)} onRetry={upload.retry}
@@ -524,7 +581,8 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
           onDelete={guest ? undefined : deleteMedia} onSetCover={guest ? undefined : setCover} />
         {/* Portal: inside .edit-main's stacking context the tools would paint over the backdrop. */}
         {cameraFrame && createPortal(
-          <FrameCamera frame={cameraFrame.frame} windowShape={cameraFrame.shape} more={cameraFrame.more} onClose={() => setCameraFrame(null)}
+          <FrameCamera frame={cameraFrame.frame} windowShape={cameraFrame.shape} more={cameraFrame.more} set={cameraFrame.set}
+            onClose={() => setCameraFrame(null)} onSetDone={cameraFrame.set ? setDone : undefined}
             onCapture={(file, frameId) => { upload.add([file], frameId ?? cameraFrame.frame.id); if (!frameId) setCameraFrame(null); }} />,
           document.body,
         )}
@@ -539,9 +597,8 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
                 {inlineVideoBlocked() ? null : <button type="button" className="frame-menu-upload frame-menu-camera" onClick={() => {
                   const f = layout.elements.find((e) => e.id === frameMenu);
                   if (f?.type === 'frame') {
-                    const shapeOf = (id: string) => frameWindowShape(document.querySelector<HTMLElement>(`.edit-page [data-frame-id="${id}"] .frame-window`));
-                    const more = otherEmptyFrames(layout, f.id, readingDirection).map((e) => ({ frame: e, shape: shapeOf(e.id) }));
-                    setCameraFrame({ frame: f, shape: shapeOf(f.id), more });
+                    const more = otherEmptyFrames(layout, f.id, readingDirection).map((e) => ({ frame: e, shape: frameShape(e.id) }));
+                    setCameraFrame({ frame: f, shape: frameShape(f.id), more });
                   }
                   setFrameMenu(null);
                 }}>🎯<span>{tr('Shoot in the frame')}</span></button>}
@@ -612,14 +669,39 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
           <button type="button" className="secondary" onClick={() => setConfirmDelete(false)}>{tr('Cancel')}</button>
         </div>
       )}
-      {picking && (
+      {kiosk && createPortal(
+        <div className="kiosk" role="dialog" aria-label={tr('Kiosk')}>
+          <button type="button" className="kiosk-exit" aria-label={tr('Exit kiosk')} onClick={stopKiosk}>✕</button>
+          {thanks ? <p className="kiosk-thanks">✨ {tr('Thank you!')} ✨</p> : <>
+            <h2 className="kiosk-title">{title}</h2>
+            <button type="button" className="kiosk-start" disabled={busy} onClick={() => setLayout && shootSet(setLayout)}>📸 {tr('Tap to shoot')}</button>
+            <div className="kiosk-layouts" role="radiogroup" aria-label={tr('Layout for the set')}>
+              {pageTemplates.map((t) => (
+                <button key={t.id} type="button" role="radio" aria-checked={setLayout === t.id} aria-label={tr(t.name)} onClick={() => setSetLayout(t.id)}>
+                  <PageRenderer layout={t.layout} media={noMedia} mode="view" active={false} />
+                </button>
+              ))}
+            </div>
+          </>}
+        </div>,
+        document.body,
+      )}
+      {askNext && (
+        <div className="inline-confirm shoot-next" role="dialog" aria-label={tr('Set done')}>
+          <span>✨ {tr('Set done! Shoot another?')}</span>
+          <button type="button" onClick={() => setLayout && shootSet(setLayout)}>📸 {tr('Shoot another set')}</button>
+          <button type="button" className="secondary" onClick={() => { setAskNext(false); setShootPick(true); }}>{tr('Other layout')}</button>
+          <button type="button" className="secondary" onClick={() => setAskNext(false)}>{tr('Done')}</button>
+        </div>
+      )}
+      {(picking || shootPick) && (
         <div className="template-picker" role="dialog" aria-label={tr('Pick a template')} ref={pickRef}>
           <div className="template-head">
-            <span>{tr('New page')}</span>
-            <button type="button" className="template-close" aria-label={tr('Close')} title={tr('Close')} onClick={() => setPicking(false)}>×</button>
+            <span>{tr(shootPick ? 'Layout for the set' : 'New page')}</span>
+            <button type="button" className="template-close" aria-label={tr('Close')} title={tr('Close')} onClick={() => { setPicking(false); setShootPick(false); }}>×</button>
           </div>
           {pageTemplates.map((t) => (
-            <button key={t.id} type="button" className="template" onClick={() => addPage(t.id)}>
+            <button key={t.id} type="button" className="template" onClick={() => (shootPick ? shootSet(t.id) : addPage(t.id))}>
               <PageRenderer layout={t.layout} media={noMedia} mode="edit" active={false} />
               <span>{tr(t.name)}</span>
             </button>

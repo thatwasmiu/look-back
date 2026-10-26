@@ -85,11 +85,23 @@ const textSchema = z.object({
 
 export const pageElementSchema = z.discriminatedUnion('type', [frameSchema, tapeSchema, stickerSchema, textSchema, effectSchema])
 
+// Photo looks for every photo/video on a page (photobooth): drawn with CSS filters, the files stay untouched.
+export const PHOTO_FILTERS = ['bw', 'sepia', 'film', 'warm'] as const
+export type PhotoFilter = (typeof PHOTO_FILTERS)[number]
+// The same looks as canvas / CSS filter strings (render.css draws them on pages; the boomerang on its canvas).
+export const PHOTO_FILTER_CSS: Record<PhotoFilter, string> = {
+  bw: 'grayscale(1) contrast(1.08)',
+  sepia: 'sepia(.85) contrast(1.05) brightness(1.02)',
+  warm: 'sepia(.22) saturate(1.3) hue-rotate(-8deg) brightness(1.03)',
+  film: 'contrast(1.15) saturate(.75) sepia(.18) brightness(1.03)',
+}
+
 export const pageLayoutSchema = z.object({
   // paper-black: no longer offered (nobody used it); still accepted so pages that have it keep loading.
   background: z.enum(['paper-cream', 'paper-kraft', 'paper-grid', 'paper-dots', 'paper-white', 'paper-black', 'paper-pink', 'paper-sky', 'paper-mint', 'paper-lined']),
   elements: z.array(pageElementSchema).max(200),
   hidden: z.boolean().optional(), // kept in the editor, left out of the viewer, share links and print
+  filter: z.enum(PHOTO_FILTERS).optional(), // one look for all the page's photos (photobooth)
 }).superRefine((l, ctx) => {
   const seen = new Set<string>()
   for (const [i, e] of l.elements.entries()) {

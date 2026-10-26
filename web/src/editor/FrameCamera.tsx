@@ -52,6 +52,7 @@ const shapeOf = (f: FrameEl) => (f.frameStyle === 'circle' ? 'circle' : f.frameS
 const HI_RES = { width: { ideal: 3840 }, height: { ideal: 2160 } };
 const VIDEO_TYPES = ['video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
 const DELAYS = [0, 3, 5, 10] as const; // self-timer, seconds
+const newAudio = (): AudioContext | null => { try { return typeof AudioContext === 'function' ? new AudioContext() : null; } catch { return null; } };
 const MODE_LABEL = { photo: 'Photo', booth: 'Photobooth', video: 'Video' } as const;
 const MODE_ICON = { photo: '📷', booth: '🎞', video: '🎬' } as const;
 const HEART = 'M50 88C10 60 0 38 0 24 0 10 11 0 25 0c11 0 20 6 25 15C55 6 64 0 75 0c14 0 25 10 25 24 0 14-10 36-50 64z';
@@ -66,11 +67,14 @@ const BOOTH_DELAY = 3; // s before each photobooth shot when the self-timer is o
 const BOOTH_GAP_MS = 900; // pause on the next frame's shape before its countdown starts
 
 // onCapture's frameId: a photobooth shot, for that frame (the camera stays open); without it, the one shot is done.
-export function FrameCamera({ frame: first, windowShape: firstShape, more = [], onCapture, onClose }: {
-  frame: FrameEl; windowShape?: WindowShape | null; more?: CameraTarget[]; onCapture(file: File, frameId?: string): void; onClose(): void;
+// set: a photobooth set started from "Shoot a new set": the camera opens in Photobooth mode on the front camera, and
+// onSetDone runs (instead of onClose) once every frame has its shot.
+export function FrameCamera({ frame: first, windowShape: firstShape, more = [], set = false, onCapture, onClose, onSetDone }: {
+  frame: FrameEl; windowShape?: WindowShape | null; more?: CameraTarget[]; set?: boolean;
+  onCapture(file: File, frameId?: string): void; onClose(): void; onSetDone?(): void;
 }) {
   const t = useT();
-  const [mode, setMode] = useState<Mode>('photo');
+  const [mode, setMode] = useState<Mode>(set && more.length ? 'booth' : 'photo');
   const targets: CameraTarget[] = [{ frame: first, shape: firstShape ?? null }, ...more];
   const [boothAt, setBoothAt] = useState<number | null>(null); // index in targets while a photobooth run is going
   const boothRef = useRef<number | null>(null);
@@ -78,7 +82,7 @@ export function FrameCamera({ frame: first, windowShape: firstShape, more = [], 
   const [flash, setFlash] = useState(0);
   const taken = useRef(0); // photobooth shots handed over in this run
   const { frame, shape: windowShape } = targets[boothAt ?? 0];
-  const [facing, setFacing] = useState<Facing>('environment');
+  const [facing, setFacing] = useState<Facing>(set ? 'user' : 'environment'); // a set is a selfie, mirrored
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState(0); // bump to open the camera again (iOS ends the stream in the background)
   const [recording, setRecording] = useState(false);
@@ -183,6 +187,7 @@ export function FrameCamera({ frame: first, windowShape: firstShape, more = [], 
 
   useEffect(() => {
     if (countdown === null) return;
+    beep(countdown === 0 ? 1320 : 880, countdown === 0 ? 0.18 : 0.08);
     if (countdown === 0) { setCountdown(null); pending.current?.(); pending.current = null; return; }
     const t = setTimeout(() => setCountdown((n) => (n === null ? null : n - 1)), 1000);
     return () => clearTimeout(t);
@@ -198,7 +203,24 @@ export function FrameCamera({ frame: first, windowShape: firstShape, more = [], 
     }
   };
   useEffect(() => () => clearTimeout(boothTimer.current), []);
+  // Countdown beeps, like a booth: short ticks, a higher one on the shot. Silent where audio can't start.
+  const sound = useRef<AudioContext | null>(null);
+  const beep = (hz: number, sec: number) => {
+    const ctx = sound.current;
+    if (!ctx) return;
+    try {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = hz;
+      g.gain.setValueAtTime(0.15, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + sec);
+      o.connect(g).connect(ctx.destination);
+      o.start();
+      o.stop(ctx.currentTime + sec);
+    } catch { /* no sound */ }
+  };
+  useEffect(() => () => { void sound.current?.close().catch(() => {}); }, []);
   const later = (action: () => void) => () => {
+    sound.current ??= newAudio();
     if (countdown !== null) return cancelCountdown();
     if (!delay) return action();
     pending.current = action;
@@ -267,7 +289,7 @@ export function FrameCamera({ frame: first, windowShape: firstShape, more = [], 
       onCapture(file(b, 'jpg'), targets[i].frame.id);
       taken.current++;
       setFlash((n) => n + 1);
-      if (i + 1 >= targets.length) { boothRef.current = null; release(); onClose(); return; }
+      if (i + 1 >= targets.length) { boothRef.current = null; release(); (onSetDone ?? onClose)(); return; }
       boothRef.current = i + 1;
       setBoothAt(i + 1);
       boothTimer.current = setTimeout(() => boothShot(i + 1), BOOTH_GAP_MS);
@@ -275,6 +297,7 @@ export function FrameCamera({ frame: first, windowShape: firstShape, more = [], 
     setCountdown(delay || BOOTH_DELAY);
   };
   const startBooth = () => {
+    sound.current ??= newAudio(); // made on the tap: phones only allow sound that a tap started
     if (countdown !== null || boothRef.current !== null) return cancelCountdown();
     taken.current = 0;
     boothRef.current = 0;

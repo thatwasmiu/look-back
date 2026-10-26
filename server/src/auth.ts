@@ -43,7 +43,8 @@ export function registerAuth(app: FastifyInstance, config: Config, pool: pg.Pool
   app.register(rateLimit, { global: false });
 
   // Edit-link guests reach only these, and each handler keeps them to their own album.
-  const GUEST_ROUTES = new Set(['PUT /api/pages/:id', 'GET /api/media/:id']);
+  // POST pages: only for modes whose guests shoot their own sets (the handler checks the mode and the template).
+  const GUEST_ROUTES = new Set(['PUT /api/pages/:id', 'GET /api/media/:id', 'POST /api/albums/:id/pages']);
   const guestRoute = (method: string, route: string) =>
     GUEST_ROUTES.has(`${method} ${route}`) || ((route === '/api/uploads' || route === '/api/uploads/*') && method !== 'DELETE');
   app.decorateRequest('guestAlbumId', null);

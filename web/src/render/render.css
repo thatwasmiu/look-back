@@ -71,6 +71,11 @@
   background: radial-gradient(ellipse 85% 75% at 50% 45%, #262422, #121110), #161514;
 }
 
+/* ---- Photo filters (a page's look, photobooth): on the photo window only, frames and paper keep their colours ---- */
+/* The filter itself comes from PHOTO_FILTER_CSS (shared) as --photo-filter, the same one the boomerang draws with. */
+/* On the photo itself, not the window: a filtered parent left photos that fade in unpainted (Chrome). */
+.page[class*='photo-filter-'] .frame-window :is(.blur-image, video, .video, .local-preview) { filter: var(--photo-filter); }
+
 /* ---- Frames ---- */
 .el-frame:has(> .frame-torn) { filter: drop-shadow(0 .6cqh .8cqh rgba(40, 28, 10, .25)); }
 .frame { width: 100%; height: 100%; display: flex; }

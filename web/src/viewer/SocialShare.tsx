@@ -1,10 +1,10 @@
 import { useMemo, useRef, useState, type CSSProperties } from 'react';
 import { toJpeg } from 'html-to-image';
-import type { AlbumBundle } from '@scrapbook/shared';
+import { MODES, PHOTO_FILTER_CSS, type AlbumBundle, type FrameEl, type PageLayout } from '@scrapbook/shared';
 import { useT } from '../i18n';
 import { PageRenderer } from '../render/PageRenderer';
 import { mediaUrl } from '../mediaUrl';
-import { canRecordVideo, recordSlideshow, SLIDE_SEC } from './slideshow';
+import { BOOMERANG_SEC, boomerangOrder, canRecordVideo, recordSlideshow, SLIDE_SEC, type Picture } from './slideshow';
 
 // "Share to social": every visible page as a picture sized for a feed post (4:5) or a story / TikTok (9:16) — the
 // page centred on the album's desk colour, so nothing gets cropped — handed to the phone's share menu (Instagram,
@@ -99,6 +99,36 @@ export function SocialShare({ bundle, onClose, viewLink }: { bundle: AlbumBundle
   };
   const make = async () => setShots(await render());
   const music = bundle.album.musicMediaId ? media.get(bundle.album.musicMediaId) : undefined;
+  // Boomerang (photobooth): the chosen pages' shots, in reading order, forward and back — no page pictures needed.
+  const canBoomerang = canVideo && MODES[bundle.album.mode ?? 'scrapbook'].boomerang;
+  const shotsOf = (l: PageLayout): Picture[] => l.elements
+    .filter((e): e is FrameEl => e.type === 'frame' && !!e.mediaId)
+    .sort((a, b) => Math.round(a.y / 0.05) - Math.round(b.y / 0.05) || a.x - b.x)
+    .flatMap((e) => {
+      const m = media.get(e.mediaId!);
+      const key = m?.status === 'ready' ? (m.kind === 'image' ? m.variants?.display : m.variants?.poster) : undefined;
+      return key ? [{ src: mediaUrl(key), filter: l.filter ? PHOTO_FILTER_CSS[l.filter] : undefined }] : [];
+    });
+  const makeBoomerang = async () => {
+    setError(null);
+    reset();
+    const shots = chosen.flatMap((p) => shotsOf(p.layout));
+    if (shots.length < 2) { setError(t('A boomerang needs at least two photos on the chosen pages.')); return; }
+    const { w, h } = FORMATS[format];
+    const order = boomerangOrder(shots);
+    try {
+      setBusy(t('Recording the video… {n}/{total} s', { n: 0, total: Math.ceil(order.length * BOOMERANG_SEC) }));
+      const file = await recordSlideshow({
+        pictures: order, width: w, height: h, name: `${bundle.album.title}-boomerang`, slideSec: BOOMERANG_SEC, fadeSec: 0, zoom: 0,
+        onProgress: (n, total) => setBusy(t('Recording the video… {n}/{total} s', { n, total: Math.ceil(total) })),
+      });
+      setVideo({ file, url: URL.createObjectURL(file) });
+    } catch {
+      setError(t("Couldn't record the video in this browser."));
+    } finally {
+      setBusy(null);
+    }
+  };
   const makeVideo = async () => {
     const pics = await render();
     if (!pics) return;
@@ -175,14 +205,16 @@ export function SocialShare({ bundle, onClose, viewLink }: { bundle: AlbumBundle
               {t('Share the view link on Facebook')}
             </a>
           )}
+          {!made && canBoomerang && (
+            <button type="button" className="secondary" disabled={!!busy || !chosen.length} onClick={() => void makeBoomerang()}>🔁 {t('Boomerang')}</button>
+          )}
           {!made && canVideo && (
             <button type="button" className="secondary" disabled={!!busy || !chosen.length} onClick={() => void makeVideo()}>{t('Make video')}</button>
           )}
-          {!made
-            ? <button type="button" disabled={!!busy || !chosen.length} onClick={() => void make()}>{t('Make images')}</button>
-            : canShareFiles
-              ? <button type="button" onClick={() => void shareFiles()}>{t('Share…')}</button>
-              : <button type="button" onClick={download}>{t('Download')}</button>}
+          {!made && <button type="button" disabled={!!busy || !chosen.length} onClick={() => void make()}>{t('Make images')}</button>}
+          {/* Made: always Download (keep them on the device); Share… too where the phone has a share menu. */}
+          {made && <button type="button" className={canShareFiles ? 'secondary' : undefined} onClick={download}><span aria-hidden>⬇</span> {t('Download')}</button>}
+          {made && canShareFiles && <button type="button" onClick={() => void shareFiles()}>{t('Share…')}</button>}
         </div>
       </div>
       {/* Off-screen stage: the pictures are taken of these, at their real pixel size. */}

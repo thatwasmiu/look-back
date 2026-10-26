@@ -8,6 +8,7 @@ import { stickers } from '../render/decor';
 import { PageRenderer } from '../render/PageRenderer';
 import { LangSwitch, getLang, useT } from '../i18n';
 import { mediaUrl } from '../mediaUrl';
+import { QrCode } from '../QrCode';
 
 // Door with an arrow leaving it.
 function LogoutIcon() {
@@ -223,6 +224,7 @@ export default function AlbumList() {
             </Link>
             <small>
               {t(a.pageCount === 1 ? '{n} page' : '{n} pages', { n: a.pageCount })} · <Link to={`/albums/${a.id}/edit`}>{t('Edit')}</Link> ·{' '}
+              {MODES[a.mode ?? 'scrapbook'].shootFirst && <><Link to={`/albums/${a.id}/edit?shoot=1`}>📸 {t('Shoot')}</Link> ·{' '}</>}
               <button type="button" className="link-btn" aria-label={t('Share {title}', { title: a.title })} onClick={() => setSharing(a)}>{t(a.shareToken ? 'Shared' : 'Share')}</button> ·{' '}
               <button type="button" className="link-btn" aria-label={t('Delete {title}', { title: a.title })} onClick={() => setConfirming(a)}>{t('Delete')}</button>
             </small>
@@ -318,6 +320,11 @@ export default function AlbumList() {
                 <input readOnly aria-label={t('Edit link')} value={editUrl(sharing.editToken)} onFocus={(e) => e.currentTarget.select()} />
                 <button type="button" onClick={() => void copyLink(editUrl(sharing.editToken!))}>{t('Copy')}</button>
                 <button type="button" className="danger" aria-label={t('Revoke edit link')} disabled={shareBusy} onClick={() => void editLink(sharing, null)}>{t('Revoke')}</button>
+                {/* Guests scan it (at a party: print it or show it on a screen) and shoot their own set. */}
+                {MODES[sharing.mode ?? 'scrapbook'].guestSets && <>
+                  <QrCode text={editUrl(sharing.editToken)} label={t('QR code of the edit link')} />
+                  <small className="qr-hint">{t('Guests scan it to shoot their own set into this album.')}</small>
+                </>}
               </>
             ) : <span>{t('A link for others to edit: they fill the frames and change text, stickers and more — not pages or frames.')}</span>}
             <label className="edit-hours">{t('Hours')}

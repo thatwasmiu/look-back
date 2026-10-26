@@ -108,9 +108,15 @@ const vi: Guide = {
       { h: 'Album photobooth', p: [
         'Bấm **＋ Photobooth** ở danh sách album. Album trống bắt đầu bằng một trang dải ảnh; các mẫu có sẵn nhiều trang photobooth.',
         'Trang **Booth** (dải 3 / 4 kiểu, 1 lớn + 3, lưới 2 × 2, 3 + ô tiêu đề, tiêu đề + 2, 2 ảnh chồng) cũng có trong **+ trang** của mọi album scrapbook.'] },
-      { h: 'Chụp liền một lượt', p: [
-        'Trên điện thoại, bấm **+ thêm** trên một khung trống → **Chụp theo khung** → chọn **🎞 Photobooth** (chỉ hiện khi trang còn khung trống khác).',
-        'Bấm ★ một lần: đếm ngược 3 giây (hoặc theo **⏱ Hẹn giờ**), chụp, chớp sáng, rồi tự sang khung trống tiếp theo theo thứ tự đọc cho tới khung cuối. **■** để dừng — các kiểu đã chụp vẫn giữ.'] },
+      { h: 'Chụp bộ mới', p: [
+        'Trong album photobooth bấm **📸 Chụp bộ mới** (hoặc **📸 Chụp** dưới album ở danh sách): chọn bố cục, app thêm trang mới rồi mở camera trước, chế độ **🎞 Photobooth**.',
+        'Bấm ★ một lần: đếm ngược có tiếng bíp, chụp, chớp sáng, tự sang khung kế tiếp tới khung cuối. Xong thì ô ngày tự điền hôm nay và hỏi **Chụp bộ tiếp** / **Đổi bố cục** / **Xong**. **■** để dừng — các kiểu đã chụp vẫn giữ.',
+        'Trang có sẵn khung trống: **+ thêm** → **Chụp theo khung** → **🎞 Photobooth** cũng chụp liền các khung trống.'] },
+      { h: 'Bộ lọc', p: ['**Lọc** (album photobooth): **Đen trắng**, **Nâu cổ**, **Phim**, **Ấm** cho mọi ảnh trên trang. Ảnh gốc không đổi; chọn **Không lọc** để bỏ.'] },
+      { h: 'Boomerang', p: ['Khi xem album photobooth, **Chia sẻ** → **🔁 Boomerang**: các kiểu trên trang đã chọn chạy tới rồi lùi, thành video ngắn (theo bộ lọc của trang) để đăng Story, TikTok, Zalo.'] },
+      { h: 'Kiosk và mã QR cho buổi tiệc', p: [
+        '**🖥 Kiosk** (cạnh **Chụp bộ mới**): toàn màn hình cho máy tính bảng/laptop đặt ở tiệc — khách chọn bố cục, **Chạm để chụp**, mỗi bộ thành một trang, hiện **Cảm ơn!** rồi quay lại. ✕ để thoát.',
+        'Tạo **link sửa** cho album photobooth: hộp Chia sẻ hiện **mã QR**. Khách quét bằng điện thoại để tự chụp một bộ vào album (chỉ thêm được trang Booth, vào cuối album).'] },
     ] },
   ],
   shortcutsTitle: '11. Phím tắt',
@@ -220,9 +226,15 @@ const en: Guide = {
       { h: 'Photobooth albums', p: [
         'Tap **＋ Photobooth** on the album list. An empty one starts on a strips page; the templates come with several booth pages.',
         "The **Booth** pages (strips of 3 / 4, 1 big + 3, 2 × 2, 3 + title card, title + 2, 2 stacked) are also in every scrapbook album's **+ page**."] },
-      { h: 'Shoot a whole set', p: [
-        'On a phone, tap **+ add** on an empty frame → **Shoot in the frame** → **🎞 Photobooth** (shown when the page has other empty frames).',
-        'Tap ★ once: a 3 s countdown (or the **⏱ Self-timer**), a shot, a flash, then on to the next empty frame in reading order until the last. **■** stops — the shots taken are kept.'] },
+      { h: 'Shoot a new set', p: [
+        'In a photobooth album tap **📸 Shoot a new set** (or **📸 Shoot** under the album on the list): pick a layout; a new page is added and the front camera opens in **🎞 Photobooth**.',
+        "Tap ★ once: a beeping countdown, a shot, a flash, then on to the next frame until the last. Then the date box gets today's date and it asks **Shoot another set** / **Other layout** / **Done**. **■** stops — the shots taken are kept.",
+        'A page with empty frames already: **+ add** → **Shoot in the frame** → **🎞 Photobooth** fills them in one go too.'] },
+      { h: 'Filters', p: ["**Filter** (photobooth albums): **Black & white**, **Sepia**, **Film**, **Warm** for every photo on the page. The files stay as they are; **No filter** removes it."] },
+      { h: 'Boomerang', p: ["While viewing a photobooth album, **Share** → **🔁 Boomerang**: the chosen pages' shots play forward and back as a short video (with the page's filter) for Stories, TikTok, Zalo."] },
+      { h: 'Kiosk and QR code for a party', p: [
+        '**🖥 Kiosk** (next to **Shoot a new set**): full screen for a tablet or laptop at a party — guests pick a layout, **Tap to shoot**, each set becomes a page, **Thank you!**, and back to the start. ✕ exits.',
+        "Create an **edit link** for a photobooth album: the Share box shows a **QR code**. Guests scan it with their phones and shoot their own set into the album (Booth pages only, added at the end)."] },
     ] },
   ],
   shortcutsTitle: '11. Shortcuts',

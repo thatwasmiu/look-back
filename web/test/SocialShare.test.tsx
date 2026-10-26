@@ -37,6 +37,7 @@ test('makes one image per visible page and hands them to the share menu', async 
   await userEvent.click(screen.getByRole('radio', { name: /Story/ }));
   await userEvent.click(screen.getByRole('button', { name: 'Make images' }));
   await userEvent.click(await screen.findByRole('button', { name: 'Share…' }));
+  expect(screen.getByRole('button', { name: 'Download' })).toBeTruthy(); // keeping them on the device is offered too
   expect(toJpeg).toHaveBeenCalledTimes(2);
   const files = share.mock.calls[0][0].files as File[];
   expect(files.map((f) => f.name)).toEqual(['Đi chơi-1.jpg', 'Đi chơi-2.jpg']);

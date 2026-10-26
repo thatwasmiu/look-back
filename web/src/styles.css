@@ -571,6 +571,22 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .social-page { position: absolute; box-shadow: 0 18px 40px #0006; }
 
 
+.shoot-set-bar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 5; display: flex; gap: .5rem; }
+.shoot-set-btn { padding: .7rem 1.4rem; border-radius: 99px; font-size: 1.1rem; font-weight: 700; box-shadow: 0 6px 18px #0005; white-space: nowrap; }
+.kiosk-btn { border-radius: 99px; white-space: nowrap; box-shadow: 0 6px 18px #0003; }
+.kiosk { position: fixed; inset: 0; z-index: 900; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem;
+  padding: 1rem; background: radial-gradient(ellipse at 50% 40%, #3a2b45, #1d1424); color: #fff; }
+.kiosk-title { margin: 0; font-family: 'Dancing Script', cursive; font-size: clamp(2rem, 7vw, 4rem); }
+.kiosk-start { font-size: clamp(1.4rem, 5vw, 2.4rem); padding: 1.1rem 2.4rem; border-radius: 99px; box-shadow: 0 10px 30px #0008; }
+.kiosk-layouts { display: flex; gap: .6rem; flex-wrap: wrap; justify-content: center; max-width: 52rem; }
+.kiosk-layouts button { width: 4.6rem; padding: 0; border: 3px solid transparent; border-radius: 6px; background: none; }
+.kiosk-layouts button[aria-checked='true'] { border-color: #ffd36b; }
+.kiosk-thanks { font-family: 'Dancing Script', cursive; font-size: clamp(2.4rem, 9vw, 5rem); margin: 0; }
+.kiosk-exit { position: absolute; top: 12px; right: 12px; width: 2.4rem; height: 2.4rem; padding: 0; border-radius: 50%; background: #ffffff22; color: #fff; }
+.qr-code { display: block; margin: .5rem auto 0; background: #fff; padding: 6px; border-radius: 8px; }
+.qr-hint { display: block; text-align: center; opacity: .8; }
+.shoot-next { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+
 .new-album-row { display: grid; grid-template-columns: repeat(var(--modes, 3), minmax(0, 18rem)); gap: .75rem; margin: 0 0 1.25rem; }
 .new-album-row button { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: .15rem;
   padding: .7rem 1rem; text-align: left; border-radius: 10px; }

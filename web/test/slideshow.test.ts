@@ -15,3 +15,10 @@ test('each page shows for its slot, the next fades in at the end, the last one h
   expect(slideAt(3 * SLIDE_SEC - 0.1, 3)).toMatchObject({ i: 2, next: null }); // nothing after the last page
   expect(slideAt(99, 3).i).toBe(2);
 });
+
+test('a boomerang plays the shots forward then back, without repeating the ends, three times', async () => {
+  const { boomerangOrder } = await import('../src/viewer/slideshow');
+  expect(boomerangOrder(['a', 'b', 'c', 'd'], 1)).toEqual(['a', 'b', 'c', 'd', 'c', 'b']);
+  expect(boomerangOrder(['a', 'b'], 2)).toEqual(['a', 'b', 'a', 'b']);
+  expect(boomerangOrder(['a', 'b', 'c'])).toHaveLength(12);
+});

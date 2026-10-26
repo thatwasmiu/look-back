@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import type { MediaDTO, PageElement, PageLayout } from '@scrapbook/shared';
+import type { CSSProperties, ReactNode } from 'react';
+import { PHOTO_FILTER_CSS, type MediaDTO, type PageElement, type PageLayout } from '@scrapbook/shared';
 import { FrameView } from './FrameView';
 import { Tape, stickers } from './decor';
 import { textCss } from './textStyle';
@@ -18,7 +18,8 @@ const pct = (v: number) => `${Math.round(v * 1e6) / 1e4}%`;
 
 export function PageRenderer({ layout, media, mode, renderOverlay, active = true }: RenderProps) {
   return (
-    <div className={`page page-${mode}`}>
+    <div className={`page page-${mode}${layout.filter ? ` photo-filter-${layout.filter}` : ''}`}
+      style={layout.filter ? { '--photo-filter': PHOTO_FILTER_CSS[layout.filter] } as CSSProperties : undefined}>
       <div className={`page-bg bg-${layout.background}`} />
       {layout.elements.map((el) => (
         <div key={el.id} data-el={el.id} className={`el el-${el.type}`}

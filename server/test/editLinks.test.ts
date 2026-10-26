@@ -123,7 +123,9 @@ describe('edit links (guest)', () => {
   it('cannot reach anything else', async () => {
     const { albumId, pageId, mediaId } = await albumWithPage();
     const g = await guestFor(albumId);
-    for (const [method, url] of [['GET', '/api/albums'], ['GET', `/api/albums/${albumId}`], ['POST', `/api/albums/${albumId}/pages`],
+    // adding pages is only for photobooth guests (see below): here it reaches the handler and is refused
+    expect((await as(g.cookie, 'POST', `/api/albums/${albumId}/pages`, { templateId: 'blank' })).statusCode).toBe(403);
+    for (const [method, url] of [['GET', '/api/albums'], ['GET', `/api/albums/${albumId}`],
       ['DELETE', `/api/pages/${pageId}`], ['DELETE', `/api/media/${mediaId}`], ['GET', '/api/manage'], ['GET', '/api/manage/ai'],
       ['POST', `/api/albums/${albumId}/share`]] as const) {
       expect((await as(g.cookie, method, url, method === 'POST' ? { templateId: 'blank' } : undefined)).statusCode, `${method} ${url}`).toBe(401);
@@ -206,5 +208,23 @@ describe('install manifest for a shared link', () => {
     }
     expect((await as(undefined, 'GET', `/api/manifest/x/${tok}`)).statusCode).toBe(404);
     expect((await as(undefined, 'GET', '/api/manifest/e/short')).statusCode).toBe(404);
+  });
+});
+
+describe('edit links (guest, photobooth)', () => {
+  it('a guest of a photobooth album adds Booth pages, at the end only; nowhere else, nothing else', async () => {
+    const a = (await owner('POST', '/api/albums', { title: 'Tiệc', mode: 'photobooth' })).json();
+    const g = await guestFor(a.id);
+    const add = (albumId: string, templateId: string, position?: number) =>
+      as(g.cookie, 'POST', `/api/albums/${albumId}/pages`, { templateId, ...(position !== undefined ? { position } : {}) });
+    const p = await add(a.id, 'booth-grid-4', 0);
+    expect(p.statusCode).toBe(201);
+    expect(p.json().position).toBe(1); // asked for the front, put at the end
+    expect((await add(a.id, 'cover')).statusCode).toBe(403); // not a Booth layout
+    // a scrapbook album's guest can't add pages, and a guest can't add to another album
+    const { albumId: other } = await albumWithPage();
+    expect((await add(other, 'booth-grid-4')).statusCode).toBe(403);
+    const g2 = await guestFor(other);
+    expect((await as(g2.cookie, 'POST', `/api/albums/${other}/pages`, { templateId: 'booth-grid-4' })).statusCode).toBe(403);
   });
 });

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { BACKGROUND_COLORS, BACKGROUND_EFFECTS, FRAME_STYLES, PAGE_EFFECTS, type AlbumMode, type ReadingDirection, type BackgroundColor, type BackgroundEffect, type FrameEl, type MediaDTO, type PageElement, type PageLayout, type TextEl } from '@scrapbook/shared';
+import { BACKGROUND_COLORS, BACKGROUND_EFFECTS, FRAME_STYLES, MODES, PAGE_EFFECTS, PHOTO_FILTERS, type AlbumMode, type ReadingDirection, type BackgroundColor, type BackgroundEffect, type FrameEl, type MediaDTO, type PageElement, type PageLayout, type TextEl } from '@scrapbook/shared';
 import { EffectView, backgroundEffectLabels, deskColorLabels, pageEffectLabels } from '../render/effects';
 import { Tape, fontFamily, frameStyleLabels, stickers, tapeStyles } from '../render/decor';
 import { FrameView } from '../render/FrameView';
@@ -27,6 +27,7 @@ type Props = {
   guest?: boolean; // edit-link guest: no frame/panel tools, no album settings (the server refuses those changes)
 };
 
+const FILTER_NAME = { bw: 'Black & white', sepia: 'Sepia', film: 'Film', warm: 'Warm' } as const;
 const backgrounds: PageLayout['background'][] = ['paper-cream', 'paper-kraft', 'paper-grid', 'paper-dots', 'paper-lined', 'paper-pink', 'paper-sky', 'paper-mint'];
 const duration = (s: number | null) => (s ? `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}` : '');
 // Bangers (sound effects) belongs to manga albums; the scrapbook Font picker keeps its two fonts.
@@ -47,7 +48,7 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
   const t = useT();
   const manga = mode === 'manga';
   // 'add': the "+ Add" list; picking a kind with choices (frames, stickers, bubbles…) opens that kind's list.
-  const [picker, setPicker] = useState<'add' | 'frame' | 'frameStyle' | 'sticker' | 'tape' | 'bg' | 'effect' | 'albumFx' | 'font' | 'trim' | MangaPicker | null>(null);
+  const [picker, setPicker] = useState<'add' | 'frame' | 'frameStyle' | 'sticker' | 'tape' | 'bg' | 'filter' | 'effect' | 'albumFx' | 'font' | 'trim' | MangaPicker | null>(null);
   const toggle = (p: typeof picker) => setPicker((cur) => (cur === p ? null : p));
   const ref = useRef<HTMLDivElement>(null);
   // Music preview while editing: the <audio> lives outside the picker, so it keeps playing once the picker closes.
@@ -173,6 +174,12 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
             <input type="color" className="ink-custom" aria-label={t('Text color')} value={text.color} onChange={(e) => setText({ color: e.target.value }, `color:${text.id}`)} />
             <small className="picker-hint">{t('double-tap text to edit')}</small>
           </>}
+          {picker === 'filter' && ([undefined, ...PHOTO_FILTERS] as const).map((f) => (
+            <button key={f ?? 'none'} type="button" aria-pressed={layout.filter === f}
+              onClick={() => { const { filter: _old, ...rest } = layout; commit(f ? { ...rest, filter: f } : rest); setPicker(null); }}>
+              {t(f ? FILTER_NAME[f] : 'No filter')}
+            </button>
+          ))}
           {picker === 'bg' && backgrounds.map((b) => (
             <button key={b} type="button" aria-label={b} aria-pressed={layout.background === b}
               className="swatch bg-swatch" onClick={() => { commit({ ...layout, background: b }); setPicker(null); }}>
@@ -185,6 +192,7 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
         <div className="tools-main">
           <button type="button" className="add-btn" aria-label={t('Add')} aria-expanded={picker === 'add'} onClick={() => toggle('add')}>＋ {t('Add')}</button>
           {!manga && <button type="button" aria-expanded={picker === 'bg'} onClick={() => toggle('bg')}>{t('Paper')}</button>}
+          {mode && MODES[mode].photoFilters && <button type="button" aria-expanded={picker === 'filter'} onClick={() => toggle('filter')}>{t('Filter')}</button>}
           {!guest && <button type="button" aria-expanded={picker === 'albumFx'} onClick={() => toggle('albumFx')}>{t('Background')}</button>}
           {musicPlaying && <button type="button" className="music-btn on" aria-label={t('Pause music')} title={t('Pause music')} onClick={toggleMusic}>♪</button>}
           {/* One way only: unpinning stays per item, so a stray tap can't unlock the whole page. */}

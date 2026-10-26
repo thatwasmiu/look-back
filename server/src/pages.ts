@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { guestEditAllowed } from './editLinks.js';
 import type { FastifyInstance } from 'fastify';
 import type pg from 'pg';
-import { instantiateTemplate, pageLayoutSchema, type PageDTO } from '@scrapbook/shared';
+import { MODES, instantiateTemplate, pageLayoutSchema, type AlbumMode, type PageDTO } from '@scrapbook/shared';
 import { uuidParams } from './albums.js';
 
 export const toPageDTO = (r: any): PageDTO => ({
@@ -46,11 +46,17 @@ export function registerPages(app: FastifyInstance, pool: pg.Pool): void {
       } catch {
         return reply.code(400).send({ error: 'unknown template' });
       }
+      const guest = req.guestAlbumId;
+      if (guest && guest !== req.params.id) return reply.code(403).send({ error: 'forbidden' });
       const row = await tx(pool, async (c) => {
-        const a = await c.query('select id from albums where id = $1 for update', [req.params.id]);
+        const a = await c.query('select id, mode from albums where id = $1 for update', [req.params.id]);
         if (!a.rows[0]) return null;
+        // A guest adds a page only where the mode lets guests shoot their own sets, only of that mode's layouts, and
+        // only at the end (the pages already there stay where the owner put them).
+        const info = MODES[a.rows[0].mode as AlbumMode] ?? MODES.scrapbook;
+        if (guest && (!info.guestSets || !info.pageTemplates.some((t) => t.id === req.body.templateId))) return 'forbidden' as const;
         const { rows } = await c.query('select count(*)::int as n from pages where album_id = $1', [req.params.id]);
-        const pos = Math.min(req.body.position ?? rows[0].n, rows[0].n);
+        const pos = guest ? rows[0].n : Math.min(req.body.position ?? rows[0].n, rows[0].n);
         await c.query('update pages set position = position + 1 where album_id = $1 and position >= $2', [req.params.id, pos]);
         const ins = await c.query(
           'insert into pages (album_id, position, layout) values ($1, $2, $3) returning *',
@@ -58,6 +64,7 @@ export function registerPages(app: FastifyInstance, pool: pg.Pool): void {
         );
         return ins.rows[0];
       });
+      if (row === 'forbidden') return reply.code(403).send({ error: 'Link sửa không cho thêm trang ở album này.' });
       return row ? reply.code(201).send(toPageDTO(row)) : reply.code(404).send({ error: 'not found' });
     },
   );

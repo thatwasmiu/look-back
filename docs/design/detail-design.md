@@ -250,6 +250,14 @@ Vietnamese (missing entries fall back to English; `{name}` placeholders). `useT(
   countdown (self-timer, else 3 s) before each and a flash after; the window takes each frame's shape. Stop keeps
   the shots taken. Seven **Booth** page templates (strips of 3/4, 1 big + 3, 2×2, 3 + title card, title + 2,
   2 stacked) on pastel papers (pink, sky, mint, lined, cream), after classic photobooth prints. Papers added with them: `paper-lined`, `paper-pink`, `paper-sky`, `paper-mint`; `paper-black` is no longer offered but still accepted.
+- **Photobooth extras** (per mode in `shared/src/modes.ts`: `photoFilters`, `shootFirst`, `boomerang`, `guestSets`):
+  page `filter` (bw / sepia / film / warm, `PHOTO_FILTER_CSS`, drawn as `--photo-filter` on the photo windows);
+  **Shoot a new set** (pick a layout → `addPage` → camera with `set`: front camera, Photobooth mode, beeps; when done
+  `dd/mm/yyyy` texts get today's date and it offers another set); **Boomerang** in Share (the chosen pages' shots,
+  forward and back ×3, 0.35 s each, recorded like the slideshow with the page filter on the canvas); **Kiosk** (full
+  screen start screen with layouts, a thank-you after each set); guests of an edit link may `POST /api/albums/:id/pages`
+  with a Booth layout (appended at the end; other modes → 403) and the Share box shows the edit link as a QR code
+  (`qrcode`, drawn in the browser).
 - **Frame camera self-timer:** ⏱ cycles off / 3 / 5 / 10 s; Shoot or Record then counts down on screen, tapping
   again cancels.
 - **Uploads** (`useUpload.ts`): one app-wide Uppy + tus instance (survives leaving the editor), resumable, local

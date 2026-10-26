@@ -745,3 +745,49 @@ test('photobooth order: the other empty frames row by row, right to left for a r
   expect(otherEmptyFrames(layout, 'me', 'ltr').map((e) => e.id)).toEqual(['b', 'a', 'c']);
   expect(otherEmptyFrames(layout, 'me', 'rtl').map((e) => e.id)).toEqual(['a', 'b', 'c']);
 });
+
+const boothBundle = (): AlbumBundle => ({
+  ...bundle,
+  album: { ...bundle.album, mode: 'photobooth' },
+  pages: [{ id: 'p0', albumId: 'a1', position: 0, layout: { background: 'paper-pink', elements: [] } }],
+});
+const renderBooth = (api: EditorApi) => render(
+  <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={boothBundle()} api={api} /></MemoryRouter>,
+);
+
+test('photobooth: a page-wide photo filter; scrapbook albums have no Filter button', async () => {
+  const user = userEvent.setup();
+  const api = okApi();
+  const { container } = renderBooth(api);
+  await user.click(screen.getByRole('button', { name: 'Filter' }));
+  await user.click(screen.getByRole('button', { name: 'Black & white' }));
+  expect(container.querySelector('.edit-page .page.photo-filter-bw')).not.toBeNull();
+  await waitFor(() => expect(api.savePage).toHaveBeenLastCalledWith('p0', expect.objectContaining({ filter: 'bw' }), undefined));
+  await user.click(screen.getByRole('button', { name: 'Filter' }));
+  await user.click(screen.getByRole('button', { name: 'No filter' }));
+  await waitFor(() => expect(api.savePage).toHaveBeenLastCalledWith('p0', expect.not.objectContaining({ filter: expect.anything() }), undefined));
+  cleanup();
+  setup(okApi());
+  expect(screen.queryByRole('button', { name: 'Filter' })).toBeNull();
+});
+
+test('photobooth: "Shoot a new set" asks the layout, adds that page and opens the camera on it; Kiosk goes full screen', async () => {
+  const user = userEvent.setup();
+  const { templates } = await import('@scrapbook/shared');
+  const grid = templates.find((t) => t.id === 'booth-grid-4')!;
+  const api: EditorApi = { ...okApi(), addPage: vi.fn().mockResolvedValue({ id: 'p1', albumId: 'a1', position: 1, layout: grid.layout }) };
+  renderBooth(api);
+  await user.click(screen.getByRole('button', { name: /Shoot a new set/ }));
+  expect(screen.getByRole('dialog', { name: 'Pick a template' }).textContent).toContain('Layout for the set');
+  expect(screen.queryByText('Cover')).toBeNull(); // only Booth layouts
+  await user.click(screen.getByRole('button', { name: /Booth: 2 × 2/ }));
+  expect(api.addPage).toHaveBeenCalledWith('a1', 'booth-grid-4', 1);
+  expect(await screen.findByRole('dialog', { name: 'Shoot in the frame' })).toBeTruthy();
+  expect(screen.getByRole('radio', { name: 'Photobooth' }).getAttribute('aria-checked')).toBe('true');
+  await user.click(screen.getByRole('button', { name: 'Close' }));
+  await user.click(screen.getByRole('button', { name: /Kiosk/ }));
+  expect(screen.getByRole('dialog', { name: 'Kiosk' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: /Tap to shoot/ })).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: 'Exit kiosk' }));
+  expect(screen.queryByRole('dialog', { name: 'Kiosk' })).toBeNull();
+});
