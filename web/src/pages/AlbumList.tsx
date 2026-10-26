@@ -1,13 +1,26 @@
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import type { AlbumMode, AlbumSummary, ReadingDirection } from '@scrapbook/shared';
+import { instantiateTemplate, type AlbumSummary, type ReadingDirection } from '@scrapbook/shared';
 import { api, ApiError } from '../api';
 import { exampleAlbum, exampleCover } from '../example/lookBack';
-import { albumTemplates } from '../example/albumTemplates';
+import { albumTemplates, type AlbumKind } from '../example/albumTemplates';
 import { stickers } from '../render/decor';
 import { PageRenderer } from '../render/PageRenderer';
 import { LangSwitch, getLang, useT } from '../i18n';
 import { mediaUrl } from '../mediaUrl';
+
+// Door with an arrow leaving it.
+function LogoutIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" />
+      <path d="M15 8l4 4-4 4" />
+      <path d="M9 12h10" />
+    </svg>
+  );
+}
+
+const KIND_NAME: Record<AlbumKind, string> = { scrapbook: 'Scrapbook', manga: 'Manga', photobooth: 'Photobooth' };
 
 // Cover photo if one is set; otherwise the album's first page stands in, drawn small.
 function AlbumCover({ a }: { a: AlbumSummary }) {
@@ -39,11 +52,13 @@ export default function AlbumList() {
     if (v === 'ai' && aiKey === null) api.aiSettings().then((x) => setAiKey(x.hasKey), () => setAiKey(false));
   };
   const navigate = useNavigate();
-  // Album mode, fixed at creation. Manga albums also get a reading direction; built-in templates are scrapbook.
-  const [mode, setMode] = useState<AlbumMode>('scrapbook');
+  // Kind of album. Scrapbook / manga is the album's mode, fixed at creation (manga also gets a reading direction).
+  // Photobooth is a scrapbook album started from the Booth pages: its own templates, no AI, no copying.
+  const [mode, setMode] = useState<AlbumKind>('scrapbook');
   const [direction, setDirection] = useState<ReadingDirection>('ltr');
-  const pickMode = (m: AlbumMode) => { setMode(m); setFrom(''); };
-  const sameMode = albums?.filter((a) => (a.mode ?? 'scrapbook') === mode) ?? [];
+  const pickMode = (m: AlbumKind) => { setMode(m); setFrom(''); };
+  const booth = mode === 'photobooth';
+  const sameMode = booth ? [] : albums?.filter((a) => (a.mode ?? 'scrapbook') === mode) ?? [];
 
   const [loadError, setLoadError] = useState(false);
   const [createError, setCreateError] = useState('');
@@ -136,7 +151,10 @@ export default function AlbumList() {
     if (!title.trim()) return;
     try {
       const [kind, id] = from.split(':');
-      const design = kind === 'tpl' ? albumTemplates.find((t) => t.id === id)?.design(direction) : undefined;
+      const design = kind === 'tpl' ? albumTemplates.find((t) => t.id === id)?.design(direction)
+        // An empty photobooth album starts on a strips page, on a dark desk.
+        : booth ? { backgroundColor: 'slate' as const, backgroundEffect: 'none' as const, pages: [instantiateTemplate('booth-strips-3', () => `e${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`)] }
+        : undefined;
       const source = design ? { design } : kind === 'album' ? { fromAlbumId: id } : undefined;
       // A copied album keeps its own mode and direction (server side); a new manga album sends them.
       const a = await api.createAlbum(title.trim(), source, mode === 'manga' && kind !== 'album' ? { mode: 'manga', readingDirection: direction } : undefined);
@@ -155,7 +173,7 @@ export default function AlbumList() {
     setCreateError('');
     try {
       const a = await api.createAiAlbum({
-        prompt: prompt.trim(), mode, ...(mode === 'manga' ? { readingDirection: direction } : {}), ...(title.trim() ? { title: title.trim() } : {}),
+        prompt: prompt.trim(), mode: mode === 'manga' ? 'manga' : 'scrapbook', ...(mode === 'manga' ? { readingDirection: direction } : {}), ...(title.trim() ? { title: title.trim() } : {}),
       });
       busyRef.current = false;
       closeCreate();
@@ -176,10 +194,25 @@ export default function AlbumList() {
           <Link to="/guide" className="guide-link">{t('Guide')}</Link>
           <LangSwitch />
           {/* Full reload to /login: no album data stays in memory (offline caches are cleared by api.logout). */}
-          <button type="button" className="link-btn logout-btn" onClick={() => void api.logout().catch(() => {}).finally(() => location.assign('/login'))}>{t('Log out')}</button>
-          <button onClick={() => setCreating(true)}>{t('New album')}</button>
+          <button type="button" className="logout-btn" aria-label={t('Log out')} title={t('Log out')}
+            onClick={() => void api.logout().catch(() => {}).finally(() => location.assign('/login'))}><LogoutIcon /></button>
         </span>
       </header>
+      {/* One button per kind of album on its own row, so both are visible up front; the dialog opens on that mode. */}
+      <div className="new-album-row">
+        <button type="button" aria-label={t('New scrapbook album')} onClick={() => { pickMode('scrapbook'); setCreating(true); }}>
+          <span className="new-album-name"><span className="plus" aria-hidden>＋</span> Scrapbook</span>
+          <small>{t('Photos on paper, tape and stickers')}</small>
+        </button>
+        <button type="button" aria-label={t('New manga album')} onClick={() => { pickMode('manga'); setCreating(true); }}>
+          <span className="new-album-name"><span className="plus" aria-hidden>＋</span> Manga</span>
+          <small>{t('Comic panels, speech bubbles and sound effects')}</small>
+        </button>
+        <button type="button" aria-label={t('New photobooth album')} onClick={() => { pickMode('photobooth'); setCreating(true); }}>
+          <span className="new-album-name"><span className="plus" aria-hidden>＋</span> Photobooth</span>
+          <small>{t('Photo strips and booth prints, shot in a row')}</small>
+        </button>
+      </div>
       {loadError && (
         <p role="alert" className="empty">{t("Couldn't load the album list")} <button onClick={load}>{t('Retry')}</button></p>
       )}
@@ -216,8 +249,8 @@ export default function AlbumList() {
             <input aria-label={t('Album title')} placeholder={isAi ? t('Leave empty: the AI names it') : t('e.g. Tà Xùa 2026')} value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
             {/* Picker cards: template icon is one of the app's own stickers; an album shows its cover. */}
             <div className="mode-switch" role="radiogroup" aria-label={t('Mode')}>
-              {(['scrapbook', 'manga'] as const).map((m) => (
-                <button key={m} type="button" role="radio" aria-checked={mode === m} onClick={() => pickMode(m)}>{m === 'scrapbook' ? 'Scrapbook' : 'Manga'}</button>
+              {(['scrapbook', 'manga', 'photobooth'] as const).map((m) => (
+                <button key={m} type="button" role="radio" aria-checked={mode === m} onClick={() => pickMode(m)}>{KIND_NAME[m]}</button>
               ))}
             </div>
             {mode === 'manga' && (
@@ -230,7 +263,7 @@ export default function AlbumList() {
             <div className="start-from" role="radiogroup" aria-label={t('Template')}>
               <span className="start-label">{t('Template')}</span>
               <div className="start-grid">
-                {[{ value: '', name: 'Empty album', icon: 'sparkle' }, { value: 'ai', name: '✨ AI', icon: 'bubble' }, ...albumTemplates.filter((t) => (t.mode ?? 'scrapbook') === mode).map((t) => ({ value: `tpl:${t.id}`, name: t.name, icon: t.icon }))].map((o) => {
+                {[{ value: '', name: 'Empty album', icon: 'sparkle' }, ...(booth ? [] : [{ value: 'ai', name: '✨ AI', icon: 'bubble' }]), ...albumTemplates.filter((t) => (t.mode ?? 'scrapbook') === mode).map((t) => ({ value: `tpl:${t.id}`, name: t.name, icon: t.icon }))].map((o) => {
                   const Icon = stickers[o.icon]?.Svg;
                   return (
                     <button key={o.value} type="button" role="radio" aria-checked={from === o.value} className="start-card" onClick={() => pickFrom(o.value)}>

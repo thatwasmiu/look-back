@@ -270,3 +270,51 @@ test('a preview paused by the browser (phone turned) plays again; a camera muted
     await waitFor(() => expect(gum).toHaveBeenCalledTimes(2));
   } finally { vi.useRealTimers(); }
 });
+
+test('photobooth: one press shoots into this frame and then each next empty frame, a countdown before each, then closes', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  try {
+    const onCapture = vi.fn();
+    const onClose = vi.fn();
+    render(<FrameCamera frame={frame()} onCapture={onCapture} onClose={onClose}
+      more={[{ frame: frame({ id: 'f2' }), shape: null }, { frame: frame({ id: 'f3', frameStyle: 'circle' }), shape: null }]} />);
+    await waitFor(() => expect(gum).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole('radio', { name: 'Photobooth' }));
+    expect(screen.getByText('Shot 1 of 3')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Start photobooth' }));
+    const tick = (ms = 1000) => act(async () => { vi.advanceTimersByTime(ms); });
+    for (let i = 0; i < 3; i++) await tick();
+    expect(onCapture).toHaveBeenLastCalledWith(expect.any(File), 'f1');
+    expect(screen.getByText('Shot 2 of 3')).toBeTruthy();
+    await tick(900);
+    for (let i = 0; i < 3; i++) await tick();
+    expect(onCapture).toHaveBeenLastCalledWith(expect.any(File), 'f2');
+    expect(document.querySelector('.camera-window.shape-circle')).not.toBeNull(); // the window took f3's shape
+    await tick(900);
+    for (let i = 0; i < 3; i++) await tick();
+    expect(onCapture).toHaveBeenLastCalledWith(expect.any(File), 'f3');
+    expect(onCapture).toHaveBeenCalledTimes(3);
+    expect(onClose).toHaveBeenCalled();
+    expect(stop).toHaveBeenCalled();
+  } finally { vi.useRealTimers(); }
+});
+
+test('photobooth is offered only when the page has more empty frames; stopping keeps the shots taken', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  try {
+    const { unmount } = render(<FrameCamera frame={frame()} onCapture={() => {}} onClose={() => {}} />);
+    expect(screen.queryByRole('radio', { name: 'Photobooth' })).toBeNull();
+    unmount();
+    const onCapture = vi.fn();
+    const onClose = vi.fn();
+    render(<FrameCamera frame={frame()} onCapture={onCapture} onClose={onClose} more={[{ frame: frame({ id: 'f2' }), shape: null }]} />);
+    fireEvent.click(screen.getByRole('radio', { name: 'Photobooth' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start photobooth' }));
+    for (let i = 0; i < 3; i++) await act(async () => { vi.advanceTimersByTime(1000); });
+    expect(onCapture).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Stop' }));
+    await act(async () => { vi.advanceTimersByTime(6000); });
+    expect(onCapture).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalled();
+  } finally { vi.useRealTimers(); }
+});

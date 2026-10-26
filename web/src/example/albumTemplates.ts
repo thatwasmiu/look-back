@@ -3,8 +3,10 @@
 import { instantiateTemplate, type AlbumDesign, type AlbumMode, type BackgroundColor, type BackgroundEffect, type EffectEl, type PageElement, type PageLayout, type ReadingDirection, type TextEl } from '@scrapbook/shared';
 import { exampleAlbum } from './lookBack';
 
-// icon: a sticker id. mode: which album mode lists it (default scrapbook); manga designs take the chosen reading direction.
-type AlbumTemplate = { id: string; name: string; icon: string; mode?: AlbumMode; design: (direction?: ReadingDirection) => AlbumDesign };
+// icon: a sticker id. mode: which kind of album lists it (default scrapbook); manga designs take the chosen reading
+// direction. Photobooth is a kind of its own in "New album" (its own templates), stored as a scrapbook album.
+export type AlbumKind = AlbumMode | 'photobooth';
+type AlbumTemplate = { id: string; name: string; icon: string; mode?: AlbumKind; design: (direction?: ReadingDirection) => AlbumDesign };
 
 // randomUUID needs a secure context; the app may be opened over plain http on the LAN.
 const newId = () => `e${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -173,6 +175,12 @@ export const albumTemplates: AlbumTemplate[] = [
     ['cover', 'sweet-heart', 'vintage', 'two-tilted', 'postcard', 'memories']) },
   { id: 'year', name: 'Year in review', icon: 'camera', design: fromPages('slate', 'snow',
     ['cover', 'four-grid-loose', 'three-collage', 'hero-plus-two', 'video-feature', 'film-day', 'old-album', 'journal']) },
+  { id: 'booth-party', name: 'Party booth', icon: 'camera', mode: 'photobooth', design: fromPages('slate', 'stars',
+    ['booth-strips-3', 'booth-grid-4', 'booth-big-3', 'booth-strips-4', 'booth-stack']) },
+  { id: 'booth-wedding', name: 'Wedding booth', icon: 'heart', mode: 'photobooth', design: fromPages('rose', 'petals',
+    ['booth-pair', 'booth-strips-3', 'booth-grid-3', 'booth-big-3', 'booth-stack']) },
+  { id: 'booth-friends', name: 'Friends night', icon: 'star', mode: 'photobooth', design: fromPages('night', 'stars',
+    ['booth-strips-4', 'booth-grid-4', 'booth-grid-3', 'booth-pair']) },
   { id: 'look-back', name: 'Look Back', icon: 'moon', design: () => ({
     backgroundColor: exampleAlbum.album.backgroundColor, backgroundEffect: exampleAlbum.album.backgroundEffect,
     pages: exampleAlbum.pages.map((p) => p.layout),

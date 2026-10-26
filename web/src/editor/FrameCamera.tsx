@@ -5,8 +5,10 @@ import { useT } from '../i18n';
 // "Chụp theo khung" (phones): an in-app camera whose preview shows the frame's own shape and proportions, so the
 // owner composes the shot for that frame. A photo is cropped to the outlined area; a video is recorded whole (the frame
 // shows its centre, which is the outlined area). The file then goes through the normal upload into that frame.
+// Photobooth (when the page has more empty frames): one press shoots into this frame and then each next empty frame,
+// a countdown before each shot, the camera window taking each frame's shape in turn.
 
-type Mode = 'photo' | 'video';
+type Mode = 'photo' | 'video' | 'booth';
 type Facing = 'environment' | 'user';
 
 // The photo area of a frame as drawn on the page (polaroids, film, mats… pad it, so it isn't the frame's own
@@ -50,6 +52,8 @@ const shapeOf = (f: FrameEl) => (f.frameStyle === 'circle' ? 'circle' : f.frameS
 const HI_RES = { width: { ideal: 3840 }, height: { ideal: 2160 } };
 const VIDEO_TYPES = ['video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
 const DELAYS = [0, 3, 5, 10] as const; // self-timer, seconds
+const MODE_LABEL = { photo: 'Photo', booth: 'Photobooth', video: 'Video' } as const;
+const MODE_ICON = { photo: '📷', booth: '🎞', video: '🎬' } as const;
 const HEART = 'M50 88C10 60 0 38 0 24 0 10 11 0 25 0c11 0 20 6 25 15C55 6 64 0 75 0c14 0 25 10 25 24 0 14-10 36-50 64z';
 
 // Zalo's in-app browser on iPhone can't play video inside the page: the live camera opens in iOS's fullscreen
@@ -57,9 +61,23 @@ const HEART = 'M50 88C10 60 0 38 0 24 0 10 11 0 25 0c11 0 20 6 25 15C55 6 64 0 7
 export const inlineVideoBlocked = (ua = typeof navigator === 'undefined' ? '' : navigator.userAgent) =>
   /Zalo/i.test(ua) && /iPhone|iPad|iPod/i.test(ua);
 
-export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame: FrameEl; windowShape?: WindowShape | null; onCapture(file: File): void; onClose(): void }) {
+export type CameraTarget = { frame: FrameEl; shape: WindowShape | null };
+const BOOTH_DELAY = 3; // s before each photobooth shot when the self-timer is off
+const BOOTH_GAP_MS = 900; // pause on the next frame's shape before its countdown starts
+
+// onCapture's frameId: a photobooth shot, for that frame (the camera stays open); without it, the one shot is done.
+export function FrameCamera({ frame: first, windowShape: firstShape, more = [], onCapture, onClose }: {
+  frame: FrameEl; windowShape?: WindowShape | null; more?: CameraTarget[]; onCapture(file: File, frameId?: string): void; onClose(): void;
+}) {
   const t = useT();
   const [mode, setMode] = useState<Mode>('photo');
+  const targets: CameraTarget[] = [{ frame: first, shape: firstShape ?? null }, ...more];
+  const [boothAt, setBoothAt] = useState<number | null>(null); // index in targets while a photobooth run is going
+  const boothRef = useRef<number | null>(null);
+  const boothTimer = useRef<ReturnType<typeof setTimeout>>();
+  const [flash, setFlash] = useState(0);
+  const taken = useRef(0); // photobooth shots handed over in this run
+  const { frame, shape: windowShape } = targets[boothAt ?? 0];
   const [facing, setFacing] = useState<Facing>('environment');
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState(0); // bump to open the camera again (iOS ends the stream in the background)
@@ -127,7 +145,7 @@ export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame:
       if (!cancelled) setError(`${t(e.name === 'NotAllowedError' ? "You haven't allowed the camera." : "Couldn't open the camera.")} ${t('Use the “Take photo/video” button instead.')}`);
     }) ?? setError(`${t("This browser can't open the camera.")} ${t('Use the “Take photo/video” button instead.')}`);
     return () => { cancelled = true; release(); };
-  }, [facing, mode, session]);
+  }, [facing, mode === 'video', session]);
 
   // Turning the phone (or the browser pausing the preview on its own) can leave the live preview paused on black:
   // play it again.
@@ -169,7 +187,17 @@ export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame:
     const t = setTimeout(() => setCountdown((n) => (n === null ? null : n - 1)), 1000);
     return () => clearTimeout(t);
   }, [countdown]);
-  const cancelCountdown = () => { pending.current = null; setCountdown(null); };
+  const cancelCountdown = () => {
+    pending.current = null;
+    setCountdown(null);
+    clearTimeout(boothTimer.current);
+    if (boothRef.current !== null) { // stopping a photobooth run: the shots taken so far are kept, and done
+      boothRef.current = null;
+      setBoothAt(null);
+      if (taken.current) { release(); onClose(); }
+    }
+  };
+  useEffect(() => () => clearTimeout(boothTimer.current), []);
   const later = (action: () => void) => () => {
     if (countdown !== null) return cancelCountdown();
     if (!delay) return action();
@@ -203,13 +231,14 @@ export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame:
   const scale = digital && canZoom ? zoom : 1;
   const feedTransform = facing === 'user' ? `scale(${-scale}, ${scale})` : scale === 1 ? '' : `scale(${scale})`;
 
+  const file = (blob: Blob, ext: string) => new File([blob], `camera-${Date.now()}.${ext}`, { type: blob.type });
   const done = (blob: Blob, ext: string) => {
     release();
-    onCapture(new File([blob], `camera-${Date.now()}.${ext}`, { type: blob.type }));
+    onCapture(file(blob, ext));
   };
 
   // The outlined area, mapped from the screen back into the camera image (the preview fills the screen, cropped).
-  const shoot = () => {
+  const grab = (got: (b: Blob) => void) => {
     const v = videoRef.current;
     if (!v?.videoWidth) return;
     const vr = v.getBoundingClientRect();
@@ -227,7 +256,30 @@ export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame:
     if (!g) return;
     if (facing === 'user') { g.translate(c.width, 0); g.scale?.(-1, 1); } // match the mirrored selfie preview
     g.drawImage(v, sx, sy, sw, sh, 0, 0, c.width, c.height);
-    c.toBlob((b) => { if (b) done(b, 'jpg'); }, 'image/jpeg', 0.92);
+    c.toBlob((b) => { if (b) got(b); }, 'image/jpeg', 0.92);
+  };
+  const shoot = () => grab((b) => done(b, 'jpg'));
+
+  // Photobooth: countdown → shot into targets[i] → next frame's shape → … → close after the last.
+  const boothShot = (i: number) => {
+    pending.current = () => grab((b) => {
+      if (boothRef.current !== i) return;
+      onCapture(file(b, 'jpg'), targets[i].frame.id);
+      taken.current++;
+      setFlash((n) => n + 1);
+      if (i + 1 >= targets.length) { boothRef.current = null; release(); onClose(); return; }
+      boothRef.current = i + 1;
+      setBoothAt(i + 1);
+      boothTimer.current = setTimeout(() => boothShot(i + 1), BOOTH_GAP_MS);
+    });
+    setCountdown(delay || BOOTH_DELAY);
+  };
+  const startBooth = () => {
+    if (countdown !== null || boothRef.current !== null) return cancelCountdown();
+    taken.current = 0;
+    boothRef.current = 0;
+    setBoothAt(0);
+    boothShot(0);
   };
 
   const record = () => {
@@ -271,12 +323,15 @@ export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame:
       {hint && !error && <p className="camera-hint" role="note"><span aria-hidden>📱↻</span> {t(hint)} <small>({t('turn off rotation lock if it is on')})</small></p>}
       {error && <p className="camera-error" role="alert">{error}</p>}
       {countdown !== null && <p className="camera-countdown" role="status" aria-live="assertive">{countdown}</p>}
+      {flash > 0 && <div key={flash} className="camera-flash" aria-hidden />}
+      {mode === 'booth' && <p className="camera-booth-count">{t('Shot {n} of {total}', { n: (boothAt ?? 0) + 1, total: targets.length })}</p>}
       {recording && <p className="camera-timer" role="status"><span className="rec-dot" aria-hidden />{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}</p>}
       <div className="camera-top">
         <button type="button" className="camera-round" aria-label={t('Close')} onClick={() => { cancelCountdown(); if (recording) recorder.current?.stop(); release(); onClose(); }}>✕</button>
         <div className="mode-switch" role="radiogroup" aria-label={t('Mode')}>
-          {(['photo', 'video'] as const).map((m) => (
-            <button key={m} type="button" role="radio" aria-label={t(m === 'photo' ? 'Photo' : 'Video')} aria-checked={mode === m} disabled={recording} onClick={() => { cancelCountdown(); setMode(m); }}>{m === 'photo' ? `📷 ${t('Photo')}` : `🎬 ${t('Video')}`}</button>
+          {(more.length ? ['photo', 'booth', 'video'] as const : ['photo', 'video'] as const).map((m) => (
+            <button key={m} type="button" role="radio" aria-label={t(MODE_LABEL[m])} aria-checked={mode === m} disabled={recording || boothAt !== null}
+              onClick={() => { cancelCountdown(); setMode(m); }}>{MODE_ICON[m]} {t(MODE_LABEL[m])}</button>
           ))}
         </div>
         <button type="button" className="camera-round camera-delay" aria-label={t('Self-timer')} aria-pressed={delay > 0} disabled={recording || countdown !== null}
@@ -292,8 +347,9 @@ export function FrameCamera({ frame, windowShape, onCapture, onClose }: { frame:
         </label>
       )}
       <div className="camera-bottom">
-        <button type="button" className="camera-round camera-flip" aria-label={t('Switch camera')} disabled={recording} onClick={() => setFacing(facing === 'environment' ? 'user' : 'environment')}><FlipIcon /></button>
-        {mode === 'photo' ? <button type="button" className="camera-shutter" aria-label={t(countdown !== null ? 'Cancel' : 'Shoot')} onClick={later(shoot)}><span aria-hidden>♥</span></button>
+        <button type="button" className="camera-round camera-flip" aria-label={t('Switch camera')} disabled={recording || boothAt !== null} onClick={() => setFacing(facing === 'environment' ? 'user' : 'environment')}><FlipIcon /></button>
+        {mode === 'booth' ? <button type="button" className="camera-shutter booth" aria-label={t(boothAt !== null ? 'Stop' : 'Start photobooth')} onClick={startBooth}><span aria-hidden>{boothAt !== null ? '■' : '★'}</span></button>
+          : mode === 'photo' ? <button type="button" className="camera-shutter" aria-label={t(countdown !== null ? 'Cancel' : 'Shoot')} onClick={later(shoot)}><span aria-hidden>♥</span></button>
           : recording ? <button type="button" className="camera-shutter recording" aria-label={t('Stop')} onClick={stopRecording}><span aria-hidden /></button>
             : <button type="button" className="camera-shutter rec" aria-label={t(countdown !== null ? 'Cancel' : 'Record')} onClick={later(record)}><span aria-hidden /></button>}
         {hw.torch && <button type="button" className="camera-round camera-torch" aria-label={t('⚡ Light')} aria-pressed={torch} onClick={toggleTorch}><BoltIcon /></button>}

@@ -22,7 +22,7 @@ test('500 on load shows an error, not the empty state', async () => {
 
 test('create failure shows an inline error', async () => {
   setup(vi.fn().mockResolvedValueOnce(json(200, [])).mockResolvedValueOnce(json(500, { error: 'boom' })));
-  await userEvent.click(await screen.findByRole('button', { name: 'New album' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'New scrapbook album' }));
   await userEvent.type(screen.getByLabelText('Album title'), 'Trip');
   await userEvent.click(screen.getByRole('button', { name: 'Create' }));
   expect(await screen.findByText("Couldn't create the album")).toBeTruthy();
@@ -30,12 +30,12 @@ test('create failure shows an inline error', async () => {
 
 test('New album opens a modal; Escape and × close it', async () => {
   setup(vi.fn().mockResolvedValue(json(200, [])));
-  await userEvent.click(await screen.findByRole('button', { name: 'New album' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'New scrapbook album' }));
   expect(screen.getByRole('dialog', { name: 'New album' })).toBeTruthy();
   expect((screen.getByRole('button', { name: 'Create' }) as HTMLButtonElement).disabled).toBe(true);
   await userEvent.keyboard('{Escape}');
   expect(screen.queryByRole('dialog')).toBeNull();
-  await userEvent.click(screen.getByRole('button', { name: 'New album' }));
+  await userEvent.click(screen.getByRole('button', { name: 'New scrapbook album' }));
   await userEvent.click(screen.getByRole('button', { name: 'Close' }));
   expect(screen.queryByRole('dialog')).toBeNull();
 });
@@ -87,7 +87,7 @@ test('New album can start from another album’s design (sent as fromAlbumId) an
   const created = { ...src, id: 'a2', title: 'Trip 2', shareToken: null };
   const fetchMock = vi.fn().mockResolvedValueOnce(json(200, [src])).mockResolvedValueOnce(json(201, created));
   setup(fetchMock);
-  await userEvent.click(await screen.findByRole('button', { name: 'New album' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'New scrapbook album' }));
   await userEvent.type(screen.getByLabelText('Album title'), 'Trip 2');
   await userEvent.click(screen.getAllByRole('radio', { name: 'Trip' }).at(-1)!); // the album, after the built-in Trip template
   await userEvent.click(screen.getByRole('button', { name: 'Create' }));
@@ -100,7 +100,7 @@ test('New album can start from a built-in template: its whole design is sent', a
   const created = { id: 'a9', title: 'Sinh nhật', coverMediaId: null, backgroundEffect: 'stars', backgroundColor: 'rose', shareToken: null };
   const fetchMock = vi.fn().mockResolvedValueOnce(json(200, [])).mockResolvedValueOnce(json(201, created));
   setup(fetchMock);
-  await userEvent.click(await screen.findByRole('button', { name: 'New album' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'New scrapbook album' }));
   await userEvent.type(screen.getByLabelText('Album title'), 'Sinh nhật');
   await userEvent.click(screen.getByRole('radio', { name: 'Birthday' }));
   expect(screen.getByRole('radio', { name: 'Birthday' }).getAttribute('aria-checked')).toBe('true');
@@ -126,7 +126,7 @@ test('Manga mode with right-to-left reading is sent on Create; scrapbook templat
   const created = { ...albumOf('m1', 'Truyện', 'manga'), readingDirection: 'rtl' };
   const fetchMock = vi.fn().mockResolvedValueOnce(json(200, [])).mockResolvedValueOnce(json(201, created));
   setup(fetchMock);
-  await userEvent.click(await screen.findByRole('button', { name: 'New album' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'New scrapbook album' }));
   await userEvent.type(screen.getByLabelText('Album title'), 'Truyện');
   expect(screen.getByRole('radio', { name: 'Trip' })).toBeTruthy();
   await userEvent.click(screen.getByRole('radio', { name: 'Manga' }));
@@ -142,7 +142,7 @@ test('"copy the design of" lists only albums of the chosen mode; a default creat
   const fetchMock = vi.fn().mockResolvedValueOnce(json(200, [albumOf('s1', 'Biển', 'scrapbook'), albumOf('m1', 'Truyện', 'manga')]))
     .mockResolvedValueOnce(json(201, albumOf('s2', 'Mới', 'scrapbook')));
   setup(fetchMock);
-  await userEvent.click(await screen.findByRole('button', { name: 'New album' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'New scrapbook album' }));
   const copyNames = () => screen.getAllByRole('radio').map((r) => r.textContent);
   expect(copyNames()).toContain('Biển');
   expect(copyNames()).not.toContain('Truyện');
@@ -159,7 +159,7 @@ test('Manga mode offers manga templates (not scrapbook ones); a picked one is se
   const created = { ...albumOf('m2', 'Đi phượt', 'manga'), readingDirection: 'rtl' };
   const fetchMock = vi.fn().mockResolvedValueOnce(json(200, [])).mockResolvedValueOnce(json(201, created));
   setup(fetchMock);
-  await userEvent.click(await screen.findByRole('button', { name: 'New album' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'New scrapbook album' }));
   await userEvent.type(screen.getByLabelText('Album title'), 'Đi phượt');
   expect(screen.queryByRole('radio', { name: 'Hành trình' })).toBeNull(); // scrapbook mode: no manga templates
   await userEvent.click(screen.getByRole('radio', { name: 'Manga' }));
@@ -200,7 +200,7 @@ function serveAi(hasKey: boolean, create: () => Promise<Response> | Response = (
 
 test('✨ AI card in both modes; without a key it points to /manage and Create stays off', async () => {
   serveAi(false);
-  await userEvent.click(await screen.findByRole('button', { name: 'New album' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'New scrapbook album' }));
   expect(screen.getByRole('radio', { name: /✨ AI/ })).toBeTruthy();
   await userEvent.click(screen.getByRole('radio', { name: 'Manga' }));
   await userEvent.click(screen.getByRole('radio', { name: /✨ AI/ }));
@@ -212,7 +212,7 @@ test('✨ AI card in both modes; without a key it points to /manage and Create s
 test('✨ AI sends the description, mode and direction once, then opens the editor', async () => {
   let release!: (r: Response) => void;
   const calls = serveAi(true, () => new Promise<Response>((ok) => { release = ok; }));
-  await userEvent.click(await screen.findByRole('button', { name: 'New album' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'New scrapbook album' }));
   await userEvent.click(screen.getByRole('radio', { name: 'Manga' }));
   await userEvent.click(screen.getByRole('radio', { name: 'Right → left' }));
   await userEvent.click(screen.getByRole('radio', { name: /✨ AI/ }));
@@ -235,7 +235,7 @@ test('✨ AI sends the description, mode and direction once, then opens the edit
 
 test('✨ AI shows the server error', async () => {
   serveAi(true, () => json(502, { error: 'Hết lượt miễn phí của Gemini, thử lại sau.' }));
-  await userEvent.click(await screen.findByRole('button', { name: 'New album' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'New scrapbook album' }));
   await userEvent.click(screen.getByRole('radio', { name: /✨ AI/ }));
   await userEvent.type(screen.getByLabelText('Album description'), 'sinh nhật');
   await userEvent.type(screen.getByLabelText('Album title'), 'Của tôi');
@@ -247,7 +247,7 @@ test('✨ AI shows the server error', async () => {
 
 test('✨ AI: the dialog cannot be closed while the album is being generated', async () => {
   serveAi(true, () => new Promise<Response>(() => {}));
-  await userEvent.click(await screen.findByRole('button', { name: 'New album' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'New scrapbook album' }));
   await userEvent.click(screen.getByRole('radio', { name: /✨ AI/ }));
   await userEvent.type(screen.getByLabelText('Album description'), 'abc');
   const create = screen.getByRole('button', { name: 'Create' });
@@ -298,4 +298,27 @@ test('Share dialog: an edit link for the hours the owner types (8 by default), t
   await userEvent.click(screen.getByRole('button', { name: 'Revoke edit link' }));
   expect(calls).toContain('DELETE /api/albums/a1/edit-link');
   expect(await screen.findByRole('button', { name: 'Create edit link' })).toBeTruthy();
+});
+
+test('the album list shows one button per mode; Manga opens the dialog in manga mode', async () => {
+  setup(vi.fn().mockResolvedValue(json(200, [])));
+  await userEvent.click(await screen.findByRole('button', { name: 'New manga album' }));
+  expect(screen.getByRole('radio', { name: 'Manga' }).getAttribute('aria-checked')).toBe('true');
+  expect(screen.getByRole('radiogroup', { name: 'Reading direction' })).toBeTruthy();
+});
+
+test('Photobooth is a kind of its own: booth templates, no AI; an empty one starts on a strips page', async () => {
+  const fetchMock = vi.fn().mockResolvedValueOnce(json(200, []))
+    .mockResolvedValueOnce(json(201, { id: 'b1', title: 'Booth', coverMediaId: null, backgroundEffect: 'none', backgroundColor: 'slate', shareToken: null, musicMediaId: null, mode: 'scrapbook', readingDirection: 'ltr' }));
+  setup(fetchMock);
+  await userEvent.click(await screen.findByRole('button', { name: 'New photobooth album' }));
+  expect(screen.getByRole('radio', { name: 'Photobooth' }).getAttribute('aria-checked')).toBe('true');
+  expect(screen.queryByRole('radio', { name: '✨ AI' })).toBeNull();
+  expect(screen.getByRole('radio', { name: /Party booth/ })).toBeTruthy();
+  await userEvent.type(screen.getByLabelText('Album title'), 'Booth');
+  await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+  const body = JSON.parse(fetchMock.mock.calls[1][1].body);
+  expect(body.mode).toBeUndefined(); // stored as a scrapbook album
+  expect(body.design.pages[0].background).toBe('paper-black');
 });

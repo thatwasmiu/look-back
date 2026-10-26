@@ -14,7 +14,7 @@ import { useAutosave } from '../editor/useAutosave';
 import { MediaTray, thumbOf } from '../editor/MediaTray';
 import { mediaUrl } from '../mediaUrl';
 import { ACCEPT, pollUntilSettled, useUpload } from '../editor/useUpload';
-import { FrameCamera, frameWindowShape, type WindowShape, inlineVideoBlocked } from '../editor/FrameCamera';
+import { FrameCamera, frameWindowShape, type CameraTarget, type WindowShape, inlineVideoBlocked } from '../editor/FrameCamera';
 import { dropLocalPreview, LocalPreview } from '../localPreview';
 
 export type EditorApi = Pick<typeof realApi,
@@ -53,6 +53,15 @@ const UPLOADING_POLL_MS = 15_000;
 const placeholder = (id: string, albumId: string): MediaDTO => ({
   id, albumId, kind: 'image', status: 'uploading', width: null, height: null, durationSec: null, blurDataUrl: null, variants: null, error: null,
 });
+
+// The page's empty frames other than `id`, in reading order: rows top to bottom (frames whose tops are within 5 % of
+// the page count as one row), each row left to right, or right to left for a right-to-left manga.
+export function otherEmptyFrames(layout: PageLayout, id: string, dir: ReadingDirection): FrameEl[] {
+  const row = (f: FrameEl) => Math.round(f.y / 0.05);
+  return layout.elements
+    .filter((e): e is FrameEl => e.type === 'frame' && !e.mediaId && e.id !== id)
+    .sort((a, b) => row(a) - row(b) || (dir === 'rtl' ? b.x - a.x : a.x - b.x));
+}
 
 const MUSIC = '#music'; // upload target: the album's background music instead of a frame
 
@@ -297,7 +306,8 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
   // With nothing uploaded yet it goes straight to the file dialog — except on phones, where the menu also offers the
   // cameras.
   const [frameMenu, setFrameMenu] = useState<string | null>(null);
-  const [cameraFrame, setCameraFrame] = useState<{ frame: FrameEl; shape: WindowShape | null } | null>(null); // "Chụp theo khung" open for this frame
+  // "Chụp theo khung" open for this frame; more: the page's other empty frames, in reading order (for Photobooth).
+  const [cameraFrame, setCameraFrame] = useState<{ frame: FrameEl; shape: WindowShape | null; more: CameraTarget[] } | null>(null);
   // camera: the phone-only "Take photo/video" (same input with capture, which opens the camera directly).
   const cameraPick = useRef<HTMLInputElement | null>(null);
   const uploadToFrame = (frameId: string, camera = false) => {
@@ -514,8 +524,8 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
           onDelete={guest ? undefined : deleteMedia} onSetCover={guest ? undefined : setCover} />
         {/* Portal: inside .edit-main's stacking context the tools would paint over the backdrop. */}
         {cameraFrame && createPortal(
-          <FrameCamera frame={cameraFrame.frame} windowShape={cameraFrame.shape} onClose={() => setCameraFrame(null)}
-            onCapture={(file) => { upload.add([file], cameraFrame.frame.id); setCameraFrame(null); }} />,
+          <FrameCamera frame={cameraFrame.frame} windowShape={cameraFrame.shape} more={cameraFrame.more} onClose={() => setCameraFrame(null)}
+            onCapture={(file, frameId) => { upload.add([file], frameId ?? cameraFrame.frame.id); if (!frameId) setCameraFrame(null); }} />,
           document.body,
         )}
         {frameMenu && createPortal(
@@ -529,8 +539,9 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
                 {inlineVideoBlocked() ? null : <button type="button" className="frame-menu-upload frame-menu-camera" onClick={() => {
                   const f = layout.elements.find((e) => e.id === frameMenu);
                   if (f?.type === 'frame') {
-                    const win = document.querySelector<HTMLElement>(`.edit-page [data-frame-id="${f.id}"] .frame-window`);
-                    setCameraFrame({ frame: f, shape: frameWindowShape(win) });
+                    const shapeOf = (id: string) => frameWindowShape(document.querySelector<HTMLElement>(`.edit-page [data-frame-id="${id}"] .frame-window`));
+                    const more = otherEmptyFrames(layout, f.id, readingDirection).map((e) => ({ frame: e, shape: shapeOf(e.id) }));
+                    setCameraFrame({ frame: f, shape: shapeOf(f.id), more });
                   }
                   setFrameMenu(null);
                 }}>🎯<span>{tr('Shoot in the frame')}</span></button>}

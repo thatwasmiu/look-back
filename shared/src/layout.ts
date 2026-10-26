@@ -85,7 +85,7 @@ const textSchema = z.object({
 export const pageElementSchema = z.discriminatedUnion('type', [frameSchema, tapeSchema, stickerSchema, textSchema, effectSchema])
 
 export const pageLayoutSchema = z.object({
-  background: z.enum(['paper-cream', 'paper-kraft', 'paper-grid', 'paper-dots', 'paper-white']),
+  background: z.enum(['paper-cream', 'paper-kraft', 'paper-grid', 'paper-dots', 'paper-white', 'paper-black']),
   elements: z.array(pageElementSchema).max(200),
   hidden: z.boolean().optional(), // kept in the editor, left out of the viewer, share links and print
 }).superRefine((l, ctx) => {

@@ -22,7 +22,7 @@ const vi: Guide = {
         'Bấm ảnh bìa để xem album, **Sửa** để trang trí.',
         'Ảnh bìa đặt bằng nút ★ trong khu ảnh của album. Chưa đặt thì thẻ album hiện thu nhỏ trang đầu.',
         '**Xoá** xoá vĩnh viễn album cùng toàn bộ ảnh và video (luôn hỏi trước).'] },
-      { h: 'Ngôn ngữ và đăng xuất', p: ['Nút **EN / VI** ở góc trên đổi tiếng Anh / tiếng Việt (máy nhớ lựa chọn). **Đăng xuất** ở cạnh đó.'] },
+      { h: 'Ngôn ngữ và đăng xuất', p: ['Nút **EN / VI** ở góc trên đổi tiếng Anh / tiếng Việt (máy nhớ lựa chọn). **Biểu tượng cửa** ở cạnh đó để đăng xuất.'] },
     ] },
     { id: 'share', title: '2. Chia sẻ', features: [
       { h: 'Link xem', img: 'share', p: [
@@ -122,7 +122,7 @@ const en: Guide = {
         'Tap a cover to view the album, **Edit** to decorate it.',
         "The cover is the photo starred with ★ in the album's photos; without one, the card shows the first page.",
         '**Delete** removes the album with all its photos and videos for good (it always asks first).'] },
-      { h: 'Language and logging out', p: ['The **EN / VI** button at the top switches English / Vietnamese (remembered on this device). **Log out** is next to it.'] },
+      { h: 'Language and logging out', p: ['The **EN / VI** button at the top switches English / Vietnamese (remembered on this device). The **door icon** next to it logs out.'] },
     ] },
     { id: 'share', title: '2. Sharing', features: [
       { h: 'View link', img: 'share', p: [

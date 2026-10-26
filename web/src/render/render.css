@@ -40,6 +40,10 @@
     #f4ecdb;
 }
 
+.bg-paper-black {
+  background: radial-gradient(ellipse 85% 75% at 50% 45%, #262422, #121110), #161514;
+}
+
 /* ---- Frames ---- */
 .el-frame:has(> .frame-torn) { filter: drop-shadow(0 .6cqh .8cqh rgba(40, 28, 10, .25)); }
 .frame { width: 100%; height: 100%; display: flex; }

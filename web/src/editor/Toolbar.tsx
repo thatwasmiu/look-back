@@ -27,7 +27,7 @@ type Props = {
   guest?: boolean; // edit-link guest: no frame/panel tools, no album settings (the server refuses those changes)
 };
 
-const backgrounds: PageLayout['background'][] = ['paper-cream', 'paper-kraft', 'paper-grid', 'paper-dots'];
+const backgrounds: PageLayout['background'][] = ['paper-cream', 'paper-kraft', 'paper-grid', 'paper-dots', 'paper-black'];
 const duration = (s: number | null) => (s ? `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}` : '');
 // Bangers (sound effects) belongs to manga albums; the scrapbook Font picker keeps its two fonts.
 const SCRAPBOOK_FONTS: TextEl['font'][] = ['dancing-script', 'patrick-hand'];

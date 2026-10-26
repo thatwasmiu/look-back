@@ -737,3 +737,11 @@ test('someone else saved the page meanwhile: their version is loaded with a note
   expect(api.savePage).toHaveBeenCalledTimes(1); // their version isn't saved back over itself
   expect(screen.getByRole('status').textContent).toBe('Saved');
 });
+
+test('photobooth order: the other empty frames row by row, right to left for a right-to-left manga', async () => {
+  const { otherEmptyFrames } = await import('../src/pages/Editor');
+  const f = (id: string, x: number, y: number, mediaId: string | null = null) => ({ type: 'frame' as const, id, x, y, w: 0.4, h: 0.3, rotation: 0, z: 1, frameStyle: 'plain' as const, mediaId, crop: { x: 0.5, y: 0.5, scale: 1 } });
+  const layout = { background: 'paper-cream' as const, elements: [f('a', 0.5, 0.05), f('b', 0.05, 0.06), f('c', 0.05, 0.5), f('d', 0.5, 0.5, 'm1'), f('me', 0.5, 0.9)] };
+  expect(otherEmptyFrames(layout, 'me', 'ltr').map((e) => e.id)).toEqual(['b', 'a', 'c']);
+  expect(otherEmptyFrames(layout, 'me', 'rtl').map((e) => e.id)).toEqual(['a', 'b', 'c']);
+});

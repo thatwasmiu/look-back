@@ -1,5 +1,14 @@
 // Vietnamese for the app's English text (see i18n.tsx). Keys are the exact English strings passed to t().
 export const VI: Record<string, string> = {
+  'New scrapbook album': 'Tạo album scrapbook',
+  'New manga album': 'Tạo album manga',
+  'New photobooth album': 'Tạo album photobooth',
+  'Photo strips and booth prints, shot in a row': 'Dải ảnh và khung in photobooth, chụp liền một lượt',
+  'Party booth': 'Tiệc photobooth',
+  'Wedding booth': 'Photobooth cưới',
+  'Friends night': 'Đêm bạn bè',
+  'Photos on paper, tape and stickers': 'Ảnh dán trên giấy, băng keo và sticker',
+  'Comic panels, speech bubbles and sound effects': 'Khung truyện tranh, bóng thoại và hiệu ứng chữ',
   'New album': 'Album mới',
   'Delete “{title}”?': 'Xoá “{title}”?',
   // Editor toolbar, labels, manga tools
@@ -356,6 +365,9 @@ export const VI: Record<string, string> = {
   'Switch camera': 'Đổi camera',
   'Shoot': 'Chụp',
   'Self-timer': 'Hẹn giờ chụp',
+  'Photobooth': 'Photobooth',
+  'Start photobooth': 'Bắt đầu chụp liền',
+  'Shot {n} of {total}': 'Kiểu {n}/{total}',
   'Stop': 'Dừng',
   'Record': 'Quay',
   '⚡ Light': '⚡ Đèn',
