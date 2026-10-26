@@ -120,11 +120,14 @@ const vi: Guide = {
     ] },
     { id: 'space', title: '11. Space', features: [
       { h: 'Một không gian, thật nhiều ảnh', p: [
-        'Bấm **＋ Space**, chọn **Tường dọc** (cuộn xuống) hoặc **Dải ngang** (vuốt ngang). Album Space chỉ có một trang — một không gian dài.',
-        'Trong màn sửa, nút **🧩 Không gian**: **Dọc / Ngang** đổi dạng (ảnh giữ chỗ trong từng đoạn), **Dài hơn / Ngắn hơn** (không bao giờ cắt mất vật đang có), **Xếp ảnh: lưới** hoặc **Xếp ảnh: rải** đặt mọi ảnh của album chưa có trên không gian vào sau những gì đang có.'] },
+        'Bấm **＋ Space**, chọn **Tường dọc** (cuộn xuống), **Dải ngang** (vuốt ngang), **Bảng tự do** (kéo đi mọi hướng, phóng to/thu nhỏ) hoặc **Vòng cầu** (ảnh dán quanh một quả cầu 3D). Album Space chỉ có một trang — một không gian lớn.',
+        'Trong màn sửa, nút **🧩 Không gian**: **Dọc / Ngang / Tự do** đổi dạng (ảnh giữ chỗ trong từng đoạn), **Dài hơn / Ngắn hơn** (bảng: **Lớn hơn / Nhỏ hơn**, từ 2 × 2 tới 5 × 5; không bao giờ cắt mất vật đang có), **Xếp ảnh: lưới** hoặc **Xếp ảnh: rải** đặt mọi ảnh của album chưa có trên không gian vào sau những gì đang có.'] },
+      { h: 'Vòng cầu', p: [
+        'Ảnh được app tự rải đều quanh quả cầu; bạn chỉ chọn ảnh và thứ tự. **🧩 Không gian → Thêm ảnh của album** đưa ảnh lên cầu; bên dưới quả cầu, ◀ ▶ đổi thứ tự, ✕ bỏ một ảnh.',
+        'Khi xem: kéo để xoay (quả cầu trôi thêm một chút rồi tự quay chậm), chạm một ảnh để mở to. **Chia sẻ**: một ảnh quả cầu, hoặc **Tạo video** quả cầu quay một vòng (8 giây, kèm nhạc). **PDF** in các ảnh thành lưới.'] },
       { h: 'Xem và chia sẻ', p: [
-        'Khi xem: cuộn dọc hoặc vuốt ngang; chạm một ảnh để mở to, ← → hoặc vuốt để sang ảnh khác, × hoặc vuốt xuống để đóng.',
-        '**Chia sẻ** cắt không gian thành các phần cỡ một trang (**Phần 1, 2…**) — đăng thành một bài nhiều ảnh (carousel). **PDF** in mỗi phần một tờ.'] },
+        'Khi xem: cuộn dọc hoặc vuốt ngang; bảng tự do mở vừa màn hình — chụm hai ngón, Ctrl + cuộn chuột, nhấp đúp hoặc nút **＋ / −** để phóng to, kéo để đi khắp bảng. Chạm một ảnh để mở to, ← → hoặc vuốt để sang ảnh khác, × hoặc vuốt xuống để đóng.',
+        '**Chia sẻ** cắt tường / dải thành các phần cỡ một trang (**Phần 1, 2…**) — đăng thành một bài nhiều ảnh (carousel); bảng tự do thành một ảnh cả bảng. **PDF** in mỗi phần một tờ (bảng: một tờ).'] },
     ] },
   ],
   shortcutsTitle: '12. Phím tắt',
@@ -246,11 +249,14 @@ const en: Guide = {
     ] },
     { id: 'space', title: '11. Space', features: [
       { h: 'One space, lots of photos', p: [
-        'Tap **＋ Space**, pick **Vertical wall** (scrolled down) or **Horizontal strip** (swiped sideways). A space album has one page — one long space.',
-        "In the editor, **🧩 Space**: **Vertical / Horizontal** changes the shape (items keep their place in each part), **Longer / Shorter** (never cuts an item off), **Arrange: grid** or **Arrange: scatter** puts the album's photos that aren't on the space yet after what is there."] },
+        'Tap **＋ Space**, pick **Vertical wall** (scrolled down), **Horizontal strip** (swiped sideways), **Free board** (panned any way, zoomed in and out) or **Sphere** (photos round a 3D globe). A space album has one page — one big space.',
+        "In the editor, **🧩 Space**: **Vertical / Horizontal / Free** changes the shape (items keep their place in each part), **Longer / Shorter** (a board: **Bigger / Smaller**, 2 × 2 to 5 × 5; never cuts an item off), **Arrange: grid** or **Arrange: scatter** puts the album's photos that aren't on the space yet after what is there."] },
+      { h: 'Sphere', p: [
+        "The app spreads the photos evenly round the globe; you only pick them and their order. **🧩 Space → Add the album's photos** puts them on it; under the globe, ◀ ▶ reorder and ✕ takes one off.",
+        'Viewing: drag to turn it (it drifts a little, then spins slowly), tap a photo to see it big. **Share**: a picture of the globe, or **Make video** of it turning once (8 s, with the music). **PDF** prints the photos as a grid.'] },
       { h: 'Viewing and sharing', p: [
-        'Viewing: scroll down or swipe sideways; tap a photo to see it big, ← → or a swipe for the next, × or a swipe down to close.',
-        '**Share** cuts the space into page-sized parts (**Part 1, 2…**) — one post with several slides (a carousel). **PDF** prints one part per sheet.'] },
+        'Viewing: scroll down or swipe sideways; a free board opens whole on screen — pinch, Ctrl + wheel, double-tap or **＋ / −** to zoom, drag to move around it. Tap a photo to see it big, ← → or a swipe for the next, × or a swipe down to close.',
+        '**Share** cuts a wall / strip into page-sized parts (**Part 1, 2…**) — one post with several slides (a carousel); a free board makes one picture of the whole board. **PDF** prints one part per sheet (a board: one sheet).'] },
     ] },
   ],
   shortcutsTitle: '12. Shortcuts',

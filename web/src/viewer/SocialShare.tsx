@@ -5,7 +5,9 @@ import { useT } from '../i18n';
 import { SpaceTile, tileCount } from '../render/SpaceTile';
 import { mediaUrl } from '../mediaUrl';
 import { applyContainerUnits } from '../cqPolyfill';
-import { BOOMERANG_SEC, boomerangOrder, canRecordVideo, recordSlideshow, SLIDE_SEC, type Picture } from './slideshow';
+import { BOOMERANG_SEC, boomerangOrder, canRecordVideo, recordCanvas, recordSlideshow, SLIDE_SEC, type Picture } from './slideshow';
+import { drawGlobe } from '../render/sphere';
+import { spaceShots } from './SpaceView';
 
 // "Share to social": every visible page as a picture sized for a feed post (4:5), a story / TikTok (9:16) — the
 // page centred on the album's desk colour, so nothing gets cropped; a story's spare height carries the album's title
@@ -116,7 +118,63 @@ export function SocialShare({ bundle, onClose, viewLink }: { bundle: AlbumBundle
       setStaging(false);
     }
   };
-  const make = async () => setShots(await render());
+  // A globe (Space, sphere) isn't photographed from the page: it is drawn on a canvas — the photos round a globe on the
+  // album's desk colour (a story also gets the title) — still for a picture, turning once in 8 s for a video.
+  const globe = pages.length === 1 && pages[0].layout.space?.shape === 'sphere' ? pages[0].layout : null;
+  const GLOBE_SEC = 8;
+  const globePainter = async () => {
+    const shotsOnGlobe = spaceShots(globe!, media);
+    const load = (src: string) => new Promise<HTMLImageElement | null>((ok) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => ok(img);
+      img.onerror = () => ok(null);
+      img.src = src;
+    });
+    const imgs = await Promise.all(shotsOnGlobe.map(({ media: m }) => {
+      const key = m.kind === 'video' ? m.variants?.poster : m.variants?.thumb ?? m.variants?.display;
+      return key ? load(mediaUrl(key)) : Promise.resolve(null);
+    }));
+    const probe = document.createElement('div');
+    probe.className = `desk-${bundle.album.backgroundColor}`;
+    document.body.append(probe);
+    const cs = getComputedStyle(probe);
+    const deskA = cs.getPropertyValue('--desk-a').trim() || '#8a6a4c', deskB = cs.getPropertyValue('--desk-b').trim() || '#5b412e';
+    probe.remove();
+    const { w, h } = FORMATS[format];
+    return (g: CanvasRenderingContext2D, turnSec: number) => {
+      const bg = g.createRadialGradient(w / 2, h * 0.45, 0, w / 2, h * 0.45, Math.max(w, h) * 0.75);
+      bg.addColorStop(0, deskA);
+      bg.addColorStop(1, deskB);
+      g.fillStyle = bg;
+      g.fillRect(0, 0, w, h);
+      drawGlobe(g, imgs, w, h, -0.2, (turnSec / GLOBE_SEC) * 2 * Math.PI);
+      if (format === 'story') {
+        g.fillStyle = '#fff8ec';
+        g.font = "700 96px 'Dancing Script', cursive";
+        g.textAlign = 'center';
+        g.fillText(bundle.album.title, w / 2, h * 0.11, w - 140);
+      }
+    };
+  };
+  const make = async () => {
+    if (!globe) return setShots(await render());
+    setError(null);
+    reset();
+    try {
+      setBusy(t('Making image {n}/{total}…', { n: 1, total: 1 }));
+      const paint = await globePainter();
+      const { w, h } = FORMATS[format];
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      paint(c.getContext('2d')!, 0.6);
+      setShots([{ name: name(0), url: c.toDataURL('image/jpeg', 0.92) }]);
+    } catch {
+      setError(t("Couldn't make the images. A photo kept in a bucket without CORS can't be drawn — move it to the VPS or turn on CORS."));
+    } finally {
+      setBusy(null);
+    }
+  };
   const music = bundle.album.musicMediaId ? media.get(bundle.album.musicMediaId) : undefined;
   // Boomerang (photobooth): the chosen pages' shots, in reading order, forward and back — no page pictures needed.
   const canBoomerang = canVideo && MODES[bundle.album.mode ?? 'scrapbook'].boomerang;
@@ -149,6 +207,26 @@ export function SocialShare({ bundle, onClose, viewLink }: { bundle: AlbumBundle
     }
   };
   const makeVideo = async () => {
+    if (globe) {
+      setError(null);
+      reset();
+      try {
+        const paint = await globePainter();
+        const { w, h } = FORMATS[format];
+        setBusy(t('Recording the video… {n}/{total} s', { n: 0, total: GLOBE_SEC }));
+        const file = await recordCanvas({
+          width: w, height: h, seconds: GLOBE_SEC, name: bundle.album.title, frame: (g, sec) => paint(g, sec),
+          musicUrl: music?.status === 'ready' && music.variants?.audio ? mediaUrl(music.variants.audio) : null,
+          onProgress: (n, total) => setBusy(t('Recording the video… {n}/{total} s', { n, total })),
+        });
+        setVideo({ file, url: URL.createObjectURL(file) });
+      } catch {
+        setError(t("Couldn't record the video in this browser."));
+      } finally {
+        setBusy(null);
+      }
+      return;
+    }
     const pics = await render();
     if (!pics) return;
     const { w, h } = FORMATS[format];

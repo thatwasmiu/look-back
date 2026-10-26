@@ -48,3 +48,63 @@ test('Arrange: the photos not on the space yet, after what is there; the space g
   expect(Math.max(...frames(strip).map((f) => f.y + f.h))).toBeLessThanOrEqual(1);
   expect(pageLayoutSchema.safeParse(strip).success).toBe(true);
 });
+
+test('free board: square, Bigger / Smaller a tile each way (2–5), never cutting items', () => {
+  const board = spaceLayout('free', 3);
+  expect(board.space).toEqual({ shape: 'free', cols: 3, rows: 3 });
+  expect(resizeSpace(board, 1).space).toEqual({ shape: 'free', cols: 4, rows: 4 });
+  expect(resizeSpace(resizeSpace(board, 1), 1).space?.cols).toBe(5);
+  expect(resizeSpace({ ...board, space: { shape: 'free', cols: 5, rows: 5 } }, 1).space?.cols).toBe(5); // 25 tiles: the most
+  expect(resizeSpace(board, -1).space?.cols).toBe(2);
+  expect(resizeSpace(resizeSpace(board, -1), -1).space?.cols).toBe(2); // never below 2 × 2
+  const far = { ...board, elements: [{ ...board.elements[0], id: 'far', x: 2.2 }] };
+  expect(resizeSpace(far, -1)).toBe(far); // an item reaching into the third column keeps 3 × 3
+});
+
+test('wall → board → wall: tile k stays tile k (row by row across the board), nothing outside the board', () => {
+  const wall = { ...spaceLayout('vertical', 5), elements: [{ ...spaceLayout('vertical').elements[0], id: 't4', x: 0.1, y: 4.2 }] };
+  const board = setShape(wall, 'free');
+  expect(board.space).toEqual({ shape: 'free', cols: 3, rows: 3 }); // 5 tiles fit 3 × 3
+  expect(board.elements[0].x).toBeCloseTo(1.1); // tile 4 = column 1, row 1
+  expect(board.elements[0].y).toBeCloseTo(1.2);
+  const back = setShape(board, 'vertical');
+  expect(back.space).toEqual({ shape: 'vertical', cols: 1, rows: 9 });
+  expect(back.elements[0].y).toBeCloseTo(4.2);
+  expect(pageLayoutSchema.safeParse(board).success).toBe(true);
+});
+
+test('Arrange on a board: rows run across all its tiles; it grows square to fit', () => {
+  const board = spaceLayout('free', 2);
+  const ids = Array.from({ length: 30 }, (_, i) => `m${i}`);
+  const out = arrange(board, ids, 'grid');
+  const fs = frames(out);
+  expect(fs.length).toBeGreaterThan(0);
+  expect(Math.max(...fs.map((f) => f.x + f.w))).toBeGreaterThan(1.5); // across both columns of tiles
+  expect(out.space!.cols).toBe(out.space!.rows);
+  expect(Math.max(...fs.map((f) => f.y + f.h))).toBeLessThanOrEqual(out.space!.rows);
+  expect(pageLayoutSchema.safeParse(out).success).toBe(true);
+});
+
+test('onto a globe: photos keep reading order, boxes tucked in one tile, empty frames dropped; and back to a wall as a grid', async () => {
+  const { moveOnSphere, sphereOrder } = await import('../src/editor/spaceOps');
+  const wall = arrange(spaceLayout('vertical', 2), ['a', 'b', 'c', 'd'], 'grid');
+  const withEmpty = { ...wall, elements: [...wall.elements, { ...frames(wall)[0], id: 'empty', mediaId: null }] };
+  const globe = setShape(withEmpty, 'sphere');
+  expect(globe.space).toEqual({ shape: 'sphere', cols: 1, rows: 1 });
+  expect(sphereOrder(globe).map((f) => f.mediaId)).toEqual(['a', 'b', 'c', 'd']);
+  expect(frames(globe).some((f) => !f.mediaId)).toBe(false);
+  expect(pageLayoutSchema.safeParse(globe).success).toBe(true);
+  // add the rest of the album, reorder, take one off
+  const more = arrange(globe, ['a', 'b', 'c', 'd', 'e'], 'grid');
+  expect(sphereOrder(more).map((f) => f.mediaId)).toEqual(['a', 'b', 'c', 'd', 'e']);
+  const moved = moveOnSphere(more, sphereOrder(more)[4].id, -1);
+  expect(sphereOrder(moved).map((f) => f.mediaId)).toEqual(['a', 'b', 'c', 'e', 'd']);
+  expect(moveOnSphere(moved, sphereOrder(moved)[0].id, -1)).toBe(moved); // already first
+  // back to a wall: laid out again as a grid, in the globe's order
+  const back = setShape(moved, 'vertical');
+  expect(back.space?.shape).toBe('vertical');
+  const order = frames(back).slice().sort((p, q) => Math.round(p.y * 10) - Math.round(q.y * 10) || p.x - q.x).map((f) => f.mediaId);
+  expect(order).toEqual(['a', 'b', 'c', 'e', 'd']);
+  expect(pageLayoutSchema.safeParse(back).success).toBe(true);
+  expect(resizeSpace(globe, 1)).toBe(globe); // a globe has no size
+});

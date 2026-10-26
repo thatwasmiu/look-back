@@ -11,6 +11,7 @@ describe('space', () => {
     const l = spaceLayout('vertical')
     expect(l.space).toEqual({ shape: 'vertical', cols: 1, rows: 3 })
     expect(spaceLayout('horizontal').space).toEqual({ shape: 'horizontal', cols: 3, rows: 1 })
+    expect(spaceLayout('free').space).toEqual({ shape: 'free', cols: 3, rows: 3 })
     expect(pageLayoutSchema.safeParse(l).success).toBe(true)
   })
 

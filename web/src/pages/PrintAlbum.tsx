@@ -49,7 +49,7 @@ export default function PrintAlbum() {
       {/* One sheet per page; a space prints one sheet per tile of its length. */}
       {bundle.pages.filter((p) => !p.layout.hidden).flatMap((p) => Array.from({ length: tileCount(p.layout) }, (_, i) => (
         <section key={`${p.id}-${i}`} className="print-sheet">
-          {p.layout.space ? <SpaceTile layout={p.layout} media={media} index={i} />
+          {p.layout.space ? <SpaceTile layout={p.layout} media={media} index={i} grid />
             : <PageRenderer layout={p.layout} media={media} mode="view" active={false} />}
         </section>
       )))}

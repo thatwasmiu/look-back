@@ -82,26 +82,35 @@ export async function recordSlideshow({ pictures, width, height, musicUrl, name,
   const cache = new Map<string, Promise<HTMLImageElement>>(); // a boomerang shows each shot several times
   const imgs = await Promise.all(pics.map((p) => { if (!cache.has(p.src)) cache.set(p.src, load(p.src)); return cache.get(p.src)!; }));
   const total = imgs.length * slideSec;
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const g = canvas.getContext('2d')!;
-  const draw = (i: number, p: number, alpha: number) => {
-    const img = imgs[i];
-    const s = Math.max(width / img.naturalWidth, height / img.naturalHeight) * (1 + zoom * p);
-    const w = img.naturalWidth * s, h = img.naturalHeight * s;
-    g.globalAlpha = alpha;
-    g.filter = pics[i].filter ?? 'none';
-    g.drawImage(img, (width - w) / 2, (height - h) / 2, w, h);
-    g.filter = 'none';
-  };
-  const frame = (t: number) => {
+  return recordCanvas({ width, height, seconds: total, musicUrl, name, onProgress, type, frame: (g, t) => {
+    const draw = (i: number, p: number, alpha: number) => {
+      const img = imgs[i];
+      const s = Math.max(width / img.naturalWidth, height / img.naturalHeight) * (1 + zoom * p);
+      const w = img.naturalWidth * s, h = img.naturalHeight * s;
+      g.globalAlpha = alpha;
+      g.filter = pics[i].filter ?? 'none';
+      g.drawImage(img, (width - w) / 2, (height - h) / 2, w, h);
+      g.filter = 'none';
+    };
     const { i, next, alpha, p } = slideAt(t, imgs.length, slideSec, fadeSec);
     draw(i, p, 1);
     if (next !== null) draw(next, 0, alpha);
     g.globalAlpha = 1;
-  };
-  frame(0);
+  } });
+}
+
+// Record `seconds` of a canvas drawn by frame(g, t) — in real time, with the music under it — as a video file.
+export async function recordCanvas({ width, height, seconds, frame, musicUrl, name, onProgress, type = pickVideoType() }: {
+  width: number; height: number; seconds: number; frame(g: CanvasRenderingContext2D, t: number): void;
+  musicUrl?: string | null; name: string; onProgress?(sec: number, total: number): void; type?: string | null;
+}): Promise<File> {
+  if (!type) throw new Error('video recording not supported');
+  const total = seconds;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const g = canvas.getContext('2d')!;
+  frame(g, 0);
 
   const stream = canvas.captureStream(FPS);
   const music = await musicTrack(musicUrl, total);
@@ -118,7 +127,7 @@ export async function recordSlideshow({ pictures, width, height, musicUrl, name,
     // A timer, not requestAnimationFrame: the recording goes on if the screen dims or the tab is covered.
     const tick = setInterval(() => {
       const t = (performance.now() - t0) / 1000;
-      frame(Math.min(t, total));
+      frame(g, Math.min(t, total));
       onProgress?.(Math.min(Math.floor(t), total), total);
       if (t >= total) { clearInterval(tick); done(); }
     }, 1000 / FPS);

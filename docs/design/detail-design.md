@@ -266,7 +266,16 @@ Vietnamese (missing entries fall back to English; `{name}` placeholders). `useT(
   Shorter (`spaceOps.ts`, never below the items' reach), Arrange grid / scatter (seeded by photo id). Viewer:
   `SpaceView` scrolls the space, tap a photo → `PhotoViewer`. `SpaceTile` cuts one tile for album cards, the share
   carousel (one picture per tile) and print (one sheet per tile). The server refuses a second page (`maxPages`) and
-  guests can't change `space`.
+  guests can't change `space`. Round 2: **free boards** (n × n tiles, 2–5, so the whole board is 3:4): Bigger / Smaller
+  both ways, shapes map tile k row by row across the board, Arrange runs rows across all its tiles; the viewer opens
+  the board whole and zooms 1–4× (pinch via touch events, Ctrl + wheel, double-tap, ＋ / −) about the fingers /
+  pointer, scrolling both ways; share and print use the whole board as one picture / sheet. Round 3: **sphere**
+  (1 × 1; frames' order is the globe's order, their boxes tucked inside the tile): `render/sphere.ts` spreads n photos
+  on a Fibonacci sphere and turns / projects them; `SphereView` places thumbnail cards with CSS 3D (drag to turn with
+  inertia, slow idle spin unless reduced motion, tap → photo viewer); `SphereEditor` shows the globe plus the order
+  (◀ ▶ ✕), photos added by Arrange; switching to a flat shape lays the photos out again as a grid. Share draws the
+  globe on a canvas (`drawGlobe`): a still picture, or an 8 s turn recorded with `recordCanvas`; print: the photos as a
+  grid; album card: a still globe.
 - **Frame camera self-timer:** ⏱ cycles off / 3 / 5 / 10 s; Shoot or Record then counts down on screen, tapping
   again cancels.
 - **Uploads** (`useUpload.ts`): one app-wide Uppy + tus instance (survives leaving the editor), resumable, local

@@ -14,6 +14,7 @@ import { useAutosave } from '../editor/useAutosave';
 import { MediaTray, thumbOf } from '../editor/MediaTray';
 import { mediaUrl } from '../mediaUrl';
 import { ACCEPT, pollUntilSettled, useUpload } from '../editor/useUpload';
+import { SphereEditor } from '../editor/SphereEditor';
 import { FrameCamera, frameWindowShape, type CameraTarget, type WindowShape, inlineVideoBlocked } from '../editor/FrameCamera';
 import { dropLocalPreview, LocalPreview } from '../localPreview';
 
@@ -560,7 +561,8 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
         {/* Tapping the desk around the page clears the selection, same as tapping empty page. */}
         <div className="stage-wrap" onPointerDown={(e) => { if (e.target === e.currentTarget || e.target === stageRef.current) setSelectedId(null); }}>
           <div className="edit-stage" ref={stageRef}>
-            {page ? <EditCanvas lockFrames={guest} layout={layout} media={media} selectedId={selectedId} onSelect={setSelectedId} onCommit={commit}
+            {page && layout.space?.shape === 'sphere' ? <SphereEditor layout={layout} media={media} commit={(l) => commit(l)} />
+              : page ? <EditCanvas lockFrames={guest} layout={layout} media={media} selectedId={selectedId} onSelect={setSelectedId} onCommit={commit}
               onFrameAddMedia={addToFrame} cropId={cropId} onCrop={setCropId} shapeId={shapeId} onShape={setShapeId} zoom={zoom} snap={snap} />
               : <p className="empty">{tr('No pages yet — add one below.')}</p>}
           </div>

@@ -5,7 +5,7 @@ import { Tape, fontFamily, frameStyleLabels, stickers, tapeStyles } from '../ren
 import { FrameView } from '../render/FrameView';
 import { mediaUrl } from '../mediaUrl';
 import { MangaAddItems, MangaPanelTools, MangaPickerContent, MangaTextTools, type MangaPicker } from '../manga/MangaTools';
-import { arrange, minLength, resizeSpace, setShape } from './spaceOps';
+import { arrange, lengthOf, minLength, resizeSpace, setShape } from './spaceOps';
 import { addElement, assignMedia, bringForward, duplicate, newEffect, newFrame, newSticker, newTape, newText, removeElement, sendBackward, setFrameStyle, updateElement } from './layoutOps';
 import type { SaveStatus } from './useAutosave';
 import { TrimPanel } from './TrimPanel';
@@ -30,6 +30,9 @@ type Props = {
 };
 
 const FILTER_NAME = { bw: 'Black & white', sepia: 'Sepia', film: 'Film', warm: 'Warm' } as const;
+const SHAPE_ICON = { vertical: '↕', horizontal: '↔', free: '✥', sphere: '🌐' } as const;
+const SHAPE_NAME = { vertical: 'Vertical', horizontal: 'Horizontal', free: 'Free', sphere: 'Sphere' } as const;
+const GROW = { vertical: ['Longer', 'Shorter'], horizontal: ['Wider', 'Narrower'], free: ['Bigger', 'Smaller'], sphere: ['', ''] } as const;
 const backgrounds: PageLayout['background'][] = ['paper-cream', 'paper-kraft', 'paper-grid', 'paper-dots', 'paper-lined', 'paper-pink', 'paper-sky', 'paper-mint'];
 const duration = (s: number | null) => (s ? `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}` : '');
 // Bangers (sound effects) belongs to manga albums; the scrapbook Font picker keeps its two fonts.
@@ -179,16 +182,22 @@ export function Toolbar({ layout, selected, commit, undo, redo, canUndo, canRedo
           </>}
           {picker === 'space' && space && <>
             {/* A space: its shape, its length, and arranging the album's photos on it. */}
-            {(['vertical', 'horizontal'] as const).map((s) => (
+            {(['vertical', 'horizontal', 'free', 'sphere'] as const).map((s) => (
               <button key={s} type="button" aria-pressed={space.shape === s} onClick={() => commit(setShape(layout, s))}>
-                {s === 'vertical' ? '↕' : '↔'} {t(s === 'vertical' ? 'Vertical' : 'Horizontal')}
+                {SHAPE_ICON[s]} {t(SHAPE_NAME[s])}
               </button>
             ))}
-            <button type="button" onClick={() => commit(resizeSpace(layout, 1))}>＋ {t(space.shape === 'horizontal' ? 'Wider' : 'Longer')}</button>
-            <button type="button" disabled={(space.shape === 'horizontal' ? space.cols : space.rows) <= minLength(layout)}
-              onClick={() => commit(resizeSpace(layout, -1))}>− {t(space.shape === 'horizontal' ? 'Narrower' : 'Shorter')}</button>
-            <button type="button" disabled={!albumPhotos.length} onClick={() => { commit(arrange(layout, albumPhotos, 'grid')); setPicker(null); }}>▦ {t('Arrange: grid')}</button>
-            <button type="button" disabled={!albumPhotos.length} onClick={() => { commit(arrange(layout, albumPhotos, 'scatter')); setPicker(null); }}>✶ {t('Arrange: scatter')}</button>
+            {space.shape !== 'sphere' && <>
+              <button type="button" onClick={() => commit(resizeSpace(layout, 1))}>＋ {t(GROW[space.shape][0])}</button>
+              <button type="button" disabled={lengthOf(layout) <= minLength(layout)}
+                onClick={() => commit(resizeSpace(layout, -1))}>− {t(GROW[space.shape][1])}</button>
+            </>}
+            {space.shape === 'sphere'
+              ? <button type="button" disabled={!albumPhotos.length} onClick={() => { commit(arrange(layout, albumPhotos, 'grid')); setPicker(null); }}>🌐 {t('Add the album\'s photos')}</button>
+              : <>
+                <button type="button" disabled={!albumPhotos.length} onClick={() => { commit(arrange(layout, albumPhotos, 'grid')); setPicker(null); }}>▦ {t('Arrange: grid')}</button>
+                <button type="button" disabled={!albumPhotos.length} onClick={() => { commit(arrange(layout, albumPhotos, 'scatter')); setPicker(null); }}>✶ {t('Arrange: scatter')}</button>
+              </>}
             <small className="picker-hint">{t('Arrange puts the album\'s photos that are not on the space yet after what is there.')}</small>
           </>}
           {picker === 'filter' && ([undefined, ...PHOTO_FILTERS] as const).map((f) => (

@@ -29,3 +29,15 @@ test('the space is placed in tiles; tapping a photo opens it big, then ← → w
   fireEvent.keyDown(window, { key: 'Escape' });
   expect(screen.queryByRole('dialog')).toBeNull();
 });
+
+test('a free board opens whole and zooms with the + / − buttons', () => {
+  const layout = { ...spaceLayout('free', 3), elements: [f('a', 0.2, 0.3)] };
+  const { container } = render(<SpaceView layout={layout} media={media} />);
+  const stage = container.querySelector<HTMLElement>('.space-stage')!;
+  expect(stage.style.getPropertyValue('--z')).toBe('1');
+  expect(screen.getByRole('button', { name: 'Zoom out' }).hasAttribute('disabled')).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+  expect(stage.style.getPropertyValue('--z')).toBe('1.5');
+  fireEvent.click(screen.getByRole('button', { name: 'Zoom out' }));
+  expect(stage.style.getPropertyValue('--z')).toBe('1');
+});

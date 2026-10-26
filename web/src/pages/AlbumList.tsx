@@ -27,7 +27,7 @@ const MODE_BUTTON: Record<AlbumMode, { label: string; blurb: string }> = {
   scrapbook: { label: 'New scrapbook album', blurb: 'Photos on paper, tape and stickers' },
   manga: { label: 'New manga album', blurb: 'Comic panels, speech bubbles and sound effects' },
   photobooth: { label: 'New photobooth album', blurb: 'Photo strips and booth prints, shot in a row' },
-  space: { label: 'New space album', blurb: 'One space, many photos: a long wall or a strip' },
+  space: { label: 'New space album', blurb: 'One space, many photos: a wall, a strip, a board or a globe' },
 };
 
 // Cover photo if one is set; otherwise the album's first page stands in, drawn small.
@@ -64,7 +64,7 @@ export default function AlbumList() {
   // page and their editor offers only Booth pages; they have their own templates and no AI.
   const [mode, setMode] = useState<AlbumMode>('scrapbook');
   const [direction, setDirection] = useState<ReadingDirection>('ltr');
-  const [shape, setShape] = useState<Extract<SpaceShape, 'vertical' | 'horizontal'>>('vertical'); // a space album's
+  const [shape, setShape] = useState<SpaceShape>('vertical'); // a space album's
   const pickMode = (m: AlbumMode) => { setMode(m); setFrom(''); };
   const info = MODES[mode];
   const sameMode = albums?.filter((a) => (a.mode ?? 'scrapbook') === mode) ?? [];
@@ -260,9 +260,9 @@ export default function AlbumList() {
             </div>
             {info.space && (
               <div className="mode-switch" role="radiogroup" aria-label={t('Shape')}>
-                {(['vertical', 'horizontal'] as const).map((sh) => (
+                {(['vertical', 'horizontal', 'free', 'sphere'] as const).map((sh) => (
                   <button key={sh} type="button" role="radio" aria-checked={shape === sh} onClick={() => setShape(sh)}>
-                    {sh === 'vertical' ? '↕' : '↔'} {t(sh === 'vertical' ? 'Vertical wall' : 'Horizontal strip')}
+                    {{ vertical: '↕', horizontal: '↔', free: '✥', sphere: '🌐' }[sh]} {t({ vertical: 'Vertical wall', horizontal: 'Horizontal strip', free: 'Free board', sphere: 'Sphere' }[sh])}
                   </button>
                 ))}
               </div>

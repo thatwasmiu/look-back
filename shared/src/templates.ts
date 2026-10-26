@@ -307,15 +307,18 @@ export const templates: Template[] = ([
   ]),
 ] satisfies Template[]).map((t) => ({ ...t, ai: SCRAPBOOK_AI[t.id] }))
 
-// A space album's one page: an empty space of `len` tiles with the title at the top of the first.
+// A space album's one page: an empty space with the title at the top of the first tile — a wall or a strip `len`
+// tiles long, a free board len × len (the sphere has no size).
 export const spaceLayout = (shape: SpaceShape, len = 3): PageLayout => ({
   background: 'paper-cream',
-  space: { shape, cols: shape === 'horizontal' ? len : 1, rows: shape === 'vertical' ? len : 1 },
+  space: { shape, cols: shape === 'horizontal' || shape === 'free' ? len : 1, rows: shape === 'vertical' || shape === 'free' ? len : 1 },
   elements: [{ type: 'text', id: 'title', x: 0.1, y: 0.04, w: 0.8, h: 0.1, rotation: -1, z: 5, text: 'Tiêu đề', font: 'dancing-script', size: 0.07, color: '#3b2a1a' }],
 })
 export const spaceTemplates: Template[] = [
   { id: 'space-vertical', name: 'Vertical wall', layout: spaceLayout('vertical') },
   { id: 'space-horizontal', name: 'Horizontal strip', layout: spaceLayout('horizontal') },
+  { id: 'space-free', name: 'Free board', layout: spaceLayout('free') },
+  { id: 'space-sphere', name: 'Sphere', layout: spaceLayout('sphere') },
 ]
 
 // Scrapbook page templates first, then manga page layouts, then spaces.
