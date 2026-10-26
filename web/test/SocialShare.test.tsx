@@ -15,8 +15,8 @@ const bundle = (shareToken: string | null = null): AlbumBundle => ({
   media: [],
 });
 
-test('a 3:4 page fits inside each format with a margin, centred', () => {
-  for (const f of Object.keys(FORMATS) as (keyof typeof FORMATS)[]) {
+test('a 3:4 page fits inside each format with a margin, centred; the bare page format is exactly the page', () => {
+  for (const f of ['post', 'story'] as const) {
     const { w, h } = FORMATS[f];
     const r = fitPage(f);
     expect(r.width / r.height).toBeCloseTo(3 / 4, 3);
@@ -27,6 +27,7 @@ test('a 3:4 page fits inside each format with a margin, centred', () => {
   }
   expect(FORMATS.post).toEqual({ w: 1080, h: 1350 });
   expect(FORMATS.story).toEqual({ w: 1080, h: 1920 });
+  expect(fitPage('page')).toEqual({ width: 1080, height: 1440, left: 0, top: 0 });
 });
 
 test('makes one image per visible page and hands them to the share menu', async () => {

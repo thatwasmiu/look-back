@@ -6,18 +6,22 @@ import { PageRenderer } from '../render/PageRenderer';
 import { mediaUrl } from '../mediaUrl';
 import { BOOMERANG_SEC, boomerangOrder, canRecordVideo, recordSlideshow, SLIDE_SEC, type Picture } from './slideshow';
 
-// "Share to social": every visible page as a picture sized for a feed post (4:5) or a story / TikTok (9:16) — the
-// page centred on the album's desk colour, so nothing gets cropped — handed to the phone's share menu (Instagram,
+// "Share to social": every visible page as a picture sized for a feed post (4:5), a story / TikTok (9:16) — the
+// page centred on the album's desk colour, so nothing gets cropped; a story's spare height carries the album's title
+// and the page number — or exactly the page (3:4, no border) — handed to the phone's share menu (Instagram,
 // Facebook, TikTok, Zalo…) or downloaded. Pages are drawn by the real renderer off screen and photographed with
 // html-to-image; videos show their poster, effects freeze. Lazy-loaded: only this dialog pulls html-to-image in.
-export const FORMATS = { post: { w: 1080, h: 1350 }, story: { w: 1080, h: 1920 } } as const;
+export const FORMATS = { post: { w: 1080, h: 1350 }, story: { w: 1080, h: 1920 }, page: { w: 1080, h: 1440 } } as const;
 export type SocialFormat = keyof typeof FORMATS;
-const MARGIN = 0.06; // of the picture's smaller side, all round
+const FORMAT_LABEL: Record<SocialFormat, string> = {
+  post: 'Post 4:5 (Instagram, Facebook)', story: 'Story / TikTok 9:16', page: 'Page 3:4 (no border)',
+};
+const MARGIN = 0.06; // of the picture's smaller side, all round (none for the bare page)
 
 // Where a 3:4 page sits in the picture: as large as fits inside the margins, centred.
 export function fitPage(format: SocialFormat): { width: number; height: number; left: number; top: number } {
   const { w, h } = FORMATS[format];
-  const m = Math.min(w, h) * MARGIN;
+  const m = format === 'page' ? 0 : Math.min(w, h) * MARGIN;
   const width = Math.min(w - 2 * m, ((h - 2 * m) * 3) / 4);
   const height = (width * 4) / 3;
   return { width, height, left: (w - width) / 2, top: (h - height) / 2 };
@@ -177,9 +181,9 @@ export function SocialShare({ bundle, onClose, viewLink }: { bundle: AlbumBundle
         <button type="button" className="modal-close" aria-label={t('Close')} disabled={!!busy} onClick={onClose}>×</button>
         <h2 id="social-h">{t('Share to social media')}</h2>
         <div className="mode-switch" role="radiogroup" aria-label={t('Size')}>
-          {(['post', 'story'] as const).map((f) => (
+          {(Object.keys(FORMATS) as SocialFormat[]).map((f) => (
             <button key={f} type="button" role="radio" aria-checked={format === f} disabled={!!busy} onClick={() => { setFormat(f); reset(); }}>
-              {t(f === 'post' ? 'Post 4:5 (Instagram, Facebook)' : 'Story / TikTok 9:16')}
+              {t(FORMAT_LABEL[f])}
             </button>
           ))}
         </div>
@@ -221,7 +225,14 @@ export function SocialShare({ bundle, onClose, viewLink }: { bundle: AlbumBundle
       {staging && (
         <div className="social-stage" ref={stage} aria-hidden>
           {chosen.map((p) => (
-            <div key={p.id} className={`social-frame desk-${bundle.album.backgroundColor}`} style={{ width: w, height: h }}>
+            <div key={p.id} className={`social-frame desk-${bundle.album.backgroundColor}${format === 'page' ? ' bare' : ''}`} style={{ width: w, height: h }}>
+              {/* A story's spare height: the album's title above the page, the page number below. */}
+              {format === 'story' && <>
+                <div className="social-band social-title" style={{ height: fit.top }}>{bundle.album.title}</div>
+                <div className="social-band social-foot" style={{ top: fit.top + fit.height, height: h - fit.top - fit.height }}>
+                  {t('Page {n} / {total}', { n: pages.indexOf(p) + 1, total: pages.length })}
+                </div>
+              </>}
               <div className="social-page" style={{ left: fit.left, top: fit.top, width: fit.width, height: fit.height } as CSSProperties}>
                 <PageRenderer layout={p.layout} media={media} mode="view" active={false} />
               </div>

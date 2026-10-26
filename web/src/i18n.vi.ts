@@ -494,6 +494,8 @@ export const VI: Record<string, string> = {
   'One image per page; Instagram takes up to 20 in a post, TikTok 35. Videos show their cover.': 'Mỗi trang một ảnh; Instagram tối đa 20 ảnh/bài, TikTok 35. Video hiện ảnh bìa.',
   "Or one video: 3 s per page, with the album's music.": 'Hoặc một video: mỗi trang 3 giây, kèm nhạc của album.',
   'Make video': 'Tạo video',
+  'Page 3:4 (no border)': 'Vừa trang 3:4 (không viền)',
+  'Page {n} / {total}': 'Trang {n} / {total}',
   'Boomerang': 'Boomerang',
   'A boomerang needs at least two photos on the chosen pages.': 'Boomerang cần ít nhất hai ảnh trên các trang đã chọn.',
   'Recording the video… {n}/{total} s': 'Đang quay video… {n}/{total} giây',
