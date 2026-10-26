@@ -6,9 +6,10 @@ const cropSchema = z.object({
   x: z.number().min(0).max(1),
   y: z.number().min(0).max(1),
   scale: z.number().min(0.25).max(5), // < 1: photo smaller than the frame (paper shows around it)
-  // Free shift on top of x/y, as a fraction of the frame's width / height (crop mode drags with it, past the edges too).
-  ox: z.number().min(-1).max(1).optional(),
-  oy: z.number().min(-1).max(1).optional(),
+  // Free shift on top of x/y, as a fraction of the frame's width / height (crop mode drags with it, past the edges too;
+  // a photo zoomed in far needs several frame widths to reach its corners).
+  ox: z.number().min(-8).max(8).optional(),
+  oy: z.number().min(-8).max(8).optional(),
 })
 
 const baseShape = {

@@ -269,9 +269,19 @@ function TextEditor({ el, onDone }: { el: TextEl; onDone(text: string): void }) 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 // Crop mode: drag moves the photo freely (it follows the finger, past the frame's edges too, in any direction
-// whatever the photo's proportions), wheel / pinch zooms. Pointer deltas are rotated into the frame's own axes and
-// kept as crop.ox/oy, a share of the frame window; crop.x/y stay the point the photo zooms about.
+// whatever the photo's proportions), wheel / pinch / Size zoom. Pointer deltas are rotated into the frame's own axes and
+// kept as crop.ox/oy, a share of the frame window. The photo is drawn scaled about crop.x/y (BlurImage) and then
+// shifted by ox/oy; zooming keeps the point under the fingers (or the frame's centre) where it is by adjusting ox/oy.
 const MIN_SCALE = 0.25;
+const MAX_SCALE = 5;
+
+// New ox/oy after a zoom from c.scale to s, so the photo point at (ax, ay) — fractions of the frame window — stays put.
+// On one axis the point shown at a is o + scale·(q − o) + t (o: the zoom origin crop.x, t: the shift ox).
+export function zoomAbout(c: Crop, s: number, ax = 0.5, ay = 0.5): Crop {
+  const k = s / c.scale;
+  const move = (t: number, o: number, a: number) => (a - o) * (1 - k) + k * t;
+  return { ...c, scale: s, ox: move(c.ox ?? 0, c.x, ax), oy: move(c.oy ?? 0, c.y, ay) };
+}
 
 function CropOverlay({ el, media, onChange, onDone, onRemove }: {
   el: FrameEl; media: MediaDTO | undefined; onChange(c: Crop): void; onDone(): void; onRemove(): void;
@@ -283,17 +293,41 @@ function CropOverlay({ el, media, onChange, onDone, onRemove }: {
   const base = useRef<{ crop: Crop; cx: number; cy: number; d: number } | null>(null);
   const set = (c: Crop) => { cur.current = c; onChange(c); };
 
-  const pan = (c: Crop, sx: number, sy: number): Crop => {
-    const win = ref.current?.parentElement?.querySelector<HTMLElement>('.frame-window');
-    if (!win) return c;
+  const win = () => ref.current?.parentElement?.querySelector<HTMLElement>('.frame-window') ?? null;
+  // Screen vector → frame axes (the frame may be rotated).
+  const toFrame = (sx: number, sy: number) => {
     const a = (-el.rotation * Math.PI) / 180;
-    const dx = sx * Math.cos(a) - sy * Math.sin(a);
-    const dy = sx * Math.sin(a) + sy * Math.cos(a);
-    const w = win.offsetWidth, h = win.offsetHeight;
-    if (!w || !h || (!dx && !dy)) return c;
-    const r = (v: number) => Math.round(clamp(v, -1, 1) * 10000) / 10000;
-    return { ...c, ox: r((c.ox ?? 0) + dx / w), oy: r((c.oy ?? 0) + dy / h) };
+    return { x: sx * Math.cos(a) - sy * Math.sin(a), y: sx * Math.sin(a) + sy * Math.cos(a) };
   };
+  // How far the photo may be pushed: until it has (almost) left the frame, however far it is zoomed in.
+  const limit = (c: Crop) => {
+    const w = win(), iw = media?.width, ih = media?.height;
+    const cover = w && iw && ih ? Math.max(w.offsetWidth / iw, w.offsetHeight / ih) : 0;
+    const pw = cover && iw ? (iw * cover * c.scale) / w!.offsetWidth : c.scale; // photo size in frame widths / heights
+    const ph = cover && ih ? (ih * cover * c.scale) / w!.offsetHeight : c.scale;
+    return { x: Math.min(8, (pw + 1) / 2 + 0.5), y: Math.min(8, (ph + 1) / 2 + 0.5) };
+  };
+  const tidy = (c: Crop): Crop => {
+    const l = limit(c), r = (v: number, m: number) => Math.round(clamp(v, -m, m) * 10000) / 10000;
+    const { ox: _x, oy: _y, ...rest } = c;
+    const ox = r(c.ox ?? 0, l.x), oy = r(c.oy ?? 0, l.y);
+    return { ...rest, ...(ox || oy ? { ox, oy } : {}) }; // no shift: leave the fields out
+  };
+  const pan = (c: Crop, sx: number, sy: number): Crop => {
+    const w = win();
+    const d = toFrame(sx, sy);
+    if (!w?.offsetWidth || !w.offsetHeight || (!d.x && !d.y)) return tidy(c);
+    return tidy({ ...c, ox: (c.ox ?? 0) + d.x / w.offsetWidth, oy: (c.oy ?? 0) + d.y / w.offsetHeight });
+  };
+  // A screen point → fractions of the frame window (for zooming about the fingers).
+  const at = (px: number, py: number) => {
+    const w = win();
+    if (!w?.offsetWidth) return { x: 0.5, y: 0.5 };
+    const r = w.getBoundingClientRect();
+    const d = toFrame(px - (r.left + r.width / 2), py - (r.top + r.height / 2));
+    return { x: 0.5 + d.x / w.offsetWidth, y: 0.5 + d.y / w.offsetHeight };
+  };
+  const zoom = (s: number, ax?: number, ay?: number) => tidy(zoomAbout(cur.current, clamp(s, MIN_SCALE, MAX_SCALE), ax, ay));
   // Controls sit under the frame; a frame near the bottom of the visible stage gets them above it instead.
   const actionsRef = useRef<HTMLDivElement>(null);
   const [above, setAbove] = useState(false);
@@ -323,8 +357,10 @@ function CropOverlay({ el, media, onChange, onDone, onRemove }: {
     const p = [...pts.current.values()];
     const b = base.current;
     const cx = p.reduce((s, q) => s + q.x, 0) / p.length, cy = p.reduce((s, q) => s + q.y, 0) / p.length;
-    const scale = b.d && p.length > 1 ? clamp(b.crop.scale * Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) / b.d, MIN_SCALE, 5) : b.crop.scale;
-    set(pan({ ...b.crop, scale }, cx - b.cx, cy - b.cy));
+    // Two fingers: zoom about where they started (that photo point stays under them), then follow their middle.
+    const scale = b.d && p.length > 1 ? clamp(b.crop.scale * Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) / b.d, MIN_SCALE, MAX_SCALE) : b.crop.scale;
+    const a = at(b.cx, b.cy);
+    set(pan(scale === b.crop.scale ? b.crop : zoomAbout(b.crop, scale, a.x, a.y), cx - b.cx, cy - b.cy));
   };
   const lift = (e: ReactPointerEvent) => { pts.current.delete(e.pointerId); rebase(); };
 
@@ -333,7 +369,8 @@ function CropOverlay({ el, media, onChange, onDone, onRemove }: {
     // Non-passive so a trackpad pinch (ctrl+wheel) zooms the photo instead of the browser page.
     const wheel = (e: WheelEvent) => {
       e.preventDefault();
-      set({ ...cur.current, scale: clamp(cur.current.scale * Math.exp(-e.deltaY * 0.0015), MIN_SCALE, 5) });
+      const a = at(e.clientX, e.clientY); // zoom about the pointer
+      set(zoom(cur.current.scale * Math.exp(-e.deltaY * 0.0015), a.x, a.y));
     };
     n.addEventListener('wheel', wheel, { passive: false });
     return () => n.removeEventListener('wheel', wheel);
@@ -351,8 +388,8 @@ function CropOverlay({ el, media, onChange, onDone, onRemove }: {
       {/* Counter-rotated so the controls stay level under a tilted frame. */}
       <div className={`crop-actions${above ? ' above' : ''}`} ref={actionsRef} style={{ rotate: `${-el.rotation}deg` }}>
         <label className="crop-size">Size
-          <input type="range" aria-label={t('Photo size')} min={MIN_SCALE} max={5} step={0.01} value={el.crop.scale}
-            onChange={(e) => set(pan({ ...cur.current, scale: Number(e.target.value) }, 0, 0))} />
+          <input type="range" aria-label={t('Photo size')} min={MIN_SCALE} max={MAX_SCALE} step={0.01} value={el.crop.scale}
+            onChange={(e) => set(zoom(Number(e.target.value)))} />
         </label>
         <button type="button" onClick={() => set({ x: 0.5, y: 0.5, scale: fitScale() })} title={t('Show the whole photo')}>{t('Fit')}</button>
         <button type="button" onClick={() => set({ x: 0.5, y: 0.5, scale: 1 })} title={t('Fill the frame')}>{t('Fill')}</button>

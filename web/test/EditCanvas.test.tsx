@@ -149,10 +149,10 @@ test('crop mode drag moves the photo freely, on the axis where it exactly fills 
   const ptr = (type: string, x: number, y: number) => new MouseEvent(type, { bubbles: true, clientX: x, clientY: y });
   fireEvent(overlay, ptr('pointerdown', 100, 100));
   fireEvent(overlay, ptr('pointermove', 150, 130));
-  fireEvent(overlay, ptr('pointermove', 600, 130)); // far past the edge: held at one frame width
+  fireEvent(overlay, ptr('pointermove', 600, 130)); // far past the edge: held where the photo has just left the frame
   fireEvent(overlay, ptr('pointerup', 600, 130));
   fireEvent.click(getByRole('button', { name: 'Done' }));
-  expect(onCommit).toHaveBeenLastCalledWith(expect.objectContaining({ elements: [expect.objectContaining({ crop: { x: 0.5, y: 0.5, scale: 1, ox: 1, oy: 0.3 } })] }));
+  expect(onCommit).toHaveBeenLastCalledWith(expect.objectContaining({ elements: [expect.objectContaining({ crop: { x: 0.5, y: 0.5, scale: 1, ox: 1.5, oy: 0.3 } })] }));
 });
 
 test('one tap on "+ add" of an unselected frame opens the picker (no select first)', async () => {
@@ -306,4 +306,17 @@ test('Done in crop mode commits once', () => {
   fireEvent.click(getByRole('button', { name: 'Done' }));
   rerender(<EditCanvas {...props} cropId={cropId} />);
   expect(onCommit).toHaveBeenCalledTimes(1);
+});
+
+test('zooming keeps the point being looked at in place (after a drag it does not slide away)', async () => {
+  const { zoomAbout } = await import('../src/editor/EditCanvas');
+  // shown position of photo point q on one axis: o + s·(q − o) + t
+  const shown = (c: { x: number; scale: number; ox?: number }, q: number) => c.x + c.scale * (q - c.x) + (c.ox ?? 0);
+  const before = { x: 0.5, y: 0.5, scale: 2, ox: 0.6, oy: 0 };
+  const q = (0.5 - before.x - before.ox) / before.scale + before.x; // the photo point at the frame's centre
+  const after = zoomAbout(before, 4);
+  expect(shown(after, q)).toBeCloseTo(0.5);
+  const a = 0.2; // zoom about a finger at 20 % of the width
+  const qa = (a - before.x - before.ox) / before.scale + before.x;
+  expect(shown(zoomAbout(before, 3, a), qa)).toBeCloseTo(a);
 });
