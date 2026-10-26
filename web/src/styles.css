@@ -13,6 +13,9 @@
 /* No pinch / double-tap zoom of the whole app on phones: it left the toolbars off screen. Pinches inside the app
    (resizing an item, crop, camera zoom) are handled by those components and still work. */
 html { touch-action: pan-x pan-y; }
+/* iPhone Safari enlarges text in boxes wider than the screen ("text autosizing"): the 1080 px stage that pictures
+   for Share to social are taken of got bigger words than its bubbles, so they spilled out. Sizes are ours. */
+html, .social-stage { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body {
   margin: 0; min-height: 100vh; color: var(--ink);
   background: var(--paper) radial-gradient(circle at 20% 10%, #f6efe0, var(--paper) 60%);
