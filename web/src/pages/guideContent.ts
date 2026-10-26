@@ -11,8 +11,8 @@ const vi: Guide = {
   sections: [
     { id: 'albums', title: '1. Danh sách album', features: [
       { h: 'Tạo album mới', img: 'new-album', p: [
-        'Bấm **Album mới**, nhập tên rồi **Tạo**. Đóng bằng **Huỷ**, ×, phím Esc hoặc bấm ra ngoài.',
-        'Chọn **Scrapbook** hoặc **Manga** (chọn một lần khi tạo). Manga chọn thêm chiều đọc **Trái → phải** hoặc **Phải → trái**.',
+        'Bấm một trong ba nút ở đầu trang: **＋ Scrapbook**, **＋ Manga** hoặc **＋ Photobooth**, nhập tên rồi **Tạo**. Đóng bằng **Huỷ**, ×, phím Esc hoặc bấm ra ngoài.',
+        'Trong hộp vẫn đổi được loại album (chọn một lần khi tạo). Manga chọn thêm chiều đọc **Trái → phải** hoặc **Phải → trái**. Photobooth có mẫu riêng (2 3 con mực, Tiệc photobooth, Photobooth cưới, Đêm bạn bè), không có ✨ AI.',
         '**Mẫu**: **Album trống** chỉ có trang bìa; các mẫu dựng sẵn có nhiều trang, giấy, sticker, chữ, màu bàn và hiệu ứng nền.',
         '**Chép thiết kế của album (không kèm ảnh)**: tạo album giống hệt một album đã có, mọi khung để trống.'] },
       { h: 'Tạo album bằng AI', p: [
@@ -28,6 +28,9 @@ const vi: Guide = {
       { h: 'Link xem', img: 'share', p: [
         'Bấm **Chia sẻ** dưới album → **Tạo link chia sẻ** → **Chép**. Người nhận mở link là xem được, không cần mật khẩu, không sửa được.',
         '**Dừng chia sẻ** làm link cũ hết hiệu lực ngay, kể cả ảnh và video.'] },
+      { h: 'Chia sẻ lên mạng xã hội', p: [
+        'Khi xem album, bấm **Chia sẻ** (cả người xem qua link cũng có): chọn khổ **Bài đăng 4:5** hoặc **Story / TikTok 9:16**, tick các trang.',
+        '**Tạo ảnh**: mỗi trang một ảnh JPG. **Tạo video**: một video MP4, mỗi trang 3 giây, kèm nhạc của album. Rồi **Chia sẻ…** (mở bảng chia sẻ của điện thoại: Instagram, TikTok, Zalo…) hoặc **Tải về**.'] },
       { h: 'Link sửa (cho người khác cùng làm)', p: [
         'Trong hộp **Chia sẻ**, gõ **Số giờ** (1–168) rồi **Tạo link sửa** → **Chép**. Người nhận mở link là vào sửa được, không cần mật khẩu.',
         'Họ được: bỏ ảnh/video vào khung, thêm/sửa/xoá chữ, bong bóng thoại, sticker, băng dính, hiệu ứng, đổi giấy. Họ không được: thêm/xoá/chuyển/ẩn trang, thêm/xoá/kéo khung hay panel, đổi tên, nhạc, nền album.',
@@ -52,7 +55,7 @@ const vi: Guide = {
       { h: 'Dán ảnh từ clipboard', p: ['Chụp màn hình hoặc “Copy image” rồi **Ctrl+V**. Đang chọn khung trống thì ảnh vào thẳng khung đó.'] },
       { h: 'Đưa ảnh vào khung', img: 'frame-menu', p: [
         'Bấm **+ thêm** trên khung trống → **Tải lên** hoặc chọn một ảnh đã có. Trên điện thoại có thêm **Chụp ảnh/quay video** (camera của máy).',
-        '**Chụp theo khung** (điện thoại): camera trong app hiện đúng hình và tỉ lệ khung; chế độ **Ảnh** hoặc **Video**, **Đổi camera**, thanh **Zoom**, **⚡ Đèn** (nếu máy có). Trong Zalo trên iPhone không dùng được — mở bằng Safari.',
+        '**Chụp theo khung** (điện thoại): camera trong app hiện đúng hình và tỉ lệ khung; chế độ **Ảnh**, **Photobooth** hoặc **Video**, **Đổi camera**, thanh **Zoom**, **⚡ Đèn** (nếu máy có), **⏱ Hẹn giờ** 3 / 5 / 10 giây (bấm nút chụp lần nữa để huỷ). Trong Zalo trên iPhone không dùng được — mở bằng Safari.',
         'Hoặc kéo ảnh từ khu ảnh thả vào khung.'] },
       { h: 'Cắt video', p: ['Chọn khung có video → **✂ Cắt video**: kéo điểm bắt đầu / kết thúc. Video gốc không bị cắt; **Cả video** để phát lại cả bài.'] },
       { h: 'Ảnh bìa và xoá ảnh', p: ['Trong khu ảnh: ★ đặt làm ảnh bìa; 🗑 xoá ảnh khỏi album (khung đang dùng sẽ trống lại).'] },
@@ -63,13 +66,13 @@ const vi: Guide = {
         'Chọn một loại có nhiều kiểu (khung, sticker, thoại…) thì danh sách kiểu của loại đó hiện ra.'] },
       { h: 'Khi chọn một vật', p: ['Hàng nút thứ hai hiện ra cho vật đang chọn: **Chữ & màu**, **Kiểu khung**, **Cắt ảnh**, **Gỡ ảnh**, **Nhân bản**, **Ghim**, ↑ ↓ 🗑…'] },
       { h: 'Cắt và chỉnh cỡ ảnh', img: 'crop', p: [
-        'Chọn khung có ảnh → **Cắt ảnh** (hoặc nhấp đúp). Kéo để dịch ảnh, cuộn chuột / chụm hai ngón để phóng to.',
+        'Chọn khung có ảnh → **Cắt ảnh** (hoặc nhấp đúp). Kéo để dịch ảnh tự do (cả ra ngoài mép khung), cuộn chuột / chụm hai ngón để phóng to.',
         '**Vừa** hiện trọn ảnh, **Đầy** phủ kín khung, **Gỡ ảnh** bỏ ảnh khỏi khung, **Xong** để kết thúc.'] },
       { h: 'Chữ', img: 'text', p: [
         '**＋ Thêm → Chữ**. Nhấp đúp vào chữ để sửa.',
         '**Chữ & màu**: kiểu chữ, cỡ (**A−** / **A+**), căn lề, giãn dòng, **Viền chữ**, màu chữ.'] },
       { h: 'Giấy và nền', img: 'background', p: [
-        '**Giấy** đổi giấy của trang (scrapbook).',
+        '**Giấy** đổi giấy của trang (scrapbook): kem, kraft, ô li, chấm bi, vở kẻ dòng, hồng, xanh trời, xanh bạc hà.',
         '**Nền** chọn màu bàn, hiệu ứng nền cả album, chiều đọc (manga) và nhạc nền (**Tải nhạc lên**, **▶ Phát** / **⏸ Dừng**, **Bỏ nhạc**).'] },
     ] },
     { id: 'items', title: '6. Thao tác với vật', features: [
@@ -79,7 +82,8 @@ const vi: Guide = {
       { h: 'Nhân bản, hoàn tác, phóng to', p: [
         '**⧉ Nhân bản** hoặc **Ctrl+C** / **Ctrl+V** (dán được sang trang khác).',
         '↶ / ↷ hoặc **Ctrl+Z** / **Ctrl+Shift+Z**. − / + phóng 100–300%, bấm số % để về vừa màn hình.'] },
-      { h: 'Tự động lưu', p: ['Mọi thay đổi tự lưu (“Đã lưu”). Lưu lỗi thì hiện “Lưu lỗi” và nút **Lưu lại**.'] },
+      { h: 'Tự động lưu', p: ['Mọi thay đổi tự lưu (“Đã lưu”). Lưu lỗi thì hiện “Lưu lỗi” và nút **Lưu lại**.',
+        'Hai người cùng sửa một trang (bạn và người có link sửa): ai lưu sau sẽ thấy “Trang vừa được người khác sửa — đã tải bản mới” thay vì ghi đè. Sửa trang khác nhau thì không sao.'] },
     ] },
     { id: 'view', title: '7. Xem album', features: [
       { h: 'Lật trang như sách', img: 'viewer', p: ['Vuốt, bấm hai bên hoặc phím ← / →. Màn hình rộng hiện hai trang. Trang đang ẩn không hiện.'] },
@@ -100,8 +104,16 @@ const vi: Guide = {
       { h: 'Nét tốc độ và lưới chấm', p: ['**＋ Thêm → Nét** → **Nét tốc độ** / **Nét tập trung**; **Lưới chấm**. Đang chọn panel thì lớp mới phủ đúng panel đó.'] },
       { h: 'Đọc từ phải sang trái', p: ['Chọn khi tạo album, đổi sau trong **Nền → Chiều đọc**. Đọc phải sang trái: phím ← hoặc bấm mép trái là sang trang tiếp.'] },
     ] },
+    { id: 'booth', title: '10. Photobooth', features: [
+      { h: 'Album photobooth', p: [
+        'Bấm **＋ Photobooth** ở danh sách album. Album trống bắt đầu bằng một trang dải ảnh; các mẫu có sẵn nhiều trang photobooth.',
+        'Trang **Booth** (dải 3 / 4 kiểu, 1 lớn + 3, lưới 2 × 2, 3 + ô tiêu đề, tiêu đề + 2, 2 ảnh chồng) cũng có trong **+ trang** của mọi album scrapbook.'] },
+      { h: 'Chụp liền một lượt', p: [
+        'Trên điện thoại, bấm **+ thêm** trên một khung trống → **Chụp theo khung** → chọn **🎞 Photobooth** (chỉ hiện khi trang còn khung trống khác).',
+        'Bấm ★ một lần: đếm ngược 3 giây (hoặc theo **⏱ Hẹn giờ**), chụp, chớp sáng, rồi tự sang khung trống tiếp theo theo thứ tự đọc cho tới khung cuối. **■** để dừng — các kiểu đã chụp vẫn giữ.'] },
+    ] },
   ],
-  shortcutsTitle: '10. Phím tắt',
+  shortcutsTitle: '11. Phím tắt',
   shortcuts: [['← / →', 'Chuyển trang (khi không chọn vật nào)'], ['Mũi tên', 'Dịch vật đang chọn'], ['Delete / Backspace', 'Xoá vật đang chọn'],
     ['Ctrl+C / Ctrl+V', 'Sao chép / dán vật; Ctrl+V cũng dán ảnh'], ['Ctrl+Z / Ctrl+Shift+Z', 'Hoàn tác / làm lại'], ['Ctrl + cuộn chuột', 'Phóng to / thu nhỏ trang'], ['Esc', 'Đóng bảng chọn, hộp thoại']],
 };
@@ -111,8 +123,8 @@ const en: Guide = {
   sections: [
     { id: 'albums', title: '1. Albums', features: [
       { h: 'New album', img: 'new-album', p: [
-        'Tap **New album**, type a name, then **Create**. Close with **Cancel**, ×, Esc or a tap outside.',
-        'Pick **Scrapbook** or **Manga** (chosen once, when creating). Manga also asks the reading direction: **Left → right** or **Right → left**.',
+        'Tap one of the three buttons at the top: **＋ Scrapbook**, **＋ Manga** or **＋ Photobooth**, type a name, then **Create**. Close with **Cancel**, ×, Esc or a tap outside.',
+        'The dialog can still switch the kind (chosen once, when creating). Manga also asks the reading direction: **Left → right** or **Right → left**. Photobooth has its own templates (2 3 con mực, Party booth, Wedding booth, Friends night) and no ✨ AI.',
         '**Template**: **Empty album** has just a cover; the ready-made ones come with pages, paper, stickers, text, desk colour and background effects.',
         "**Copy an album's design (without photos)**: a new album laid out like an existing one, with every frame empty."] },
       { h: 'AI album', p: [
@@ -128,6 +140,9 @@ const en: Guide = {
       { h: 'View link', img: 'share', p: [
         'Tap **Share** under an album → **Create share link** → **Copy**. Anyone with the link can view it — no password, no editing.',
         '**Stop sharing** kills the link at once, photos and videos included.'] },
+      { h: 'Share to social media', p: [
+        'While viewing an album, tap **Share** (people viewing through a link have it too): pick **Post 4:5** or **Story / TikTok 9:16** and tick the pages.',
+        "**Make images**: one JPG per page. **Make video**: one MP4, 3 s per page, with the album's music. Then **Share…** (the phone's share menu: Instagram, TikTok, Zalo…) or **Download**."] },
       { h: 'Edit link (let others help)', p: [
         'In the **Share** box, type the **Hours** (1–168), then **Create edit link** → **Copy**. Whoever opens it can edit — no password.',
         "They can: put photos/videos into frames, add/change/delete text, bubbles, stickers, tape, effects, change the paper. They can't: add/delete/move/hide pages, add/delete/move frames or panels, or change the album's name, music or background.",
@@ -152,7 +167,7 @@ const en: Guide = {
       { h: 'Paste from the clipboard', p: ['Take a screenshot or “Copy image”, then **Ctrl+V**. With an empty frame selected it goes straight into it.'] },
       { h: 'Photos into frames', img: 'frame-menu', p: [
         "Tap **+ add** on an empty frame → **Upload** or one of the album's photos. Phones also get **Take photo/video** (the phone's camera).",
-        "**Shoot in the frame** (phones): the in-app camera shows the frame's exact shape; **Photo** or **Video**, **Switch camera**, **Zoom**, **⚡ Light** where available. Not inside Zalo on iPhone — open in Safari.",
+        "**Shoot in the frame** (phones): the in-app camera shows the frame's exact shape; **Photo**, **Photobooth** or **Video**, **Switch camera**, **Zoom**, **⚡ Light** where available, **⏱ Self-timer** 3 / 5 / 10 s (tap the shutter again to cancel). Not inside Zalo on iPhone — open in Safari.",
         'Or drag a photo from the photos area onto a frame.'] },
       { h: 'Trimming videos', p: ['Select a frame with a video → **✂ Trim**: drag the start / end. The original stays whole; **Full video** plays all of it again.'] },
       { h: 'Cover and deleting', p: ["In the photos area: ★ makes it the cover; 🗑 deletes it from the album (frames using it become empty)."] },
@@ -163,13 +178,13 @@ const en: Guide = {
         "Kinds with several looks (frames, stickers, bubbles…) open that kind's list."] },
       { h: 'With something selected', p: ['A second row shows what the selected item can do: **Font**, **Frame style**, **Crop**, **Remove photo**, **Duplicate**, **Pin**, ↑ ↓ 🗑…'] },
       { h: 'Crop and size', img: 'crop', p: [
-        'Select a frame with a photo → **Crop** (or double-tap it). Drag to move the photo, scroll / pinch to zoom.',
+        'Select a frame with a photo → **Crop** (or double-tap it). Drag to move the photo freely (past the frame edges too), scroll / pinch to zoom.',
         '**Fit** shows the whole photo, **Fill** covers the frame, **Remove photo** empties it, **Done** finishes.'] },
       { h: 'Text', img: 'text', p: [
         '**＋ Add → Text**. Double-tap text to edit it.',
         '**Font**: typeface, size (**A−** / **A+**), alignment, line spacing, **Outline**, colour.'] },
       { h: 'Paper and background', img: 'background', p: [
-        "**Paper** changes the page's paper (scrapbook).",
+        "**Paper** changes the page's paper (scrapbook): cream, kraft, grid, dots, lined notebook, pink, sky, mint.",
         "**Background** picks the desk colour, the album's background effect, the reading direction (manga) and the music (**Upload music**, **▶ Play** / **⏸ Pause**, **Remove music**)."] },
     ] },
     { id: 'items', title: '6. Working with items', features: [
@@ -179,7 +194,8 @@ const en: Guide = {
       { h: 'Duplicate, undo, zoom', p: [
         '**⧉ Duplicate** or **Ctrl+C** / **Ctrl+V** (works across pages).',
         '↶ / ↷ or **Ctrl+Z** / **Ctrl+Shift+Z**. − / + zoom 100–300%; tap the % to fit the page again.'] },
-      { h: 'Autosave', p: ['Every change saves itself (“Saved”). If saving fails it says “Save failed” with a **Retry save** button.'] },
+      { h: 'Autosave', p: ['Every change saves itself (“Saved”). If saving fails it says “Save failed” with a **Retry save** button.',
+        'Two people on the same page (you and someone with the edit link): whoever saves second sees “Someone else just changed this page — their version is loaded” instead of overwriting it. Different pages never clash.'] },
     ] },
     { id: 'view', title: '7. Viewing', features: [
       { h: 'Flip like a book', img: 'viewer', p: ['Swipe, tap either side or use ← / →. Wide screens show two pages. Hidden pages are skipped.'] },
@@ -200,8 +216,16 @@ const en: Guide = {
       { h: 'Speed lines and screentone', p: ['**＋ Add → Lines** → **Speed lines** / **Focus lines**; **Screentone**. With a panel selected the new layer covers that panel.'] },
       { h: 'Right-to-left reading', p: ['Chosen when creating; change it later in **Background → Reading direction**. Right to left: ← or the left edge goes forward.'] },
     ] },
+    { id: 'booth', title: '10. Photobooth', features: [
+      { h: 'Photobooth albums', p: [
+        'Tap **＋ Photobooth** on the album list. An empty one starts on a strips page; the templates come with several booth pages.',
+        "The **Booth** pages (strips of 3 / 4, 1 big + 3, 2 × 2, 3 + title card, title + 2, 2 stacked) are also in every scrapbook album's **+ page**."] },
+      { h: 'Shoot a whole set', p: [
+        'On a phone, tap **+ add** on an empty frame → **Shoot in the frame** → **🎞 Photobooth** (shown when the page has other empty frames).',
+        'Tap ★ once: a 3 s countdown (or the **⏱ Self-timer**), a shot, a flash, then on to the next empty frame in reading order until the last. **■** stops — the shots taken are kept.'] },
+    ] },
   ],
-  shortcutsTitle: '10. Shortcuts',
+  shortcutsTitle: '11. Shortcuts',
   shortcuts: [['← / →', 'Switch pages (nothing selected)'], ['Arrows', 'Nudge the selected item'], ['Delete / Backspace', 'Delete the selected item'],
     ['Ctrl+C / Ctrl+V', 'Copy / paste an item; Ctrl+V also pastes photos'], ['Ctrl+Z / Ctrl+Shift+Z', 'Undo / redo'], ['Ctrl + scroll', 'Zoom the page'], ['Esc', 'Close lists and dialogs']],
 };

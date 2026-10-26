@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { mangaTemplates, pageLayoutSchema, templates, type AlbumBundle, type ReadingDirection, type BackgroundColor, type BackgroundEffect, type FrameEl, type MediaDTO, type PageDTO, type PageElement, type PageLayout } from '@scrapbook/shared';
+import { MODES, pageLayoutSchema, type AlbumBundle, type ReadingDirection, type BackgroundColor, type BackgroundEffect, type FrameEl, type MediaDTO, type PageDTO, type PageElement, type PageLayout } from '@scrapbook/shared';
 import { api as realApi, ApiError } from '../api';
 import { PageRenderer } from '../render/PageRenderer';
 import { EditCanvas } from '../editor/EditCanvas';
@@ -128,7 +128,7 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
     api.updateAlbum(albumId, { backgroundColor: c }).catch(() => { setBgColorState(prev); setOpError(tr("Couldn't save the desk color.")); });
   };
   const mode = bundle.album.mode ?? 'scrapbook';
-  const pageTemplates = mode === 'manga' ? mangaTemplates : templates;
+  const pageTemplates = MODES[mode].pageTemplates; // e.g. a photobooth album offers only the Booth pages
   const [readingDirection, setReadingDirectionState] = useState<ReadingDirection>(bundle.album.readingDirection ?? 'ltr');
   const setReadingDirection = (d: ReadingDirection) => {
     const prev = readingDirection;

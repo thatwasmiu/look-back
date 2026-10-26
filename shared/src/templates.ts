@@ -23,8 +23,9 @@ const sticker = (id: string, b: Box, stickerId: string): PageElement => ({ type:
 const text = (id: string, b: Box, t: string, font: TextEl['font'], size: number, color = '#4a3b2c'): PageElement =>
   ({ type: 'text', ...at(id, b, 5), text: t, font, size, color })
 
-const INK_LIGHT = '#f5efe4', INK_SOFT = '#cfc6b6';
-const booth = (id: string, name: string, elements: PageElement[]): Template[] => [{ id, name, layout: { background: 'paper-black', elements } }];
+const INK = '#4a3b2c', INK_SOFT = '#7a6a58';
+const booth = (id: string, name: string, background: PageLayout['background'], elements: PageElement[]): Template[] =>
+  [{ id, name, layout: { background, elements } }];
 
 // What each page is good for, for the AI album prompt. Its texts are the layout's own (title, note).
 const SCRAPBOOK_AI: Record<string, TemplateAi> = Object.fromEntries(Object.entries({
@@ -51,11 +52,11 @@ const SCRAPBOOK_AI: Record<string, TemplateAi> = Object.fromEntries(Object.entri
   journey: 'Journey: four stamp photos along a path, travel steps',
   'quote-photo': 'Big quote with one photo below',
   'the-end': 'Closing page: The End, one heart photo',
-  'booth-strips-3': 'Photobooth: two strips of three shots on black, a fun booth moment',
-  'booth-strips-4': 'Photobooth: two strips of four shots on black, many poses',
-  'booth-big-3': 'Photobooth: one big shot and three small ones on black',
-  'booth-grid-4': 'Photobooth: four shots in a 2×2 grid on black',
-  'booth-grid-3': 'Photobooth: three shots and a title card in a 2×2 grid on black',
+  'booth-strips-3': 'Photobooth: two strips of three shots, a fun booth moment',
+  'booth-strips-4': 'Photobooth: two strips of four shots, many poses',
+  'booth-big-3': 'Photobooth: one big shot and three small ones',
+  'booth-grid-4': 'Photobooth: four shots in a 2×2 grid',
+  'booth-grid-3': 'Photobooth: three shots and a title card in a 2×2 grid',
   'booth-pair': 'Photobooth: title on top, two portrait shots side by side',
   'booth-stack': 'Photobooth: two wide shots stacked, title below',
 }).map(([id, about]) => [id, { about }]))
@@ -259,49 +260,49 @@ export const templates: Template[] = ([
     sticker('s1', [0.12, 0.82, 0.14, 0.1, -6], 'sparkle'),
     sticker('s2', [0.74, 0.82, 0.14, 0.1, 6], 'heart'),
   ] } },
-  // Photobooth prints (strips and 4R boards): black card, white-bordered shots, white lettering.
-  ...booth('booth-strips-3', 'Booth: 2 strips × 3', [
+  // Photobooth prints (strips and 4R boards): white-bordered shots on pastel paper, a title and a date.
+  ...booth('booth-strips-3', 'Booth: 2 strips × 3', 'paper-pink', [
     ...[0.08, 0.53].flatMap((x, s) => [0.05, 0.27, 0.49].map((y, i) => frame(`f${s * 3 + i}`, [x, y, 0.39, 0.2, 0], 'plain'))),
     ...[0.08, 0.53].flatMap((x, s) => [
-      text(`title${s}`, [x, 0.72, 0.39, 0.1, 0], 'Tiêu đề', 'dancing-script', 0.05, INK_LIGHT),
+      text(`title${s}`, [x, 0.72, 0.39, 0.1, 0], 'Tiêu đề', 'dancing-script', 0.05, INK),
       text(`date${s}`, [x, 0.83, 0.39, 0.06, 0], 'dd/mm/yyyy', 'patrick-hand', 0.03, INK_SOFT),
     ]),
   ]),
-  ...booth('booth-strips-4', 'Booth: 2 strips × 4', [
+  ...booth('booth-strips-4', 'Booth: 2 strips × 4', 'paper-sky', [
     ...[0.08, 0.53].flatMap((x, s) => [0.05, 0.225, 0.4, 0.575].map((y, i) => frame(`f${s * 4 + i}`, [x, y, 0.39, 0.165, 0], 'plain'))),
     ...[0.08, 0.53].flatMap((x, s) => [
-      text(`title${s}`, [x, 0.77, 0.39, 0.09, 0], 'Tiêu đề', 'dancing-script', 0.045, INK_LIGHT),
+      text(`title${s}`, [x, 0.77, 0.39, 0.09, 0], 'Tiêu đề', 'dancing-script', 0.045, INK),
       text(`date${s}`, [x, 0.87, 0.39, 0.06, 0], 'dd/mm/yyyy', 'patrick-hand', 0.03, INK_SOFT),
     ]),
   ]),
-  ...booth('booth-big-3', 'Booth: 1 big + 3', [
+  ...booth('booth-big-3', 'Booth: 1 big + 3', 'paper-cream', [
     frame('f1', [0.06, 0.05, 0.88, 0.5, 0], 'plain'),
     ...[0.06, 0.36, 0.66].map((x, i) => frame(`f${i + 2}`, [x, 0.58, 0.28, 0.2, 0], 'plain')),
-    text('title', [0.06, 0.81, 0.6, 0.09, 0], 'Tiêu đề', 'dancing-script', 0.055, INK_LIGHT),
+    text('title', [0.06, 0.81, 0.6, 0.09, 0], 'Tiêu đề', 'dancing-script', 0.055, INK),
     text('date', [0.66, 0.84, 0.28, 0.06, 0], 'dd/mm/yyyy', 'patrick-hand', 0.03, INK_SOFT),
   ]),
-  ...booth('booth-grid-4', 'Booth: 2 × 2', [
+  ...booth('booth-grid-4', 'Booth: 2 × 2', 'paper-mint', [
     ...[0.05, 0.42].flatMap((y, r) => [0.06, 0.51].map((x, c) => frame(`f${r * 2 + c}`, [x, y, 0.43, 0.34, 0], 'plain'))),
-    text('title', [0.06, 0.8, 0.6, 0.1, 0], 'Tiêu đề', 'dancing-script', 0.06, INK_LIGHT),
+    text('title', [0.06, 0.8, 0.6, 0.1, 0], 'Tiêu đề', 'dancing-script', 0.06, INK),
     text('date', [0.66, 0.84, 0.28, 0.06, 0], 'dd/mm/yyyy', 'patrick-hand', 0.03, INK_SOFT),
   ]),
-  ...booth('booth-grid-3', 'Booth: 3 + title card', [
+  ...booth('booth-grid-3', 'Booth: 3 + title card', 'paper-lined', [
     frame('f1', [0.06, 0.08, 0.43, 0.4, 0], 'plain'),
     frame('f2', [0.51, 0.08, 0.43, 0.4, 0], 'plain'),
     frame('f3', [0.06, 0.51, 0.43, 0.4, 0], 'plain'),
-    text('title', [0.53, 0.6, 0.39, 0.14, 0], 'Tiêu đề', 'dancing-script', 0.06, INK_LIGHT),
+    text('title', [0.53, 0.6, 0.39, 0.14, 0], 'Tiêu đề', 'dancing-script', 0.06, INK),
     text('date', [0.53, 0.76, 0.39, 0.06, 0], 'dd/mm/yyyy', 'patrick-hand', 0.03, INK_SOFT),
   ]),
-  ...booth('booth-pair', 'Booth: title + 2', [
-    text('title', [0.1, 0.07, 0.8, 0.12, 0], 'Tiêu đề', 'dancing-script', 0.07, INK_LIGHT),
+  ...booth('booth-pair', 'Booth: title + 2', 'paper-pink', [
+    text('title', [0.1, 0.07, 0.8, 0.12, 0], 'Tiêu đề', 'dancing-script', 0.07, INK),
     frame('f1', [0.06, 0.24, 0.43, 0.44, 0], 'plain'),
     frame('f2', [0.51, 0.24, 0.43, 0.44, 0], 'plain'),
     text('date', [0.3, 0.76, 0.4, 0.06, 0], 'dd/mm/yyyy', 'patrick-hand', 0.035, INK_SOFT),
   ]),
-  ...booth('booth-stack', 'Booth: 2 stacked', [
+  ...booth('booth-stack', 'Booth: 2 stacked', 'paper-sky', [
     frame('f1', [0.08, 0.05, 0.84, 0.36, 0], 'plain'),
     frame('f2', [0.08, 0.43, 0.84, 0.36, 0], 'plain'),
-    text('title', [0.1, 0.81, 0.8, 0.09, 0], 'Tiêu đề', 'dancing-script', 0.055, INK_LIGHT),
+    text('title', [0.1, 0.81, 0.8, 0.09, 0], 'Tiêu đề', 'dancing-script', 0.055, INK),
     text('date', [0.3, 0.9, 0.4, 0.05, 0], 'dd/mm/yyyy', 'patrick-hand', 0.03, INK_SOFT),
   ]),
 ] satisfies Template[]).map((t) => ({ ...t, ai: SCRAPBOOK_AI[t.id] }))

@@ -1,5 +1,5 @@
 import {
-  BACKGROUND_COLORS, BACKGROUND_EFFECTS, STICKERS, albumDesignSchema, fillTemplate, mangaTemplates, stickerSpotCount, templates, textSlots,
+  BACKGROUND_COLORS, BACKGROUND_EFFECTS, MODES, STICKERS, albumDesignSchema, fillTemplate, stickerSpotCount, textSlots,
   type AlbumDesign, type AlbumMode, type ReadingDirection, type Template,
 } from '@scrapbook/shared';
 import { GeminiError } from './gemini.js';
@@ -10,7 +10,7 @@ export type AiAnswer = { title: string; backgroundColor: string; backgroundEffec
 
 const MIN_PAGES = 4, MAX_PAGES = 10;
 
-export const aiTemplates = (mode: AlbumMode): Template[] => (mode === 'manga' ? mangaTemplates : templates).filter((t) => t.ai);
+export const aiTemplates = (mode: AlbumMode): Template[] => MODES[mode].pageTemplates.filter((t) => t.ai);
 
 export function answerSchema(mode: AlbumMode): object {
   const str = (e?: readonly string[]) => ({ type: 'STRING', ...(e ? { enum: [...e] } : {}) });

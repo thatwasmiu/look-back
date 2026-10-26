@@ -40,7 +40,7 @@ test('in Vietnamese the guide is Vietnamese, with the same sections', () => {
   setLang('vi');
   render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><Guide /></MemoryRouter>);
   expect(screen.getByRole('heading', { level: 1, name: 'Hướng dẫn sử dụng' })).toBeTruthy();
-  expect(screen.getByRole('navigation', { name: 'Mục lục' }).querySelectorAll('a')).toHaveLength(10);
+  expect(screen.getByRole('navigation', { name: 'Mục lục' }).querySelectorAll('a')).toHaveLength(11);
   expect(screen.getByRole('heading', { level: 3, name: 'Link sửa (cho người khác cùng làm)' })).toBeTruthy();
 });
 

@@ -84,6 +84,16 @@ describe('albums', () => {
     expect((await call('GET', `/api/albums/${a.id}`)).json().album.musicMediaId).toBeNull();
   });
 
+  it('photobooth mode: stored (no database list of modes), starts on a Booth strips page; no AI for it', async () => {
+    const res = await call('POST', '/api/albums', { title: 'B', mode: 'photobooth' });
+    expect(res.statusCode).toBe(201);
+    expect(res.json().mode).toBe('photobooth');
+    const bundle = (await call('GET', `/api/albums/${res.json().id}`)).json();
+    expect(bundle.pages).toHaveLength(1);
+    expect(bundle.pages[0].layout.elements.filter((e: { type: string }) => e.type === 'frame')).toHaveLength(6);
+    expect((await call('POST', '/api/ai/album', { prompt: 'x', mode: 'photobooth' })).statusCode).toBe(400);
+  });
+
   it('manga mode: chosen at creation, starts with a manga layout; reading direction can change, mode cannot', async () => {
     const plain = (await call('POST', '/api/albums', { title: 'S' })).json();
     expect(plain).toMatchObject({ mode: 'scrapbook', readingDirection: 'ltr' });

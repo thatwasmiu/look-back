@@ -6,7 +6,7 @@ import type { FastifyInstance } from 'fastify';
 import type PgBoss from 'pg-boss';
 import type pg from 'pg';
 import {
-  ALBUM_MODES, BACKGROUND_COLORS, BACKGROUND_EFFECTS, READING_DIRECTIONS, albumDesignSchema, instantiateTemplate, templates,
+  ALBUM_MODES, BACKGROUND_COLORS, BACKGROUND_EFFECTS, MODES, READING_DIRECTIONS, albumDesignSchema, instantiateTemplate,
   type AlbumMode, type ReadingDirection,
   type AlbumBundle, type AlbumDTO, type PageLayout, type AlbumSummary, type BackgroundColor, type BackgroundEffect,
 } from '@scrapbook/shared';
@@ -76,7 +76,7 @@ export function registerAlbums(app: FastifyInstance, pool: pg.Pool, config: Conf
         await c.query('begin');
         let mode: AlbumMode = req.body.mode ?? 'scrapbook';
         let direction: ReadingDirection = req.body.readingDirection ?? 'ltr';
-        const first = mode === 'manga' ? 'manga-cover' : templates.some((t) => t.id === 'cover') ? 'cover' : 'blank';
+        const first = MODES[mode].firstPage;
         let layouts: PageLayout[] = [instantiateTemplate(first, randomUUID)];
         let look = { effect: 'none', color: 'walnut' };
         if (design?.success) {

@@ -307,7 +307,7 @@ test('the album list shows one button per mode; Manga opens the dialog in manga 
   expect(screen.getByRole('radiogroup', { name: 'Reading direction' })).toBeTruthy();
 });
 
-test('Photobooth is a kind of its own: booth templates, no AI; an empty one starts on a strips page', async () => {
+test('Photobooth is a mode of its own: booth templates, no AI; an empty one is created in photobooth mode', async () => {
   const fetchMock = vi.fn().mockResolvedValueOnce(json(200, []))
     .mockResolvedValueOnce(json(201, { id: 'b1', title: 'Booth', coverMediaId: null, backgroundEffect: 'none', backgroundColor: 'slate', shareToken: null, musicMediaId: null, mode: 'scrapbook', readingDirection: 'ltr' }));
   setup(fetchMock);
@@ -319,6 +319,6 @@ test('Photobooth is a kind of its own: booth templates, no AI; an empty one star
   await userEvent.click(screen.getByRole('button', { name: 'Create' }));
   await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
   const body = JSON.parse(fetchMock.mock.calls[1][1].body);
-  expect(body.mode).toBeUndefined(); // stored as a scrapbook album
-  expect(body.design.pages[0].background).toBe('paper-black');
+  expect(body.mode).toBe('photobooth'); // the server starts it on a Booth strips page
+  expect(body.design).toBeUndefined();
 });

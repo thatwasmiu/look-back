@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { ALBUM_MODES, READING_DIRECTIONS, type AlbumMode, type ReadingDirection } from '@scrapbook/shared';
+import { ALBUM_MODES, MODES, READING_DIRECTIONS, type AlbumMode, type ReadingDirection } from '@scrapbook/shared';
 import type { FastifyInstance } from 'fastify';
 import type pg from 'pg';
 import type { Config } from './config.js';
@@ -57,7 +57,7 @@ export function registerAiRoutes(app: FastifyInstance, pool: pg.Pool, config: Co
   app.post<{ Body: { prompt: string; mode: AlbumMode; readingDirection?: ReadingDirection; title?: string } }>('/api/ai/album', {
     schema: { body: { type: 'object', required: ['prompt', 'mode'], additionalProperties: false, properties: {
       prompt: { type: 'string', minLength: 1, maxLength: 200, pattern: '\\S' },
-      mode: { type: 'string', enum: [...ALBUM_MODES] },
+      mode: { type: 'string', enum: ALBUM_MODES.filter((m) => MODES[m].ai) },
       readingDirection: { type: 'string', enum: [...READING_DIRECTIONS] },
       title: { type: 'string', maxLength: 200 },
     } } },

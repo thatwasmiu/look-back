@@ -21,7 +21,8 @@ test('manga templates: at least three, all-manga pages of panels on white paper,
     // bubbles / narration / sound effects are what makes it manga
     expect(d.pages.flatMap((p) => p.elements).some((e) => e.type === 'text' && e.textStyle && e.textStyle !== 'plain'), t.id).toBe(true);
   }
-  for (const t of albumTemplates.filter((x) => x.mode !== 'manga')) expect(t.design().mode ?? 'scrapbook', t.id).toBe('scrapbook');
+  // every template's design is of the mode it is listed under
+  for (const t of albumTemplates.filter((x) => x.mode !== 'manga')) expect(t.design().mode ?? 'scrapbook', t.id).toBe(t.mode ?? 'scrapbook');
 });
 
 test('"2 3 con mực" also comes as a manga template, with its ocean look and template music', () => {

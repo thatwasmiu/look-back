@@ -183,7 +183,7 @@ Errors are `{ error: string }`; user-facing ones are Vietnamese (the web shows t
 
 | Path | Page | Notes |
 |---|---|---|
-| / | AlbumList | **＋ Scrapbook / ＋ Manga / ＋ Photobooth** buttons open the create modal on that kind (mode, reading direction, template / ✨ AI / copy design; Photobooth = a scrapbook album from the Booth pages, own templates, no AI), share dialog (view link, edit link with hours), Log out, EN/VI |
+| / | AlbumList | **＋ Scrapbook / ＋ Manga / ＋ Photobooth** buttons open the create modal on that kind (mode, reading direction, template / ✨ AI / copy design; Photobooth = mode `photobooth` (migration 011): starts on a Booth page, the editor's **+ page** lists only Booth pages, own album templates, no AI), share dialog (view link, edit link with hours), Log out, EN/VI |
 | /albums/:id | Viewer | book; `?page=N` opens on a page; **Share** → share-to-social dialog |
 | /albums/:id/edit | Editor | `?page=N` opens on a page; Done returns to the edited page |
 | /albums/:id/print | PrintAlbum | one page per sheet (210×280 mm), opens the print dialog (Save as PDF) |
@@ -249,7 +249,7 @@ Vietnamese (missing entries fall back to English; `{name}` placeholders). `useT(
   then every other empty frame in reading order (rows top to bottom, left→right or right→left for rtl manga), a
   countdown (self-timer, else 3 s) before each and a flash after; the window takes each frame's shape. Stop keeps
   the shots taken. Seven **Booth** page templates (strips of 3/4, 1 big + 3, 2×2, 3 + title card, title + 2,
-  2 stacked) on the new `paper-black` paper, after classic photobooth prints.
+  2 stacked) on pastel papers (pink, sky, mint, lined, cream), after classic photobooth prints. Papers added with them: `paper-lined`, `paper-pink`, `paper-sky`, `paper-mint`; `paper-black` is no longer offered but still accepted.
 - **Frame camera self-timer:** ⏱ cycles off / 3 / 5 / 10 s; Shoot or Record then counts down on screen, tapping
   again cancels.
 - **Uploads** (`useUpload.ts`): one app-wide Uppy + tus instance (survives leaving the editor), resumable, local

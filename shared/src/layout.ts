@@ -29,7 +29,8 @@ export const FRAME_STYLES = [
 ] as const
 
 // Album modes: scrapbook (the original) or manga. Manga albums can read right-to-left.
-export const ALBUM_MODES = ['scrapbook', 'manga'] as const
+// photobooth: scrapbook pages, but the editor offers only the Booth page layouts.
+export const ALBUM_MODES = ['scrapbook', 'manga', 'photobooth'] as const
 export type AlbumMode = (typeof ALBUM_MODES)[number]
 export const READING_DIRECTIONS = ['ltr', 'rtl'] as const
 export type ReadingDirection = (typeof READING_DIRECTIONS)[number]
@@ -85,7 +86,8 @@ const textSchema = z.object({
 export const pageElementSchema = z.discriminatedUnion('type', [frameSchema, tapeSchema, stickerSchema, textSchema, effectSchema])
 
 export const pageLayoutSchema = z.object({
-  background: z.enum(['paper-cream', 'paper-kraft', 'paper-grid', 'paper-dots', 'paper-white', 'paper-black']),
+  // paper-black: no longer offered (nobody used it); still accepted so pages that have it keep loading.
+  background: z.enum(['paper-cream', 'paper-kraft', 'paper-grid', 'paper-dots', 'paper-white', 'paper-black', 'paper-pink', 'paper-sky', 'paper-mint', 'paper-lined']),
   elements: z.array(pageElementSchema).max(200),
   hidden: z.boolean().optional(), // kept in the editor, left out of the viewer, share links and print
 }).superRefine((l, ctx) => {

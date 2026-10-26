@@ -34,7 +34,7 @@ export const api = {
       (e) => { if (e instanceof ApiError && e.status === 401) return false; throw e; },
     ),
   listAlbums: () => req<AlbumSummary[]>('GET', '/albums'),
-  createAlbum: (title: string, from?: { fromAlbumId: string } | { design: AlbumDesign }, manga?: { mode: 'manga'; readingDirection: ReadingDirection }) =>
+  createAlbum: (title: string, from?: { fromAlbumId: string } | { design: AlbumDesign }, manga?: { mode: AlbumMode; readingDirection?: ReadingDirection }) =>
     req<AlbumDTO>('POST', '/albums', { title, ...from, ...manga }),
   updateAlbum: (id: string, patch: { title?: string; coverMediaId?: string | null; musicMediaId?: string | null; backgroundEffect?: BackgroundEffect; backgroundColor?: BackgroundColor; readingDirection?: ReadingDirection }) =>
     req<AlbumDTO>('PATCH', `/albums/${id}`, patch),

@@ -3,15 +3,15 @@
 import { instantiateTemplate, type AlbumDesign, type AlbumMode, type BackgroundColor, type BackgroundEffect, type EffectEl, type PageElement, type PageLayout, type ReadingDirection, type TextEl } from '@scrapbook/shared';
 import { exampleAlbum } from './lookBack';
 
-// icon: a sticker id. mode: which kind of album lists it (default scrapbook); manga designs take the chosen reading
-// direction. Photobooth is a kind of its own in "New album" (its own templates), stored as a scrapbook album.
-export type AlbumKind = AlbumMode | 'photobooth';
-type AlbumTemplate = { id: string; name: string; icon: string; mode?: AlbumKind; design: (direction?: ReadingDirection) => AlbumDesign };
+// icon: a sticker id. mode: which album mode lists it (default scrapbook); manga designs take the chosen reading direction.
+type AlbumTemplate = { id: string; name: string; icon: string; mode?: AlbumMode; design: (direction?: ReadingDirection) => AlbumDesign };
 
 // randomUUID needs a secure context; the app may be opened over plain http on the LAN.
 const newId = () => `e${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 const fromPages = (backgroundColor: BackgroundColor, backgroundEffect: BackgroundEffect, pageTemplates: string[]) =>
   (): AlbumDesign => ({ backgroundColor, backgroundEffect, pages: pageTemplates.map((t) => instantiateTemplate(t, newId)) });
+const booths = (backgroundColor: BackgroundColor, backgroundEffect: BackgroundEffect, pageTemplates: string[]) =>
+  (): AlbumDesign => ({ ...fromPages(backgroundColor, backgroundEffect, pageTemplates)(), mode: 'photobooth' });
 
 // A page template re-themed: its stickers, texts and tapes swapped in order (undefined keeps one), plus extras.
 type Box = [x: number, y: number, w: number, h: number, rotation: number];
@@ -39,6 +39,22 @@ const squidDesign = (): AlbumDesign => ({ backgroundColor: 'ocean', backgroundEf
   sea('three-collage', { texts: ['đi ăn hông?'], stickers: ['sushi'], add: [[[0.8, 0.86, 0.14, 0.11, 4], 'onigiri']] }),
   sea('film-day', { texts: ['uống tăng lực', 'nạp năng lượng'], stickers: ['energy-can', 'octopus-blue'] }),
   sea('journal', { texts: ['căng cực?', undefined], stickers: ['ring'], add: [[[0.5, 0.84, 0.1, 0.1, 10], 'squid']] }),
+] });
+
+// The same theme as a photobooth album: Booth pages on sky paper, sea-blue lettering, the song's stickers.
+const boothSea = (template: string, texts: string[], add: [Box, string][]): PageLayout => {
+  const l = instantiateTemplate(template, newId);
+  let ti = 0;
+  const elements = l.elements.map((e): PageElement => (e.type === 'text' ? { ...e, text: texts[ti++] ?? e.text, color: '#2f5d7c' } : e));
+  for (const [[x, y, w, h, rotation], stickerId] of add) elements.push({ type: 'sticker', id: newId(), x, y, w, h, rotation, z: 8, stickerId });
+  return { ...l, background: 'paper-sky', elements };
+};
+const squidBooth = (): AlbumDesign => ({ backgroundColor: 'ocean', backgroundEffect: 'bubbles', music: 'squids', mode: 'photobooth', pages: [
+  boothSea('booth-strips-3', ['2 3 con mực', 'thương vô cực ∞', 'nắm tay nha', 'mãi mãi'], [[[0.02, 0.88, 0.1, 0.08, -10], 'octopus'], [[0.88, 0.88, 0.1, 0.08, 10], 'octopus-blue']]),
+  boothSea('booth-grid-4', ['đi ăn hông?', 'sushi & cơm nắm'], [[[0.44, 0.36, 0.12, 0.09, -6], 'sushi'], [[0.84, 0.88, 0.1, 0.08, 8], 'onigiri']]),
+  boothSea('booth-big-3', ['nạp năng lượng', 'tăng lực'], [[[0.84, 0.02, 0.12, 0.09, 12], 'energy-can'], [[0.02, 0.5, 0.1, 0.08, -8], 'squid']]),
+  boothSea('booth-pair', ['nắm tay nha', '∞'], [[[0.44, 0.69, 0.12, 0.08, 0], 'infinity'], [[0.04, 0.06, 0.1, 0.08, -10], 'shell']]),
+  boothSea('booth-stack', ['căng cực?', 'hẹn hò'], [[[0.84, 0.83, 0.12, 0.09, 10], 'ring'], [[0.04, 0.83, 0.1, 0.08, -8], 'octopus']]),
 ] });
 
 // ---- Manga album templates: manga page layouts plus bubbles, narration, sound effects and lines. All captions are
@@ -175,11 +191,12 @@ export const albumTemplates: AlbumTemplate[] = [
     ['cover', 'sweet-heart', 'vintage', 'two-tilted', 'postcard', 'memories']) },
   { id: 'year', name: 'Year in review', icon: 'camera', design: fromPages('slate', 'snow',
     ['cover', 'four-grid-loose', 'three-collage', 'hero-plus-two', 'video-feature', 'film-day', 'old-album', 'journal']) },
-  { id: 'booth-party', name: 'Party booth', icon: 'camera', mode: 'photobooth', design: fromPages('slate', 'stars',
+  { id: 'booth-squids', name: '2 3 con mực', icon: 'octopus', mode: 'photobooth', design: squidBooth },
+  { id: 'booth-party', name: 'Party booth', icon: 'camera', mode: 'photobooth', design: booths('slate', 'stars',
     ['booth-strips-3', 'booth-grid-4', 'booth-big-3', 'booth-strips-4', 'booth-stack']) },
-  { id: 'booth-wedding', name: 'Wedding booth', icon: 'heart', mode: 'photobooth', design: fromPages('rose', 'petals',
+  { id: 'booth-wedding', name: 'Wedding booth', icon: 'heart', mode: 'photobooth', design: booths('rose', 'petals',
     ['booth-pair', 'booth-strips-3', 'booth-grid-3', 'booth-big-3', 'booth-stack']) },
-  { id: 'booth-friends', name: 'Friends night', icon: 'star', mode: 'photobooth', design: fromPages('night', 'stars',
+  { id: 'booth-friends', name: 'Friends night', icon: 'star', mode: 'photobooth', design: booths('night', 'stars',
     ['booth-strips-4', 'booth-grid-4', 'booth-grid-3', 'booth-pair']) },
   { id: 'look-back', name: 'Look Back', icon: 'moon', design: () => ({
     backgroundColor: exampleAlbum.album.backgroundColor, backgroundEffect: exampleAlbum.album.backgroundEffect,
