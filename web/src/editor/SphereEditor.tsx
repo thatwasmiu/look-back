@@ -19,7 +19,7 @@ export function SphereEditor({ layout, media, commit }: {
   return (
     <div className="sphere-editor">
       <div className="sphere-editor-globe"><SphereView photos={order.map((o) => o.m)} /></div>
-      {!order.length && <p className="manage-hint">{t('No photos on the globe yet: 🧩 Space → Arrange adds the album\'s photos.')}</p>}
+      {!order.length && <p className="manage-hint">{t('No photos on the globe yet: ＋ Add photos below, or 🧩 Space → Add the album\'s photos.')}</p>}
       <ol className="sphere-order" aria-label={t('Photos on the globe, in order')}>
         {order.map(({ f, m }, i) => (
           <li key={f.id}>

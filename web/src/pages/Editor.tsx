@@ -15,6 +15,7 @@ import { MediaTray, thumbOf } from '../editor/MediaTray';
 import { mediaUrl } from '../mediaUrl';
 import { ACCEPT, pollUntilSettled, useUpload } from '../editor/useUpload';
 import { SphereEditor } from '../editor/SphereEditor';
+import { arrange } from '../editor/spaceOps';
 import { FrameCamera, frameWindowShape, type CameraTarget, type WindowShape, inlineVideoBlocked } from '../editor/FrameCamera';
 import { dropLocalPreview, LocalPreview } from '../localPreview';
 
@@ -37,7 +38,7 @@ export default function Editor() {
     });
   }, [id]);
   useEffect(load, [load]);
-  if (bundle) return <EditorView bundle={bundle} api={realApi} />;
+  if (bundle) return <EditorView bundle={bundle} api={realApi} reload={() => realApi.getAlbum(id)} />;
   return (
     <main className="editor">
       <header className="editor-bar"><Link to="/">← {tr('Albums')}</Link></header>
@@ -65,12 +66,14 @@ export function otherEmptyFrames(layout: PageLayout, id: string, dir: ReadingDir
 }
 
 const MUSIC = '#music'; // upload target: the album's background music instead of a frame
+const FILL = '#fill'; // upload target: the page's next empty frame, or a space's next row
 
 // `uploader` is swappable so /dev/editor can fake uploads without a server.
 // guest: opened from an edit link — the page structure is the owner's: no adding/deleting/moving pages, no frame or
 // panel tools (a frame only takes a photo), no album settings. Everything else on the page is free; the server
 // enforces the same.
-export function EditorView({ bundle, api, uploader = useUpload, guest = false }: { bundle: AlbumBundle; api: EditorApi; uploader?: typeof useUpload; guest?: boolean }) {
+// reload: the album as the server has it now (the owner's editor; picks up what an edit-link guest did meanwhile).
+export function EditorView({ bundle, api, uploader = useUpload, guest = false, reload }: { bundle: AlbumBundle; api: EditorApi; uploader?: typeof useUpload; guest?: boolean; reload?: () => Promise<AlbumBundle> }) {
   const albumId = bundle.album.id;
   const tr = useT();
   const [media, setMedia] = useState(() => new Map(bundle.media.map((m) => [m.id, m])));
@@ -274,6 +277,21 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
     return () => { alive = false; };
   }, [bundle.media, get, watch]);
 
+  // A space takes one pick of photos as a batch, so they fill grid rows together (each arrange starts a new row).
+  // A file that never starts uploading doesn't hold the rest back for long.
+  const spaceFill = useRef({ want: 0, ids: [] as string[], timer: 0 });
+  const queueForSpace = (mediaId: string) => {
+    const q = spaceFill.current;
+    q.ids.push(mediaId);
+    clearTimeout(q.timer);
+    const flush = () => {
+      const ids = q.ids;
+      q.ids = [];
+      q.want = 0;
+      if (ids.length) commit((x) => arrange(x, ids, 'grid'));
+    };
+    if (q.ids.length >= q.want) flush(); else q.timer = window.setTimeout(flush, 8000);
+  };
   // tus created the upload: the media row exists server-side ('uploading'), so it may go into a frame (and be
   // autosaved) right away. Returns false when the target frame isn't on the current page (or editing is frozen).
   const upload = uploader(albumId, (mediaId, frameId) => {
@@ -284,6 +302,14 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
       return true;
     }
     if (!frameId) return true;
+    // ＋ Add photos (many in one pick): each into the next empty frame in reading order (the rest stay in the tray),
+    // or onto a space after what is there.
+    if (frameId === FILL) {
+      if (latest.current.busy) return true;
+      if (latest.current.layout.space) queueForSpace(mediaId);
+      else commit((x) => { const [f] = otherEmptyFrames(x, '', readingDirection); return f ? assignMedia(x, f.id, mediaId) : x; });
+      return true;
+    }
     const { layout: l, busy: b } = latest.current;
     if (b || !l.elements.some((e) => e.id === frameId && e.type === 'frame')) return false;
     commit((x) => assignMedia(x, frameId, mediaId));
@@ -306,6 +332,27 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
     }
   }, [upload.items, watch]);
   const framePick = useRef<{ input: HTMLInputElement | null; frameId: string }>({ input: null, frameId: '' });
+  const fillPick = useRef<HTMLInputElement | null>(null);
+
+  // Back on this tab: pick up what others did meanwhile — pages an edit-link guest added or filled, their photos — so
+  // the strip and reordering match the server. The page open here stays as it is (a clash on it is the save's 409).
+  useEffect(() => {
+    if (!reload) return;
+    const onShow = () => {
+      if (document.visibilityState !== 'visible' || latest.current.busy) return;
+      reload().then((b) => {
+        const { pages: ps, cur: c, busy: bz } = latest.current;
+        const curId = ps[c]?.id;
+        if (bz || (curId && !b.pages.some((p) => p.id === curId))) return; // the open page was deleted elsewhere
+        b.pages.forEach((p) => p.id !== curId && p.updatedAt && versions.current.set(p.id, p.updatedAt));
+        setMedia((m) => { const n = new Map(m); b.media.forEach((x) => n.has(x.id) || n.set(x.id, x)); return n; });
+        setPages(b.pages.map((p) => (p.id === curId ? ps[c] : p)));
+        setCur(Math.max(0, b.pages.findIndex((p) => p.id === curId)));
+      }, () => {});
+    };
+    document.addEventListener('visibilitychange', onShow);
+    return () => document.removeEventListener('visibilitychange', onShow);
+  }, [reload]);
   // "+ add" on an empty frame: pick from what's already uploaded, or upload new (first option).
   // With nothing uploaded yet it goes straight to the file dialog — except on phones, where the menu also offers the
   // cameras.
@@ -513,6 +560,9 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
   }, [selectedId, commit, upload, guest]);
 
   const shownPages = withCurrent();
+  // ＋ Add photos: on a space (the owner's), or on a page with two or more empty frames (their count; null: no button).
+  const emptyCount = page && !layout.space ? otherEmptyFrames(layout, '', readingDirection).length : 0;
+  const fillCount = !page ? null : layout.space ? (guest ? null : 0) : emptyCount >= 2 ? emptyCount : null;
   const toggleHidden = () => commit((l) => ({ ...l, hidden: l.hidden ? undefined : true }));
   return (
     <main className={`editor desk-${bgColor}${busy ? ' busy' : ''}${panelsHidden ? ' panels-hidden' : ''}`} aria-busy={busy}>
@@ -573,6 +623,13 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
           {page && (cur < pages.length - 1
             ? <button type="button" className="page-next" aria-label={tr('Next page')} title={tr('Next page')} onClick={() => void switchTo(cur + 1)}>→</button>
             : !guest && !full && <button type="button" className="page-next" aria-label={tr('New page')} title={tr('New page')} onClick={() => setPicking(true)}>+</button>)}
+          {fillCount !== null && !canShootSet && !cameraFrame && (
+            <span className="shoot-set-bar">
+              <button type="button" className="shoot-set-btn" onClick={() => fillPick.current?.click()}>
+                ＋ {fillCount ? tr('Add photos to the {n} empty frames', { n: fillCount }) : tr('Add photos')}
+              </button>
+            </span>
+          )}
           {canShootSet && !cameraFrame && (
             <span className="shoot-set-bar">
               <button type="button" className="shoot-set-btn" onClick={() => (setLayout ? shootSet(setLayout) : setShootPick(true))}>📸 {tr('Shoot a new set')}</button>
@@ -630,6 +687,8 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
           </div>,
           document.body,
         )}
+        <input type="file" multiple accept={ACCEPT} hidden aria-label={tr('Add photos')} ref={fillPick}
+          onChange={(e) => { const fs = [...e.target.files ?? []]; spaceFill.current.want = fs.length; upload.add(fs, FILL); e.target.value = ''; }} />
         {(['Upload into frame', 'Take photo or video'] as const).map((label, i) => (
           <input key={label} type="file" accept={ACCEPT} hidden aria-label={tr(label)} capture={i ? 'environment' : undefined}
             ref={(n) => { if (i) cameraPick.current = n; else framePick.current.input = n; }}

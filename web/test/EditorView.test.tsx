@@ -835,3 +835,31 @@ test('space album: no page strip or "+ page"; the Space tools change the length 
     elements: expect.arrayContaining([expect.objectContaining({ mediaId: 'm1' }), expect.objectContaining({ mediaId: 'm2' })]),
   }), undefined));
 });
+
+test('＋ Add photos: one pick fills the empty frames in reading order; extras stay in the tray', () => {
+  let onCreated: ((id: string, frameId?: string) => boolean | void) | null = null;
+  const add = vi.fn();
+  const uploader = ((_a: string, cb: typeof onCreated) => { onCreated = cb; return { items: [], add, retry: vi.fn() }; }) as never;
+  const b: AlbumBundle = { ...bundle, pages: [{ ...bundle.pages[0], layout: { background: 'paper-cream', elements: [
+    { ...frameEmpty, id: 'low', y: 0.5 }, { ...frameEmpty, id: 'top', y: 0.05 },
+  ] } }] };
+  const { container } = render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={b} api={okApi()} uploader={uploader} /></MemoryRouter>);
+  fireEvent.change(screen.getByLabelText('Add photos'), { target: { files: [new File(['a'], 'a.jpg'), new File(['b'], 'b.jpg'), new File(['c'], 'c.jpg')] } });
+  expect(add).toHaveBeenCalledWith(expect.any(Array), '#fill');
+  expect(screen.getByRole('button', { name: /Add photos to the 2 empty frames/ })).toBeTruthy();
+  act(() => { onCreated!('u1', '#fill'); onCreated!('u2', '#fill'); onCreated!('u3', '#fill'); });
+  const chip = (id: string) => container.querySelector(`.edit-page [data-frame-id=${id}] .chip`)?.textContent;
+  expect(chip('top')).toBe('uploading…');
+  expect(chip('low')).toBe('uploading…');
+  expect(screen.queryByRole('button', { name: /empty frames/ })).toBeNull(); // nothing left to fill
+});
+
+test("back on the tab, the owner's editor picks up a page a guest added", async () => {
+  const guestPage = { id: 'g1', albumId: 'a1', position: 2, layout: { background: 'paper-cream' as const, elements: [] } };
+  const reload = vi.fn().mockResolvedValue({ ...bundle, pages: [...bundle.pages, guestPage] });
+  render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><EditorView bundle={bundle} api={okApi()} reload={reload} /></MemoryRouter>);
+  expect(screen.queryByRole('button', { name: 'Page 3' })).toBeNull();
+  act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+  expect(await screen.findByRole('button', { name: 'Page 3' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Page 1' }).getAttribute('aria-current')).toBe('true');
+});
