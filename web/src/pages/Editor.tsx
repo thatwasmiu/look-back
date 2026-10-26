@@ -399,7 +399,7 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
 
   // "Shoot a new set" (modes with shootFirst, i.e. photobooth): pick a layout (next sets reuse it), a new page with it,
   // then the camera fills all its frames in one go; afterwards the date is stamped and it offers another set.
-  const [shootPick, setShootPick] = useState(() => info.shootFirst && (!guest || info.guestSets) && params.get('shoot') === '1');
+  const [shootPick, setShootPick] = useState(() => info.shootFirst && (!guest || info.guestSets) && !inlineVideoBlocked() && params.get('shoot') === '1');
   const [setLayout, setSetLayout] = useState<string | null>(null);
   const [shootOn, setShootOn] = useState<string | null>(null); // page id: open the set camera once it is shown
   const [askNext, setAskNext] = useState(false);
@@ -571,7 +571,7 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
           {canShootSet && !cameraFrame && (
             <span className="shoot-set-bar">
               <button type="button" className="shoot-set-btn" onClick={() => (setLayout ? shootSet(setLayout) : setShootPick(true))}>📸 {tr('Shoot a new set')}</button>
-              <button type="button" className="secondary kiosk-btn" title={tr('Full screen for a party: guests tap to shoot their own set')} onClick={startKiosk}>🖥 {tr('Kiosk')}</button>
+              <button type="button" className="secondary kiosk-btn" aria-label={tr('Kiosk')} title={tr('Full screen for a party: guests tap to shoot their own set')} onClick={startKiosk}>🖥</button>
             </span>
           )}
         </div>
@@ -583,7 +583,11 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false }:
         {cameraFrame && createPortal(
           <FrameCamera frame={cameraFrame.frame} windowShape={cameraFrame.shape} more={cameraFrame.more} set={cameraFrame.set}
             onClose={() => setCameraFrame(null)} onSetDone={cameraFrame.set ? setDone : undefined}
-            onCapture={(file, frameId) => { upload.add([file], frameId ?? cameraFrame.frame.id); if (!frameId) setCameraFrame(null); }} />,
+            onCapture={(file, frameId) => {
+              upload.add([file], frameId ?? cameraFrame.frame.id);
+              // One shot (or a set layout with a single frame): done; a set still gets its date and "another set?".
+              if (!frameId) { if (cameraFrame.set) setDone(); else setCameraFrame(null); }
+            }} />,
           document.body,
         )}
         {frameMenu && createPortal(

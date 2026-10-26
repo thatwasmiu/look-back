@@ -791,3 +791,28 @@ test('photobooth: "Shoot a new set" asks the layout, adds that page and opens th
   await user.click(screen.getByRole('button', { name: 'Exit kiosk' }));
   expect(screen.queryByRole('dialog', { name: 'Kiosk' })).toBeNull();
 });
+
+test('photobooth: a set on a one-frame layout also ends with the date stamped and "another set?"', async () => {
+  const user = userEvent.setup();
+  Object.defineProperty(navigator, 'mediaDevices', { value: { getUserMedia: vi.fn(async () => ({ getTracks: () => [{ stop() {} }] })) }, configurable: true });
+  HTMLMediaElement.prototype.play = () => Promise.resolve();
+  Object.defineProperty(HTMLVideoElement.prototype, 'videoWidth', { value: 1920, configurable: true });
+  Object.defineProperty(HTMLVideoElement.prototype, 'videoHeight', { value: 1080, configurable: true });
+  HTMLCanvasElement.prototype.getContext = vi.fn(() => ({ drawImage: vi.fn(), translate: vi.fn(), scale: vi.fn() })) as never;
+  HTMLCanvasElement.prototype.toBlob = function (cb: BlobCallback, type?: string) { cb(new Blob(['jpg'], { type })); };
+  const one = { background: 'paper-pink' as const, elements: [
+    { type: 'frame' as const, id: 'f1', x: 0.1, y: 0.1, w: 0.8, h: 0.6, rotation: 0, z: 1, frameStyle: 'plain' as const, mediaId: null, crop: { x: 0.5, y: 0.5, scale: 1 } },
+    { type: 'text' as const, id: 'd', x: 0.3, y: 0.8, w: 0.4, h: 0.06, rotation: 0, z: 5, text: 'dd/mm/yyyy', font: 'patrick-hand' as const, size: 0.03, color: '#7a6a58' },
+  ] };
+  const api: EditorApi = { ...okApi(), addPage: vi.fn().mockResolvedValue({ id: 'p1', albumId: 'a1', position: 1, layout: one }) };
+  renderBooth(api);
+  await user.click(screen.getByRole('button', { name: /Shoot a new set/ }));
+  await user.click(screen.getByRole('button', { name: /Booth: 2 stacked/ }));
+  await screen.findByRole('dialog', { name: 'Shoot in the frame' });
+  await user.click(screen.getByRole('button', { name: 'Shoot' }));
+  expect(await screen.findByText(/Set done! Shoot another\?/)).toBeTruthy();
+  expect(screen.queryByRole('dialog', { name: 'Shoot in the frame' })).toBeNull();
+  await waitFor(() => expect(api.savePage).toHaveBeenLastCalledWith('p1', expect.objectContaining({
+    elements: expect.arrayContaining([expect.objectContaining({ id: 'd', text: expect.stringMatching(/^\d{2}\/\d{2}\/\d{4}$/) })]),
+  }), undefined));
+});

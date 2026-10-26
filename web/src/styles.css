@@ -573,7 +573,7 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 
 .shoot-set-bar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 5; display: flex; gap: .5rem; }
 .shoot-set-btn { padding: .7rem 1.4rem; border-radius: 99px; font-size: 1.1rem; font-weight: 700; box-shadow: 0 6px 18px #0005; white-space: nowrap; }
-.kiosk-btn { border-radius: 99px; white-space: nowrap; box-shadow: 0 6px 18px #0003; }
+.kiosk-btn { width: 2.9rem; height: 2.9rem; padding: 0; border-radius: 50%; font-size: 1.2rem; box-shadow: 0 6px 18px #0003; }
 .kiosk { position: fixed; inset: 0; z-index: 900; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem;
   padding: 1rem; background: radial-gradient(ellipse at 50% 40%, #3a2b45, #1d1424); color: #fff; }
 .kiosk-title { margin: 0; font-family: 'Dancing Script', cursive; font-size: clamp(2rem, 7vw, 4rem); }
