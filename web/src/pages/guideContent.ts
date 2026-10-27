@@ -34,7 +34,8 @@ const vi: Guide = {
       { h: 'Link sửa (cho người khác cùng làm)', p: [
         'Trong hộp **Chia sẻ**, gõ **Số giờ** (1–168) rồi **Tạo link sửa** → **Chép**. Người nhận mở link là vào sửa được, không cần mật khẩu.',
         'Họ được: bỏ ảnh/video vào khung, thêm/sửa/xoá chữ, bong bóng thoại, sticker, băng dính, hiệu ứng, đổi giấy. Họ không được: thêm/xoá/chuyển/ẩn trang, thêm/xoá/kéo khung hay panel, đổi tên, nhạc, nền album.',
-        'Link còn hạn: gõ số giờ mới rồi **Gia hạn**, hoặc **Thu hồi** để khoá ngay.'] },
+        'Link còn hạn: gõ số giờ mới rồi **Gia hạn**, hoặc **Thu hồi** để khoá ngay.',
+        'Bạn đang mở màn sửa cùng lúc: quay lại tab là thấy trang và ảnh họ vừa thêm. Hai người sửa cùng một trang thì bản lưu sau bị từ chối và tải bản mới (“Trang vừa được người khác sửa”).'] },
       { h: 'Cài app từ link', p: [
         'Mở link xem hoặc link sửa rồi “Thêm vào màn hình chính”: app cài ra sẽ mở thẳng album đó.',
         'Đã lỡ cài app từ trang chủ? Ở màn đăng nhập, dán link vào ô **Link hoặc mã chia sẻ** → **Mở**; lần sau có nút **Mở album được chia sẻ lần trước**.'] },
@@ -51,7 +52,8 @@ const vi: Guide = {
     { id: 'media', title: '4. Ảnh và video', features: [
       { h: 'Tải lên', img: 'editor', p: [
         'Bấm **Tải lên** trong khu ảnh. Hỗ trợ ảnh và video lớn; mạng chập chờn vẫn tải tiếp được.',
-        'Trong lúc tải và xử lý, khung hiện ngay ảnh bạn vừa chọn kèm nhãn “đang tải…” / “đang xử lý…”.'] },
+        'Trong lúc tải và xử lý, khung hiện ngay ảnh bạn vừa chọn kèm nhãn “đang tải…” / “đang xử lý…”.',
+        'Trang có từ 2 khung trống trở lên: nút **＋ Thêm ảnh vào N khung trống** ở dưới trang — chọn nhiều ảnh một lần, ảnh lần lượt vào các khung trống theo thứ tự đọc; ảnh thừa nằm trong khu ảnh.'] },
       { h: 'Dán ảnh từ clipboard', p: ['Chụp màn hình hoặc “Copy image” rồi **Ctrl+V**. Đang chọn khung trống thì ảnh vào thẳng khung đó.'] },
       { h: 'Đưa ảnh vào khung', img: 'frame-menu', p: [
         'Bấm **+ thêm** trên khung trống → **Tải lên** hoặc chọn một ảnh đã có. Trên điện thoại có thêm **Chụp ảnh/quay video** (camera của máy).',
@@ -121,9 +123,10 @@ const vi: Guide = {
     { id: 'space', title: '11. Space', features: [
       { h: 'Một không gian, thật nhiều ảnh', p: [
         'Bấm **＋ Space**, chọn **Tường dọc** (cuộn xuống), **Dải ngang** (vuốt ngang), **Bảng tự do** (kéo đi mọi hướng, phóng to/thu nhỏ) hoặc **Vòng cầu** (ảnh dán quanh một quả cầu 3D). Album Space chỉ có một trang — một không gian lớn.',
-        'Trong màn sửa, nút **🧩 Không gian**: **Dọc / Ngang / Tự do** đổi dạng (ảnh giữ chỗ trong từng đoạn), **Dài hơn / Ngắn hơn** (bảng: **Lớn hơn / Nhỏ hơn**, từ 2 × 2 tới 5 × 5; không bao giờ cắt mất vật đang có), **Xếp ảnh: lưới** hoặc **Xếp ảnh: rải** đặt mọi ảnh của album chưa có trên không gian vào sau những gì đang có.'] },
+        'Nút **＋ Thêm ảnh** ở dưới không gian: chọn nhiều ảnh một lần, ảnh được xếp thành lưới sau những gì đang có (vòng cầu: thêm vào quả cầu).',
+        'Trong màn sửa, nút **🧩 Không gian**: **Dọc / Ngang / Tự do / Vòng cầu** đổi dạng (ảnh giữ chỗ trong từng đoạn), **Dài hơn / Ngắn hơn** (bảng: **Lớn hơn / Nhỏ hơn**, từ 2 × 2 tới 5 × 5; không bao giờ cắt mất vật đang có), **Xếp ảnh: lưới** hoặc **Xếp ảnh: rải** đặt mọi ảnh của album chưa có trên không gian vào sau những gì đang có.'] },
       { h: 'Vòng cầu', p: [
-        'Ảnh được app tự rải đều quanh quả cầu; bạn chỉ chọn ảnh và thứ tự. **🧩 Không gian → Thêm ảnh của album** đưa ảnh lên cầu; bên dưới quả cầu, ◀ ▶ đổi thứ tự, ✕ bỏ một ảnh.',
+        'Ảnh được app tự rải đều quanh quả cầu; bạn chỉ chọn ảnh và thứ tự. **＋ Thêm ảnh** (ảnh mới) hoặc **🧩 Không gian → Thêm ảnh của album** (ảnh đã tải lên) đưa ảnh lên cầu; bên dưới quả cầu, ◀ ▶ đổi thứ tự, ✕ bỏ một ảnh.',
         'Khi xem: kéo để xoay (quả cầu trôi thêm một chút rồi tự quay chậm), chạm một ảnh để mở to. **Chia sẻ**: một ảnh quả cầu, hoặc **Tạo video** quả cầu quay một vòng (8 giây, kèm nhạc). **PDF** in các ảnh thành lưới.'] },
       { h: 'Xem và chia sẻ', p: [
         'Khi xem: cuộn dọc hoặc vuốt ngang; bảng tự do mở vừa màn hình — chụm hai ngón, Ctrl + cuộn chuột, nhấp đúp hoặc nút **＋ / −** để phóng to, kéo để đi khắp bảng. Chạm một ảnh để mở to, ← → hoặc vuốt để sang ảnh khác, × hoặc vuốt xuống để đóng.',
@@ -163,7 +166,8 @@ const en: Guide = {
       { h: 'Edit link (let others help)', p: [
         'In the **Share** box, type the **Hours** (1–168), then **Create edit link** → **Copy**. Whoever opens it can edit — no password.',
         "They can: put photos/videos into frames, add/change/delete text, bubbles, stickers, tape, effects, change the paper. They can't: add/delete/move/hide pages, add/delete/move frames or panels, or change the album's name, music or background.",
-        'While it is valid: type new hours and **Extend**, or **Revoke** to lock it at once.'] },
+        'While it is valid: type new hours and **Extend**, or **Revoke** to lock it at once.',
+        "Editing at the same time: come back to your tab and the pages and photos they added are there. Two people on one page: the later save is refused and the newer version loads (“Someone else just changed this page”)."] },
       { h: 'Installing from a link', p: [
         'Open a view or edit link and “Add to Home Screen”: the installed app opens straight on that album.',
         'Installed it from the home page instead? On the login screen paste the link into **Shared link or code** → **Open**; next time there is **Open the last shared album**.'] },
@@ -180,7 +184,8 @@ const en: Guide = {
     { id: 'media', title: '4. Photos and videos', features: [
       { h: 'Upload', img: 'editor', p: [
         "Tap **Upload** in the photos area. Big photos and videos are fine; a shaky connection resumes.",
-        'While uploading and processing, the frame already shows the picked photo with an “uploading…” / “processing…” label.'] },
+        'While uploading and processing, the frame already shows the picked photo with an “uploading…” / “processing…” label.',
+        'A page with 2 or more empty frames shows **＋ Add photos to the N empty frames** below it: pick many at once and they fill the empty frames in reading order; the rest wait in the photos area.'] },
       { h: 'Paste from the clipboard', p: ['Take a screenshot or “Copy image”, then **Ctrl+V**. With an empty frame selected it goes straight into it.'] },
       { h: 'Photos into frames', img: 'frame-menu', p: [
         "Tap **+ add** on an empty frame → **Upload** or one of the album's photos. Phones also get **Take photo/video** (the phone's camera).",
@@ -250,9 +255,10 @@ const en: Guide = {
     { id: 'space', title: '11. Space', features: [
       { h: 'One space, lots of photos', p: [
         'Tap **＋ Space**, pick **Vertical wall** (scrolled down), **Horizontal strip** (swiped sideways), **Free board** (panned any way, zoomed in and out) or **Sphere** (photos round a 3D globe). A space album has one page — one big space.',
-        "In the editor, **🧩 Space**: **Vertical / Horizontal / Free** changes the shape (items keep their place in each part), **Longer / Shorter** (a board: **Bigger / Smaller**, 2 × 2 to 5 × 5; never cuts an item off), **Arrange: grid** or **Arrange: scatter** puts the album's photos that aren't on the space yet after what is there."] },
+        '**＋ Add photos** below the space: pick many at once and they are laid out as a grid after what is there (a sphere: onto the globe).',
+        "In the editor, **🧩 Space**: **Vertical / Horizontal / Free / Sphere** changes the shape (items keep their place in each part), **Longer / Shorter** (a board: **Bigger / Smaller**, 2 × 2 to 5 × 5; never cuts an item off), **Arrange: grid** or **Arrange: scatter** puts the album's photos that aren't on the space yet after what is there."] },
       { h: 'Sphere', p: [
-        "The app spreads the photos evenly round the globe; you only pick them and their order. **🧩 Space → Add the album's photos** puts them on it; under the globe, ◀ ▶ reorder and ✕ takes one off.",
+        "The app spreads the photos evenly round the globe; you only pick them and their order. **＋ Add photos** (new ones) or **🧩 Space → Add the album's photos** (already uploaded) puts them on it; under the globe, ◀ ▶ reorder and ✕ takes one off.",
         'Viewing: drag to turn it (it drifts a little, then spins slowly), tap a photo to see it big. **Share**: a picture of the globe, or **Make video** of it turning once (8 s, with the music). **PDF** prints the photos as a grid.'] },
       { h: 'Viewing and sharing', p: [
         'Viewing: scroll down or swipe sideways; a free board opens whole on screen — pinch, Ctrl + wheel, double-tap or **＋ / −** to zoom, drag to move around it. Tap a photo to see it big, ← → or a swipe for the next, × or a swipe down to close.',

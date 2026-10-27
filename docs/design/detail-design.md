@@ -183,7 +183,7 @@ Errors are `{ error: string }`; user-facing ones are Vietnamese (the web shows t
 
 | Path | Page | Notes |
 |---|---|---|
-| / | AlbumList | **＋ Scrapbook / ＋ Manga / ＋ Photobooth** buttons open the create modal on that kind (mode, reading direction, template / ✨ AI / copy design; Photobooth = mode `photobooth` (migration 011): starts on a Booth page, the editor's **+ page** lists only Booth pages, own album templates, no AI), share dialog (view link, edit link with hours), Log out, EN/VI |
+| / | AlbumList | **＋ Scrapbook / ＋ Manga / ＋ Photobooth / ＋ Space** buttons open the create modal on that kind (mode, reading direction, template / ✨ AI / copy design; Photobooth = mode `photobooth` (migration 011): starts on a Booth page, the editor's **+ page** lists only Booth pages, own album templates, no AI; Space = mode `space`, a shape choice: vertical / horizontal / free / sphere), share dialog (view link, edit link with hours), Log out, EN/VI |
 | /albums/:id | Viewer | book; `?page=N` opens on a page; **Share** → share-to-social dialog |
 | /albums/:id/edit | Editor | `?page=N` opens on a page; Done returns to the edited page |
 | /albums/:id/print | PrintAlbum | one page per sheet (210×280 mm), opens the print dialog (Save as PDF) |
@@ -242,7 +242,9 @@ Vietnamese (missing entries fall back to English; `{name}` placeholders). `useT(
   page as it is now. The editor then loads that version (undo history reset, unsaved edits on that page dropped) and
   shows "Trang vừa được người khác sửa — đã tải bản mới". Different pages never clash. Other people's changes are
   not pushed live: a page shows what was loaded until a save is refused or the album is reopened. Emptying frames
-  after a media delete doesn't bump the version.
+  after a media delete doesn't bump the version. The owner's editor (`reload` prop) fetches the album again when its
+  tab becomes visible: pages added / changed elsewhere (an edit-link guest) and their media come in, the open page
+  stays as it is (its clash is the 409 above); if the open page was deleted elsewhere nothing is merged.
 - **Frame camera, black preview:** a preview paused by the browser (rotation, resize) is played again; a camera
   track muted for over 1.5 s (iOS interruptions) is opened again.
 - **Photobooth** (frame camera, when the page has other empty frames): one press shoots into the tapped frame,
@@ -273,11 +275,15 @@ Vietnamese (missing entries fall back to English; `{name}` placeholders). `useT(
   (1 × 1; frames' order is the globe's order, their boxes tucked inside the tile): `render/sphere.ts` spreads n photos
   on a Fibonacci sphere and turns / projects them; `SphereView` places thumbnail cards with CSS 3D (drag to turn with
   inertia, slow idle spin unless reduced motion, tap → photo viewer); `SphereEditor` shows the globe plus the order
-  (◀ ▶ ✕), photos added by Arrange; switching to a flat shape lays the photos out again as a grid. Share draws the
+  (◀ ▶ ✕), photos added by ＋ Add photos or Arrange; switching to a flat shape lays the photos out again as a grid. Share draws the
   globe on a canvas (`drawGlobe`): a still picture, or an 8 s turn recorded with `recordCanvas`; print: the photos as a
   grid; album card: a still globe.
 - **Frame camera self-timer:** ⏱ cycles off / 3 / 5 / 10 s; Shoot or Record then counts down on screen, tapping
   again cancels.
+- **＋ Add photos** (one multi-file pick, upload target `#fill`): on a page with ≥ 2 empty frames each upload goes
+  into the next empty frame in reading order as soon as tus creates it (extras stay in the tray); on a space (owner
+  only) the pick is batched — once every file has an id (or 8 s after the last) one `arrange(…, 'grid')` places them
+  together, so they share grid rows (a sphere: onto the globe). Hidden on photobooth pages (Shoot a new set there).
 - **Uploads** (`useUpload.ts`): one app-wide Uppy + tus instance (survives leaving the editor), resumable, local
   preview while uploading/processing (`localPreview.tsx`), camera capture on phones, polling until ready.
 

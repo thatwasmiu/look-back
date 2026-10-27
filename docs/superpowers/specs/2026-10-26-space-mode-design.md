@@ -1,6 +1,6 @@
 # Space mode — design
 
-Date: 2026-10-26. Status: draft, for the owner's review. Built in three rounds (see "Rounds").
+Date: 2026-10-26. Status: built — rounds 1–3 shipped 2026-10-26 (see "Rounds" and "As built").
 
 ## Intent
 
@@ -96,8 +96,9 @@ Friends open the link and scroll through it, tap a photo to see it big, swipe to
   Scatter). Shorter / Smaller never cuts off items (it stops at the last item's edge).
 - Changing shape: frames are laid out again in their current order (Grid for Vertical / Horizontal / Free, globe for
   Sphere); texts and stickers keep their order and are placed after the photos (Grid) — the owner can move them back.
-- Sphere editing: the page area shows the globe preview; the photo tray adds / removes photos; a row of thumbnails
-  reorders them (drag).
+- Sphere editing: the page area shows the globe preview; under it the photos in order, each with ◀ ▶ (move) and
+  ✕ (take off). Photos come on with **＋ Add photos** (new uploads) or 🧩 → **Add the album's photos**.
+- **＋ Add photos** (below the space, owner only): one multi-file pick, placed as one Grid batch after what is there.
 
 ### Server
 
@@ -119,6 +120,16 @@ boomerang: false, guestSets: false }`.
 3. **Sphere**: the 3D globe viewer, ordering UI, spinning-globe video.
 
 Each round is pushed for the owner to try on a phone before the next.
+
+## As built (differences from the plan above)
+
+- Changing shape keeps every item where it was within its tile (tile k maps across shapes), instead of laying
+  frames out again; only switching to / from **Sphere** relays photos (to the globe in reading order / back as a Grid
+  on a fresh 3-tile space; empty frames are dropped going to a sphere).
+- Sphere reordering is ◀ ▶ buttons, not drag. The globe is 1 × 1; its frames' boxes sit inside the tile (unused).
+- Free boards are n × n tiles (2–5), so a whole board stays 3:4 and shares / prints as one picture / sheet.
+- Share for a sphere draws the globe on a canvas: a still picture, or an 8 s turn as a video (with the music).
+- Added later: **＋ Add photos** for spaces (see Editing).
 
 ## Left to the builder
 
