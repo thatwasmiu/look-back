@@ -29,7 +29,7 @@ export function turn(p: GlobePoint, rx: number, ry: number): { x: number; y: num
 export function drawGlobe(g: CanvasRenderingContext2D, imgs: (HTMLImageElement | null)[], w: number, h: number, rx: number, ry: number, size = 1) {
   const r = Math.min(w, h) * 0.36 * size, cx = w / 2, cy = h / 2, f = 3; // f: perspective distance, in radii
   const pts = spherePoints(imgs.length).map((p, i) => ({ i, ...turn(p, rx, ry) })).sort((a, b) => a.z - b.z);
-  const side = cardSize(imgs.length, r);
+  const side = cardSize(imgs.length, r / size); // photo size as on a globe of size 1
   for (const p of pts) {
     const img = imgs[p.i];
     if (!img || p.z < -0.2) continue;

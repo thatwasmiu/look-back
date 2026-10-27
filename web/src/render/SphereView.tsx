@@ -44,7 +44,7 @@ export function SphereView({ photos, onOpen, interactive = true, size = 1 }: { p
   }, [r, interactive]);
 
   const pts = spherePoints(photos.length);
-  const side = cardSize(photos.length, r);
+  const side = cardSize(photos.length, r / size); // a bigger globe spreads the same-sized photos further apart
   const src = (m: MediaDTO) => {
     const v = m.variants;
     const key = m.kind === 'video' ? v?.poster : v?.thumb ?? v?.display;
