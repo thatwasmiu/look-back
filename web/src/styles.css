@@ -612,14 +612,15 @@ input { font: inherit; padding: .5rem; border: 1px solid var(--paper-dark); bord
 .sphere-globe { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-style: preserve-3d; }
 .sphere-card { position: absolute; left: 0; top: 0; padding: 3%; border: 0; border-radius: 4px; background: #fffdf8;
   box-shadow: 0 2px 8px #0004; backface-visibility: hidden; cursor: inherit; }
-.sphere-card img { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.sphere-card img, .sphere-card video { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
 .space-sphere { display: flex; }
 .sphere-editor { width: min(100cqw - 24px, 760px); height: calc(100cqh - 24px); display: flex; flex-direction: column; gap: .6rem; min-width: 0; padding-bottom: 64px; } /* room for ＋ Add photos */
 .sphere-editor .sphere-order { max-width: 100%; }
 .sphere-editor-globe { flex: 1; min-height: 240px; display: flex; }
 .sphere-order { list-style: none; margin: 0; padding: 0; display: flex; gap: .5rem; overflow-x: auto; }
 .sphere-order li { position: relative; flex: none; width: 4.6rem; }
-.sphere-order img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 4px; }
+.sphere-order-pic { display: block; aspect-ratio: 1; border-radius: 4px; background: #0002; overflow: hidden; }
+.sphere-order img, .sphere-order video { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 4px; }
 .sphere-order-n { position: absolute; top: 2px; left: 4px; color: #fff; font-size: .8rem; text-shadow: 0 1px 3px #000; }
 .sphere-order-tools { display: flex; justify-content: space-between; }
 .sphere-order-tools button { padding: .1rem .35rem; font-size: .8rem; }

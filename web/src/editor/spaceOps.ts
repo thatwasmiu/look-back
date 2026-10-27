@@ -24,6 +24,16 @@ export const lengthOf = (l: PageLayout) => (l.space?.shape === 'horizontal' ? l.
 const maxLength = (shape: SpaceShape) => (shape === 'free' ? MAX_BOARD : MAX_TILES);
 const sized = (shape: FlatShape, n: number) => ({ shape, cols: shape === 'vertical' ? 1 : n, rows: shape === 'horizontal' ? 1 : n });
 
+// A globe's Bigger / Smaller: its radius × 0.6 … 1.6, in steps of 0.2.
+export const GLOBE_MIN = 0.6, GLOBE_MAX = 1.6;
+export const globeSize = (l: PageLayout) => l.space?.radius ?? 1;
+export function resizeGlobe(l: PageLayout, delta: number): PageLayout {
+  const s = l.space;
+  if (s?.shape !== 'sphere') return l;
+  const radius = Math.round(Math.min(GLOBE_MAX, Math.max(GLOBE_MIN, globeSize(l) + delta * 0.2)) * 10) / 10;
+  return radius === globeSize(l) ? l : { ...l, space: { ...s, radius } };
+}
+
 // Longer / Shorter (a board: Bigger / Smaller, a tile each way): never past the limit, never cutting off an item.
 export function resizeSpace(l: PageLayout, delta: number): PageLayout {
   const s = l.space;

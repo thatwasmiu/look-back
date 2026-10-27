@@ -19,7 +19,7 @@ export function SpaceTile({ layout, media, index = 0, active = false, grid = fal
               const key = m.kind === 'video' ? m.variants?.poster : m.variants?.display;
               return key ? <img key={m.id} src={mediaUrl(key)} alt="" /> : null;
             })}</div>
-          : <SphereView photos={photos} interactive={false} />}
+          : <SphereView photos={photos} interactive={false} size={s.radius} />}
       </div>
     );
   }

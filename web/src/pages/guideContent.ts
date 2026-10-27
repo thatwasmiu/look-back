@@ -123,10 +123,10 @@ const vi: Guide = {
     { id: 'space', title: '11. Space', features: [
       { h: 'Một không gian, thật nhiều ảnh', p: [
         'Bấm **＋ Space**, chọn **Tường dọc** (cuộn xuống), **Dải ngang** (vuốt ngang), **Bảng tự do** (kéo đi mọi hướng, phóng to/thu nhỏ) hoặc **Vòng cầu** (ảnh dán quanh một quả cầu 3D). Album Space chỉ có một trang — một không gian lớn.',
-        'Nút **＋ Thêm ảnh** ở dưới không gian: chọn nhiều ảnh một lần, ảnh được xếp thành lưới sau những gì đang có (vòng cầu: thêm vào quả cầu).',
+        'Nút **＋ Thêm ảnh** ở dưới không gian (hoặc **Tải lên** trong khu ảnh): chọn nhiều ảnh một lần, ảnh tự xếp thành lưới sau những gì đang có (vòng cầu: thêm vào quả cầu).',
         'Trong màn sửa, nút **🧩 Không gian**: **Dọc / Ngang / Tự do / Vòng cầu** đổi dạng (ảnh giữ chỗ trong từng đoạn), **Dài hơn / Ngắn hơn** (bảng: **Lớn hơn / Nhỏ hơn**, từ 2 × 2 tới 5 × 5; không bao giờ cắt mất vật đang có), **Xếp ảnh: lưới** hoặc **Xếp ảnh: rải** đặt mọi ảnh của album chưa có trên không gian vào sau những gì đang có.'] },
       { h: 'Vòng cầu', p: [
-        'Ảnh được app tự rải đều quanh quả cầu; bạn chỉ chọn ảnh và thứ tự. **＋ Thêm ảnh** (ảnh mới) hoặc **🧩 Không gian → Thêm ảnh của album** (ảnh đã tải lên) đưa ảnh lên cầu; bên dưới quả cầu, ◀ ▶ đổi thứ tự, ✕ bỏ một ảnh.',
+        'Ảnh được app tự rải đều quanh quả cầu; bạn chỉ chọn ảnh và thứ tự. **＋ Thêm ảnh** (ảnh mới) hoặc **🧩 Không gian → Thêm ảnh của album** (ảnh đã tải lên) đưa ảnh lên cầu; bên dưới quả cầu, ◀ ▶ đổi thứ tự, ✕ bỏ một ảnh. **🧩 Không gian → Lớn hơn / Nhỏ hơn** đổi cỡ quả cầu.',
         'Khi xem: kéo để xoay (quả cầu trôi thêm một chút rồi tự quay chậm), chạm một ảnh để mở to. **Chia sẻ**: một ảnh quả cầu, hoặc **Tạo video** quả cầu quay một vòng (8 giây, kèm nhạc). **PDF** in các ảnh thành lưới.'] },
       { h: 'Xem và chia sẻ', p: [
         'Khi xem: cuộn dọc hoặc vuốt ngang; bảng tự do mở vừa màn hình — chụm hai ngón, Ctrl + cuộn chuột, nhấp đúp hoặc nút **＋ / −** để phóng to, kéo để đi khắp bảng. Chạm một ảnh để mở to, ← → hoặc vuốt để sang ảnh khác, × hoặc vuốt xuống để đóng.',
@@ -255,10 +255,10 @@ const en: Guide = {
     { id: 'space', title: '11. Space', features: [
       { h: 'One space, lots of photos', p: [
         'Tap **＋ Space**, pick **Vertical wall** (scrolled down), **Horizontal strip** (swiped sideways), **Free board** (panned any way, zoomed in and out) or **Sphere** (photos round a 3D globe). A space album has one page — one big space.',
-        '**＋ Add photos** below the space: pick many at once and they are laid out as a grid after what is there (a sphere: onto the globe).',
+        '**＋ Add photos** below the space (or **Upload** in the photos area): pick many at once and they are laid out as a grid after what is there (a sphere: onto the globe).',
         "In the editor, **🧩 Space**: **Vertical / Horizontal / Free / Sphere** changes the shape (items keep their place in each part), **Longer / Shorter** (a board: **Bigger / Smaller**, 2 × 2 to 5 × 5; never cuts an item off), **Arrange: grid** or **Arrange: scatter** puts the album's photos that aren't on the space yet after what is there."] },
       { h: 'Sphere', p: [
-        "The app spreads the photos evenly round the globe; you only pick them and their order. **＋ Add photos** (new ones) or **🧩 Space → Add the album's photos** (already uploaded) puts them on it; under the globe, ◀ ▶ reorder and ✕ takes one off.",
+        "The app spreads the photos evenly round the globe; you only pick them and their order. **＋ Add photos** (new ones) or **🧩 Space → Add the album's photos** (already uploaded) puts them on it; under the globe, ◀ ▶ reorder and ✕ takes one off. **🧩 Space → Bigger / Smaller** changes the globe's size.",
         'Viewing: drag to turn it (it drifts a little, then spins slowly), tap a photo to see it big. **Share**: a picture of the globe, or **Make video** of it turning once (8 s, with the music). **PDF** prints the photos as a grid.'] },
       { h: 'Viewing and sharing', p: [
         'Viewing: scroll down or swipe sideways; a free board opens whole on screen — pinch, Ctrl + wheel, double-tap or **＋ / −** to zoom, drag to move around it. Tap a photo to see it big, ← → or a swipe for the next, × or a swipe down to close.',

@@ -638,7 +638,8 @@ export function EditorView({ bundle, api, uploader = useUpload, guest = false, r
           )}
         </div>
         <MediaTray media={trayMedia} items={upload.items} coverMediaId={coverId}
-          onUpload={(files) => upload.add(files)} onRetry={upload.retry}
+          // On a space (the owner's) uploads are laid out on it straight away, like ＋ Add photos.
+          onUpload={(files) => { if (layout.space && !guest) { spaceFill.current.want = files.length; upload.add(files, FILL); } else upload.add(files); }} onRetry={upload.retry}
           onPick={(id) => selected?.type === 'frame' && putInFrame(id, selected.id)} onDrop={putInFrame}
           onDelete={guest ? undefined : deleteMedia} onSetCover={guest ? undefined : setCover} />
         {/* Portal: inside .edit-main's stacking context the tools would paint over the backdrop. */}

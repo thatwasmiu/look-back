@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { pageLayoutSchema, spaceLayout, type FrameEl, type PageLayout } from '@scrapbook/shared';
-import { arrange, minLength, resizeSpace, setShape } from '../src/editor/spaceOps';
+import { arrange, globeSize, minLength, resizeGlobe, resizeSpace, setShape } from '../src/editor/spaceOps';
 
 const frames = (l: PageLayout) => l.elements.filter((e): e is FrameEl => e.type === 'frame');
 
@@ -107,4 +107,17 @@ test('onto a globe: photos keep reading order, boxes tucked in one tile, empty f
   expect(order).toEqual(['a', 'b', 'c', 'e', 'd']);
   expect(pageLayoutSchema.safeParse(back).success).toBe(true);
   expect(resizeSpace(globe, 1)).toBe(globe); // a globe has no size
+});
+
+test('a globe grows and shrinks by 0.2 between 0.6 and 1.6; flat spaces are left alone', () => {
+  const g = setShape(spaceLayout('vertical') as never, 'sphere');
+  expect(globeSize(g)).toBe(1);
+  let l = g;
+  for (let i = 0; i < 9; i++) l = resizeGlobe(l, 1);
+  expect(l.space?.radius).toBe(1.6);
+  for (let i = 0; i < 9; i++) l = resizeGlobe(l, -1);
+  expect(l.space?.radius).toBe(0.6);
+  expect(pageLayoutSchema.safeParse(l).success).toBe(true);
+  const flat = spaceLayout('vertical') as never;
+  expect(resizeGlobe(flat, 1)).toBe(flat);
 });

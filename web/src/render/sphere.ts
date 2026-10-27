@@ -26,8 +26,8 @@ export function turn(p: GlobePoint, rx: number, ry: number): { x: number; y: num
 
 // The globe drawn flat on a canvas (a still picture, a video frame): photos sorted far to near, smaller and fainter
 // towards the back, the back half left out. Each photo is cropped square, with a thin white border.
-export function drawGlobe(g: CanvasRenderingContext2D, imgs: (HTMLImageElement | null)[], w: number, h: number, rx: number, ry: number) {
-  const r = Math.min(w, h) * 0.36, cx = w / 2, cy = h / 2, f = 3; // f: perspective distance, in radii
+export function drawGlobe(g: CanvasRenderingContext2D, imgs: (HTMLImageElement | null)[], w: number, h: number, rx: number, ry: number, size = 1) {
+  const r = Math.min(w, h) * 0.36 * size, cx = w / 2, cy = h / 2, f = 3; // f: perspective distance, in radii
   const pts = spherePoints(imgs.length).map((p, i) => ({ i, ...turn(p, rx, ry) })).sort((a, b) => a.z - b.z);
   const side = cardSize(imgs.length, r);
   for (const p of pts) {

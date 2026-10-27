@@ -109,6 +109,7 @@ const spaceSchema = z.object({
   shape: z.enum(SPACE_SHAPES),
   cols: z.number().int().min(1).max(MAX_TILES),
   rows: z.number().int().min(1).max(MAX_TILES),
+  radius: z.number().min(0.6).max(1.6).optional(), // a sphere's size: × its usual radius (unset = 1)
 }).refine((s) => s.cols * s.rows <= MAX_TILES, 'a space has at most 30 tiles')
 export type Space = z.infer<typeof spaceSchema>
 

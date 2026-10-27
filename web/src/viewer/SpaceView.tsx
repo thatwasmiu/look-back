@@ -59,7 +59,7 @@ export function SpaceView({ layout, media }: { layout: PageLayout; media: Map<st
   }, [free]);
   if (shape === 'sphere') return ( // the globe: drag to turn, tap a photo for the photo viewer
     <div className="stage space-stage space-sphere">
-      <SphereView photos={shots.map((s) => s.media)} onOpen={setOpen} />
+      <SphereView photos={shots.map((s) => s.media)} onOpen={setOpen} size={layout.space?.radius} />
       {open !== null && createPortal(<PhotoViewer shots={shots} index={open} onIndex={setOpen} onClose={() => setOpen(null)} />, document.body)}
     </div>
   );

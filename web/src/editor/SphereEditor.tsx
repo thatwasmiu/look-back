@@ -1,5 +1,6 @@
 import type { MediaDTO, PageLayout } from '@scrapbook/shared';
 import { useT } from '../i18n';
+import { LocalPreview } from '../localPreview';
 import { mediaUrl } from '../mediaUrl';
 import { SphereView } from '../render/SphereView';
 import { removeElement } from './layoutOps';
@@ -18,12 +19,13 @@ export function SphereEditor({ layout, media, commit }: {
   };
   return (
     <div className="sphere-editor">
-      <div className="sphere-editor-globe"><SphereView photos={order.map((o) => o.m)} /></div>
+      <div className="sphere-editor-globe"><SphereView photos={order.map((o) => o.m)} size={layout.space?.radius} /></div>
       {!order.length && <p className="manage-hint">{t('No photos on the globe yet: ＋ Add photos below, or 🧩 Space → Add the album\'s photos.')}</p>}
       <ol className="sphere-order" aria-label={t('Photos on the globe, in order')}>
         {order.map(({ f, m }, i) => (
           <li key={f.id}>
-            <img src={thumb(m)} alt="" />
+            {/* Still uploading / processing: the picked file's local preview (an empty tile when there is none). */}
+            <span className="sphere-order-pic">{thumb(m) ? <img src={thumb(m)} alt="" /> : <LocalPreview id={m.id} />}</span>
             <span className="sphere-order-n">{i + 1}</span>
             <span className="sphere-order-tools">
               <button type="button" aria-label={t('Move earlier')} disabled={i === 0} onClick={() => commit(moveOnSphere(layout, f.id, -1))}>◀</button>

@@ -275,7 +275,7 @@ Vietnamese (missing entries fall back to English; `{name}` placeholders). `useT(
   (1 × 1; frames' order is the globe's order, their boxes tucked inside the tile): `render/sphere.ts` spreads n photos
   on a Fibonacci sphere and turns / projects them; `SphereView` places thumbnail cards with CSS 3D (drag to turn with
   inertia, slow idle spin unless reduced motion, tap → photo viewer); `SphereEditor` shows the globe plus the order
-  (◀ ▶ ✕), photos added by ＋ Add photos or Arrange; switching to a flat shape lays the photos out again as a grid. Share draws the
+  (◀ ▶ ✕), photos added by ＋ Add photos or Arrange, Bigger / Smaller sets `space.radius` (× 0.6–1.6 of the fitted radius); switching to a flat shape lays the photos out again as a grid. Share draws the
   globe on a canvas (`drawGlobe`): a still picture, or an 8 s turn recorded with `recordCanvas`; print: the photos as a
   grid; album card: a still globe.
 - **Frame camera self-timer:** ⏱ cycles off / 3 / 5 / 10 s; Shoot or Record then counts down on screen, tapping

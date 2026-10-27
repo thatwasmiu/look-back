@@ -148,7 +148,7 @@ export function SocialShare({ bundle, onClose, viewLink }: { bundle: AlbumBundle
       bg.addColorStop(1, deskB);
       g.fillStyle = bg;
       g.fillRect(0, 0, w, h);
-      drawGlobe(g, imgs, w, h, -0.2, (turnSec / GLOBE_SEC) * 2 * Math.PI);
+      drawGlobe(g, imgs, w, h, -0.2, (turnSec / GLOBE_SEC) * 2 * Math.PI, globe!.space?.radius);
       if (format === 'story') {
         g.fillStyle = '#fff8ec';
         g.font = "700 96px 'Dancing Script', cursive";

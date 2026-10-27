@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { MediaDTO } from '@scrapbook/shared';
+import { LocalPreview } from '../localPreview';
 import { mediaUrl } from '../mediaUrl';
 import { cardSize, spherePoints } from './sphere';
 
@@ -7,7 +8,8 @@ import { cardSize, spherePoints } from './sphere';
 // not with reduced motion), tap a photo to open it. The globe is drawn with small images; the viewer opens the big one.
 // interactive=false: a still globe (album card, editor preview without gestures).
 const SPIN = 0.08; // degrees per frame when left alone
-export function SphereView({ photos, onOpen, interactive = true }: { photos: MediaDTO[]; onOpen?(i: number): void; interactive?: boolean }) {
+// size: × the usual radius (the space's `radius`).
+export function SphereView({ photos, onOpen, interactive = true, size = 1 }: { photos: MediaDTO[]; onOpen?(i: number): void; interactive?: boolean; size?: number }) {
   const box = useRef<HTMLDivElement>(null);
   const globe = useRef<HTMLDivElement>(null);
   const [r, setR] = useState(120);
@@ -16,13 +18,13 @@ export function SphereView({ photos, onOpen, interactive = true }: { photos: Med
   useEffect(() => { // the globe's radius follows the space it has
     const el = box.current;
     if (!el) return;
-    const fit = () => setR(Math.max(60, Math.min(el.clientWidth, el.clientHeight) * 0.34));
+    const fit = () => setR(Math.max(60, Math.min(el.clientWidth, el.clientHeight) * 0.34 * size));
     fit();
     if (typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver(fit);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [size]);
 
   useEffect(() => { // turning: straight on the element each frame, no re-render
     const still = !interactive || matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -82,7 +84,7 @@ export function SphereView({ photos, onOpen, interactive = true }: { photos: Med
               width: side, height: side, marginLeft: -side / 2, marginTop: -side / 2,
               transform: `rotateY(${pts[i].lon}rad) rotateX(${pts[i].lat}rad) translateZ(${r}px)`,
             } as CSSProperties}>
-            <img src={src(m)} alt="" draggable={false} loading="lazy" />
+            {src(m) ? <img src={src(m)} alt="" draggable={false} loading="lazy" /> : <LocalPreview id={m.id} />}
           </button>
         ))}
       </div>
