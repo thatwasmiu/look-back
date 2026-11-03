@@ -68,6 +68,26 @@ itself. Put certs in `deploy/certs/fullchain.pem` + `privkey.pem` (git-ignored):
 
 Stop: `docker compose -f deploy/compose.yml down` (volumes `pgdata`, `media`, `uploads` are kept; add `-v` only to wipe everything).
 
+### Ansible: set up or update the VPS in one command
+
+`deploy/ansible/site.yml` does the steps above on an Ubuntu / Debian VPS: Docker (left alone if already installed),
+the outer nginx with one site per domain (Cloudflare-proxied domains take the visitor's IP from `CF-Connecting-IP`,
+trusted only from Cloudflare's ranges), Let's Encrypt certificates (webroot; certbot's timer renews them), `compose.yml`
+and `.env` in the app folder, then pull + up and a check that `/version.json` answers. Run it from Linux, macOS or WSL:
+
+```bash
+cd deploy/ansible
+cp inventory.example.ini inventory.ini && cp vars.example.yml vars.yml   # both git-ignored; fill them in
+ansible-playbook -i inventory.ini site.yml --check --diff   # first time on a server set up by hand: see what changes
+ansible-playbook -i inventory.ini site.yml                  # set up / update everything
+ansible-playbook -i inventory.ini site.yml --tags deploy    # a release: copy compose.yml/.env, pull, restart
+```
+
+On a server set up by hand, give each domain the `site` name its nginx file already has (`vars.yml`), so the
+playbook replaces it instead of adding a second one. A new Cloudflare-proxied domain needs its first certificate
+over plain HTTP: turn off "Always Use HTTPS" until the first run has finished (or use a Cloudflare origin certificate).
+No Terraform: one VPS and a few DNS records don't need it.
+
 ## Template music (optional)
 
 A built-in album template can start with background music. Put the track on the server as

@@ -5,3 +5,7 @@ dist
 data/
 deploy/certs/
 deploy/template-music/
+
+# Ansible: your VPS and its settings
+deploy/ansible/inventory.ini
+deploy/ansible/vars.yml

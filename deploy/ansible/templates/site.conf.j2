@@ -1,0 +1,40 @@
+# {{ ansible_managed }}
+server {
+  listen 80;
+  listen [::]:80;
+  server_name {{ item.name }};
+  location /.well-known/acme-challenge/ { root /var/www/certbot; }
+  location / { return 301 https://$host$request_uri; }
+}
+{% if (certs.results | selectattr('item.name', 'equalto', item.name) | first).stat.exists | default(false) %}
+server {
+  listen 443 ssl;
+  listen [::]:443 ssl;
+  http2 on;
+  server_name {{ item.name }};
+  ssl_certificate     /etc/letsencrypt/live/{{ item.name }}/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/{{ item.name }}/privkey.pem;
+
+{% if item.cloudflare | default(false) %}
+  # Proxied by Cloudflare: the visitor is CF-Connecting-IP, believed only when the request comes from Cloudflare.
+{% for net in cloudflare_ranges %}
+  set_real_ip_from {{ net }};
+{% endfor %}
+  real_ip_header CF-Connecting-IP;
+
+{% endif %}
+  client_max_body_size 60m;        # tus uploads send 50 MiB chunks
+  proxy_request_buffering off;     # stream uploads instead of buffering them to disk first
+  proxy_buffering off;             # stream video segments
+  proxy_read_timeout 300s;
+  proxy_send_timeout 300s;
+
+  location / {
+    proxy_pass http://127.0.0.1:2611;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $remote_addr;   # overwrite, don't append: clients can't spoof their IP
+    proxy_set_header X-Forwarded-Proto https;
+  }
+}
+{% endif %}

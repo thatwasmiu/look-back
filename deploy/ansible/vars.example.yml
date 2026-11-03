@@ -1,0 +1,21 @@
+# Copy to vars.yml (git-ignored) and fill in.
+
+# Where compose.yml and .env live on the VPS (docker compose runs here).
+app_dir: /root/project/lookback
+
+# Local path of the filled-in env file to upload (mode 0600), relative to this folder.
+# Leave empty to keep the .env already on the VPS.
+env_file: ../.env
+
+# Email for Let's Encrypt.
+certbot_email: you@example.com
+
+# One outer-nginx site per domain. `site`: its file name in /etc/nginx/sites-available (keep your existing names so
+# nothing is duplicated). `cloudflare: true`: the domain is proxied by Cloudflare; the visitor's IP is taken from
+# CF-Connecting-IP, trusted only from Cloudflare's ranges (the login rate limit needs the real IP).
+domains:
+  - { name: lookback.daste.io.vn, site: lookback }
+  - { name: lookback.daste.dpdns.org, site: lookback-dpdns, cloudflare: true }
+
+# Image tag to run (latest, or a pinned version).
+image_tag: latest

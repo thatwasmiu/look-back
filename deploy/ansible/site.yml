@@ -1,0 +1,159 @@
+# Look Back on one VPS (Ubuntu / Debian): Docker, the outer HTTPS nginx with Let's Encrypt, the app via Docker Compose.
+#   ansible-playbook -i inventory.ini site.yml --check --diff   # see what would change
+#   ansible-playbook -i inventory.ini site.yml                  # set up / update everything
+#   ansible-playbook -i inventory.ini site.yml --tags deploy    # only pull the new images and restart
+- name: Look Back
+  hosts: lookback
+  become: true
+  vars_files: [vars.yml]
+  vars:
+    # https://www.cloudflare.com/ips/ (they change rarely; check now and then)
+    cloudflare_ranges:
+      - "173.245.48.0/20"
+      - "103.21.244.0/22"
+      - "103.22.200.0/22"
+      - "103.31.4.0/22"
+      - "141.101.64.0/18"
+      - "108.162.192.0/18"
+      - "190.93.240.0/20"
+      - "188.114.96.0/20"
+      - "197.234.240.0/22"
+      - "198.41.128.0/17"
+      - "162.158.0.0/15"
+      - "104.16.0.0/13"
+      - "104.24.0.0/14"
+      - "172.64.0.0/13"
+      - "131.0.72.0/22"
+      - "2400:cb00::/32"
+      - "2606:4700::/32"
+      - "2803:f800::/32"
+      - "2405:b500::/32"
+      - "2405:8100::/32"
+      - "2a06:98c0::/29"
+      - "2c0f:f248::/32"
+  handlers:
+    - name: Reload nginx
+      ansible.builtin.service: { name: nginx, state: reloaded }
+  tasks:
+    - name: Docker already installed? (docker-ce from Docker's own repo is left alone)
+      tags: setup
+      ansible.builtin.stat: { path: /usr/bin/docker }
+      register: docker_bin
+
+    - name: Docker from the distribution
+      tags: setup
+      ansible.builtin.apt: { name: [docker.io, docker-compose-v2], update_cache: true, cache_valid_time: 3600 }
+      when: not docker_bin.stat.exists
+
+    - name: Nginx and certbot
+      tags: setup
+      ansible.builtin.apt: { name: [nginx, certbot], update_cache: true, cache_valid_time: 3600 }
+
+    - name: Docker and nginx running
+      tags: setup
+      ansible.builtin.service: { name: "{{ item }}", state: started, enabled: true }
+      loop: [docker, nginx]
+
+    - name: ACME webroot
+      tags: setup
+      ansible.builtin.file: { path: /var/www/certbot, state: directory, mode: "0755" }
+
+    - name: Certificates already there?
+      tags: setup
+      ansible.builtin.stat: { path: "/etc/letsencrypt/live/{{ item.name }}/fullchain.pem" }
+      loop: "{{ domains }}"
+      register: certs
+
+    # A domain without a certificate yet gets only its port-80 part (enough for the ACME challenge); once the
+    # certificate exists the sites are written again with the HTTPS server.
+    - name: Outer nginx sites
+      tags: setup
+      ansible.builtin.template: { src: site.conf.j2, dest: "/etc/nginx/sites-available/{{ item.site }}", mode: "0644" }
+      loop: "{{ domains }}"
+      notify: Reload nginx
+
+    - name: Sites enabled
+      tags: setup
+      ansible.builtin.file:
+        src: "/etc/nginx/sites-available/{{ item.site }}"
+        dest: "/etc/nginx/sites-enabled/{{ item.site }}"
+        state: link
+      loop: "{{ domains }}"
+      notify: Reload nginx
+
+    - name: Nginx config is valid
+      tags: setup
+      ansible.builtin.command: nginx -t
+      changed_when: false
+
+    - name: Reload nginx now (the ACME challenge needs the port-80 sites)
+      tags: setup
+      ansible.builtin.meta: flush_handlers
+
+    - name: Let's Encrypt certificates (renewed by certbot's own timer)
+      tags: setup
+      ansible.builtin.command: >-
+        certbot certonly --webroot -w /var/www/certbot -d {{ item.name }}
+        --email {{ certbot_email }} --agree-tos --non-interactive
+        --deploy-hook "systemctl reload nginx"
+      args: { creates: "/etc/letsencrypt/live/{{ item.name }}/fullchain.pem" }
+      loop: "{{ domains }}"
+      register: issued
+
+    - name: Certificates now
+      tags: setup
+      ansible.builtin.stat: { path: "/etc/letsencrypt/live/{{ item.name }}/fullchain.pem" }
+      loop: "{{ domains }}"
+      register: certs
+      when: issued is changed # noqa: no-handler (the second render needs the fresh stat, in this order)
+
+    - name: Outer nginx sites with HTTPS
+      tags: setup
+      ansible.builtin.template: { src: site.conf.j2, dest: "/etc/nginx/sites-available/{{ item.site }}", mode: "0644" }
+      loop: "{{ domains }}"
+      when: issued is changed # noqa: no-handler
+      notify: Reload nginx
+
+    - name: App folder
+      tags: [setup, deploy]
+      ansible.builtin.file: { path: "{{ app_dir }}", state: directory, mode: "0755" }
+
+    - name: Compose file
+      tags: [setup, deploy]
+      ansible.builtin.copy: { src: ../compose.yml, dest: "{{ app_dir }}/compose.yml", mode: "0644" }
+
+    - name: Env file (secrets)
+      tags: [setup, deploy]
+      ansible.builtin.copy: { src: "{{ env_file }}", dest: "{{ app_dir }}/.env", mode: "0600" }
+      when: env_file | default('') | length > 0
+      no_log: true
+
+    - name: Image tag
+      tags: [setup, deploy]
+      ansible.builtin.lineinfile: { path: "{{ app_dir }}/.env", regexp: "^IMAGE_TAG=", line: "IMAGE_TAG={{ image_tag }}" }
+
+    - name: Pull the images
+      tags: [setup, deploy]
+      ansible.builtin.command: docker compose pull
+      args: { chdir: "{{ app_dir }}" }
+      register: pulled
+      changed_when: "'Downloaded newer image' in pulled.stderr or 'Pulled' in pulled.stderr"
+
+    - name: Start / restart what changed
+      tags: [setup, deploy]
+      ansible.builtin.command: docker compose up -d --remove-orphans
+      args: { chdir: "{{ app_dir }}" }
+      register: up
+      changed_when: "'Started' in up.stderr or 'Recreated' in up.stderr"
+
+    - name: The app answers
+      tags: [setup, deploy]
+      ansible.builtin.uri: { url: "http://127.0.0.1:2611/version.json", return_content: true }
+      register: version
+      retries: 15
+      delay: 2
+      until: version.status == 200
+
+    - name: Running version
+      tags: [setup, deploy]
+      ansible.builtin.debug: { msg: "{{ version.json.version }}" }
